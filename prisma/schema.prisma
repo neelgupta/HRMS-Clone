@@ -1,0 +1,65 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Company {
+  id        String        @id @default(uuid())
+  name      String
+  status    CompanyStatus @default(PENDING)
+  createdAt DateTime      @default(now())
+  users     User[]
+
+  @@map("companies")
+}
+
+model User {
+  id          String               @id @default(uuid())
+  name        String
+  email       String               @unique
+  phone       String
+  password    String
+  role        Role                 @default(HR_ADMIN)
+  status      UserStatus           @default(INACTIVE)
+  companyId   String
+  company     Company              @relation(fields: [companyId], references: [id])
+  resetTokens PasswordResetToken[]
+  createdAt   DateTime             @default(now())
+
+  @@map("users")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@map("password_reset_tokens")
+}
+
+enum Role {
+  SUPER_ADMIN
+  HR_ADMIN
+  PAYROLL_MANAGER
+  DEPT_MANAGER
+  EMPLOYEE
+}
+
+enum CompanyStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+}
+
+enum UserStatus {
+  INACTIVE
+  ACTIVE
+}
