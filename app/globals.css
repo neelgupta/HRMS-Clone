@@ -1,8 +1,9 @@
 @import "tailwindcss";
 
 :root {
-  --background: #020617;
-  --foreground: #e2e8f0;
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  color-scheme: light;
 }
 
 @theme inline {
@@ -12,8 +13,34 @@
   --font-mono: var(--font-geist-mono);
 }
 
+html,
 body {
   background: var(--background);
   color: var(--foreground);
+}
+
+body {
   font-family: var(--font-geist-sans), sans-serif;
+  transition: background-color 180ms ease, color 180ms ease;
+}
+
+* {
+  border-color: rgb(226 232 240);
+}
+
+::selection {
+  background: rgb(99 102 241 / 0.18);
+  color: rgb(15 23 42);
+}
+
+@keyframes loaderFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

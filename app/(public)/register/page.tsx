@@ -2,6 +2,9 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { MdArrowForward, MdBusiness, MdEmail, MdPerson, MdPhone } from "react-icons/md";
+import { Spinner } from "@/components/ui/loaders/spinner";
+import { dismissToast, showError, showLoading, showSuccess } from "@/lib/toast";
 
 type FormState = {
   name: string;
@@ -48,10 +51,12 @@ export default function RegisterPage() {
     const validationError = validate();
     if (validationError) {
       setError(validationError);
+      showError(validationError);
       return;
     }
 
     setLoading(true);
+    const toastId = showLoading("Creating your account...");
     try {
       const response = await fetch("/api/auth/register", {
         method: "POST",
@@ -61,88 +66,151 @@ export default function RegisterPage() {
 
       const data = (await response.json()) as { message?: string };
       if (!response.ok) {
-        setError(data.message || "Unable to create account.");
+        const message = data.message || "Unable to create account.";
+        setError(message);
+        dismissToast(toastId);
+        showError(message);
         return;
       }
 
-      setSuccess(`Check your email! We've sent a password setup link to ${form.email}`);
+      const message = `Check your email! We've sent a password setup link to ${form.email}`;
+      setSuccess(message);
       setForm(defaultState);
+      dismissToast(toastId);
+      showSuccess(message);
     } catch {
-      setError("Something went wrong. Please try again.");
+      const message = "Something went wrong. Please try again.";
+      setError(message);
+      dismissToast(toastId);
+      showError(message);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <main className="min-h-screen bg-slate-950 p-6 text-slate-100">
-      <div className="mx-auto grid min-h-[90vh] max-w-5xl grid-cols-1 gap-8 md:grid-cols-2 md:items-center">
-        <section className="hidden rounded-3xl border border-white/10 bg-slate-900/70 p-10 md:block">
-          <p className="text-sm uppercase tracking-[0.24em] text-cyan-300">WorkNest HRMS</p>
-          <h1 className="mt-5 text-4xl font-semibold leading-tight">
-            Build your people operations on one secure platform.
-          </h1>
-          <p className="mt-4 text-slate-300">
-            Register your company, activate your admin account, and launch your HR dashboard in minutes.
+    <main className="min-h-screen bg-[linear-gradient(180deg,#f8fbff_0%,#eef4ff_45%,#ffffff_100%)] px-6 py-10 text-slate-900">
+      <div className="mx-auto grid min-h-[calc(100vh-5rem)] max-w-6xl gap-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
+        <section className="hidden overflow-hidden rounded-[2rem] bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-500 p-10 text-white shadow-2xl shadow-indigo-200 lg:block">
+          <p className="inline-flex rounded-full bg-white/15 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.24em] text-blue-50">
+            WorkNest HRMS
           </p>
+          <h1 className="mt-8 text-4xl font-semibold leading-tight">
+            Create your HR admin workspace with a premium onboarding experience.
+          </h1>
+          <p className="mt-5 max-w-md text-base leading-8 text-blue-50/90">
+            Register your organization, activate your account securely, and start managing people operations with a clean modern interface.
+          </p>
+          <div className="mt-12 space-y-4">
+            <div className="rounded-2xl bg-white/10 p-5 backdrop-blur">
+              <p className="text-sm text-blue-100">Fast setup</p>
+              <p className="mt-2 text-xl font-semibold">Get started in minutes</p>
+            </div>
+            <div className="rounded-2xl bg-white/10 p-5 backdrop-blur">
+              <p className="text-sm text-blue-100">Built for scale</p>
+              <p className="mt-2 text-xl font-semibold">Ready for branches, settings, and growth</p>
+            </div>
+          </div>
         </section>
 
-        <section className="rounded-3xl border border-white/10 bg-slate-900 p-7 shadow-xl">
-          <h2 className="text-2xl font-semibold">Create Account</h2>
-          <p className="mt-2 text-sm text-slate-300">Start by creating your HR admin account.</p>
+        <section className="rounded-[2rem] border border-white/70 bg-white/90 p-8 shadow-xl shadow-slate-200 backdrop-blur md:p-10">
+          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-indigo-600">Create Account</p>
+          <h2 className="mt-4 text-3xl font-semibold tracking-tight text-slate-950">Start your HR admin account</h2>
+          <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-600">
+            Begin with your company and admin details. Your password setup link will be sent to the registered work email.
+          </p>
 
           {success ? (
-            <div className="mt-6 rounded-xl border border-emerald-400/30 bg-emerald-500/10 p-4 text-emerald-200">
+            <div className="mt-8 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-emerald-700 shadow-sm">
               {success}
             </div>
           ) : (
-            <form onSubmit={submitForm} className="mt-6 space-y-4">
-              <input
-                className="w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3 text-sm outline-none ring-cyan-400/80 focus:ring-2"
-                placeholder="Full Name"
-                value={form.name}
-                onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
-              />
-              <input
-                className="w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3 text-sm outline-none ring-cyan-400/80 focus:ring-2"
-                placeholder="Company Name"
-                value={form.companyName}
-                onChange={(event) => setForm((prev) => ({ ...prev, companyName: event.target.value }))}
-              />
-              <input
-                className="w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3 text-sm outline-none ring-cyan-400/80 focus:ring-2"
-                placeholder="Phone Number"
-                type="tel"
-                inputMode="numeric"
-                maxLength={10}
-                value={form.phone}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, phone: event.target.value.replace(/\D/g, "") }))
-                }
-              />
-              <input
-                className="w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3 text-sm outline-none ring-cyan-400/80 focus:ring-2"
-                placeholder="Work Email Address"
-                type="email"
-                value={form.email}
-                onChange={(event) => setForm((prev) => ({ ...prev, email: event.target.value }))}
-              />
+            <form onSubmit={submitForm} className="mt-8 space-y-6">
+              <div className="grid gap-5 md:grid-cols-2">
+                <label className="block">
+                  <span className="mb-2 block text-sm font-medium text-slate-700">Full Name</span>
+                  <div className="relative">
+                    <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                      <MdPerson className="text-base" />
+                    </span>
+                    <input
+                      className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-12 py-3.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-100"
+                      placeholder="Full Name"
+                      value={form.name}
+                      onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
+                    />
+                  </div>
+                </label>
+                <label className="block">
+                  <span className="mb-2 block text-sm font-medium text-slate-700">Company Name</span>
+                  <div className="relative">
+                    <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                      <MdBusiness className="text-base" />
+                    </span>
+                    <input
+                      className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-12 py-3.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-100"
+                      placeholder="Company Name"
+                      value={form.companyName}
+                      onChange={(event) => setForm((prev) => ({ ...prev, companyName: event.target.value }))}
+                    />
+                  </div>
+                </label>
+                <label className="block">
+                  <span className="mb-2 block text-sm font-medium text-slate-700">Phone Number</span>
+                  <div className="relative">
+                    <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                      <MdPhone className="text-base" />
+                    </span>
+                    <input
+                      className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-12 py-3.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-100"
+                      placeholder="Phone Number"
+                      type="tel"
+                      inputMode="numeric"
+                      maxLength={10}
+                      value={form.phone}
+                      onChange={(event) =>
+                        setForm((prev) => ({ ...prev, phone: event.target.value.replace(/\D/g, "") }))
+                      }
+                    />
+                  </div>
+                </label>
+                <label className="block">
+                  <span className="mb-2 block text-sm font-medium text-slate-700">Work Email Address</span>
+                  <div className="relative">
+                    <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                      <MdEmail className="text-base" />
+                    </span>
+                    <input
+                      className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-12 py-3.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-100"
+                      placeholder="Work Email Address"
+                      type="email"
+                      value={form.email}
+                      onChange={(event) => setForm((prev) => ({ ...prev, email: event.target.value }))}
+                    />
+                  </div>
+                </label>
+              </div>
 
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full rounded-xl bg-cyan-400 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-70"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-500 px-4 py-3.5 text-sm font-semibold text-white shadow-lg shadow-indigo-200 transition hover:-translate-y-0.5 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-70"
               >
+                {loading ? <Spinner className="text-white" label="Creating account" /> : <MdArrowForward className="text-base" />}
                 {loading ? "Creating..." : "Create Account"}
               </button>
 
-              {error ? <p className="text-sm text-rose-300">{error}</p> : null}
+              {error ? (
+                <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                  {error}
+                </div>
+              ) : null}
             </form>
           )}
 
-          <p className="mt-6 text-sm text-slate-300">
+          <p className="mt-8 text-sm text-slate-600">
             Already have an account?{" "}
-            <Link href="/login" className="font-semibold text-cyan-300 hover:text-cyan-200">
+            <Link href="/login" className="font-semibold text-indigo-600 transition hover:text-indigo-500">
               Sign in
             </Link>
           </p>

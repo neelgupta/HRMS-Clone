@@ -1,39 +1,291 @@
 import Link from "next/link";
 
 export default function HomePage() {
+  const features = [
+    {
+      title: "Centralized Employee Records",
+      description: "Keep employee profiles, onboarding data, and organizational structure aligned in one secure workspace.",
+      icon: "◫",
+    },
+    {
+      title: "Attendance & Leave Visibility",
+      description: "Bring attendance tracking, leave workflows, and manager approvals into a single polished experience.",
+      icon: "◎",
+    },
+    {
+      title: "Configuration That Scales",
+      description: "Set up branches, company settings, and HR foundations built for growing teams and multi-location operations.",
+      icon: "△",
+    },
+  ];
+
+  const steps = [
+    "Register your company and create the HR admin account.",
+    "Activate access securely using the password setup link.",
+    "Launch your HR workspace and manage operations from one dashboard.",
+  ];
+
+  const plans = [
+    {
+      name: "Starter",
+      price: "₹999",
+      subtitle: "For lean teams getting HR processes online.",
+      highlight: "",
+    },
+    {
+      name: "Growth",
+      price: "₹2,499",
+      subtitle: "For scaling companies managing multiple workflows.",
+      highlight: "ring-2 ring-indigo-100 border-indigo-300",
+    },
+    {
+      name: "Enterprise",
+      price: "Custom",
+      subtitle: "For larger organizations needing tailored support.",
+      highlight: "",
+    },
+  ];
+
+  const testimonials = [
+    {
+      quote: "WorkNest gave us a cleaner setup experience than most HR tools we evaluated.",
+      author: "Ananya Sharma",
+      role: "HR Lead, NovaGrid",
+    },
+    {
+      quote: "The product feels premium from the first screen and the company setup flow is genuinely easy to use.",
+      author: "Rahul Mehta",
+      role: "Operations Head, TalentBridge",
+    },
+  ];
+
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-950 px-6 py-16 text-slate-100">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_#1e293b,_transparent_55%)]" />
-      <div className="pointer-events-none absolute -left-24 top-8 h-72 w-72 rounded-full bg-cyan-500/20 blur-3xl" />
-      <div className="pointer-events-none absolute -right-16 bottom-0 h-72 w-72 rounded-full bg-emerald-400/20 blur-3xl" />
+    <main className="overflow-hidden bg-[linear-gradient(180deg,#f8fbff_0%,#ffffff_38%,#eef4ff_100%)] text-slate-900">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-[34rem] bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.18),transparent_34%),radial-gradient(circle_at_top_right,rgba(139,92,246,0.18),transparent_32%)]" />
 
-      <section className="relative w-full max-w-3xl rounded-3xl border border-white/15 bg-slate-900/80 p-8 backdrop-blur md:p-12">
-        <p className="inline-flex rounded-full border border-cyan-300/30 bg-cyan-400/10 px-4 py-1 text-xs font-semibold tracking-[0.2em] text-cyan-100">
-          HRMS SAAS PLATFORM
-        </p>
-        <h1 className="mt-6 text-4xl font-semibold leading-tight md:text-5xl">
-          Hire faster, manage smarter, and scale every team with confidence.
-        </h1>
-        <p className="mt-5 max-w-2xl text-base text-slate-300 md:text-lg">
-          Start your multi-tenant HRMS workspace in minutes. Register your organization, activate your
-          admin account securely, and launch your HR operations dashboard.
-        </p>
+      <header className="relative">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-6 lg:px-8">
+          <Link href="/" className="text-xl font-semibold tracking-tight text-slate-950">
+            WorkNest
+          </Link>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/login"
+              className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+            >
+              Sign In
+            </Link>
+            <Link
+              href="/register"
+              className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-200 transition hover:-translate-y-0.5 hover:shadow-xl"
+            >
+              Start Free
+            </Link>
+          </div>
+        </div>
+      </header>
 
-        <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-          <Link
-            href="/register"
-            className="inline-flex items-center justify-center rounded-xl bg-cyan-400 px-6 py-3 font-semibold text-slate-950 transition hover:bg-cyan-300"
-          >
-            Get Started
-          </Link>
-          <Link
-            href="/login"
-            className="inline-flex items-center justify-center rounded-xl border border-white/20 px-6 py-3 font-semibold transition hover:border-white/40 hover:bg-white/5"
-          >
-            Sign In
-          </Link>
+      <section className="relative mx-auto max-w-7xl px-6 pb-24 pt-14 lg:px-8 lg:pb-28 lg:pt-20">
+        <div className="grid items-center gap-14 lg:grid-cols-[1.05fr_0.95fr]">
+          <div>
+            <p className="inline-flex rounded-full border border-indigo-200 bg-white/90 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.28em] text-indigo-700 shadow-sm">
+              Premium HRMS SaaS
+            </p>
+            <h1 className="mt-7 max-w-3xl text-5xl font-semibold leading-[1.02] tracking-tight text-slate-950 md:text-6xl">
+              Build a smarter people operations system for every team.
+            </h1>
+            <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-600">
+              Register your organization, activate your admin workspace, and run HR operations from a modern platform built for clarity, structure, and growth.
+            </p>
+
+            <div className="mt-10 flex flex-col gap-4 sm:flex-row">
+              <Link
+                href="/register"
+                className="inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-500 px-7 py-4 text-base font-semibold text-white shadow-xl shadow-indigo-200 transition hover:-translate-y-0.5 hover:shadow-2xl"
+              >
+                Create Your Workspace
+              </Link>
+              <Link
+                href="/login"
+                className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-7 py-4 text-base font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+              >
+                Sign In
+              </Link>
+            </div>
+
+            <div className="mt-12 grid gap-4 sm:grid-cols-3">
+              <div className="rounded-2xl border border-white/70 bg-white/85 p-5 shadow-lg shadow-slate-100">
+                <p className="text-2xl font-semibold text-slate-950">10 min</p>
+                <p className="mt-1 text-sm text-slate-500">Average workspace setup</p>
+              </div>
+              <div className="rounded-2xl border border-white/70 bg-white/85 p-5 shadow-lg shadow-slate-100">
+                <p className="text-2xl font-semibold text-slate-950">Multi-branch</p>
+                <p className="mt-1 text-sm text-slate-500">Ready for growing companies</p>
+              </div>
+              <div className="rounded-2xl border border-white/70 bg-white/85 p-5 shadow-lg shadow-slate-100">
+                <p className="text-2xl font-semibold text-slate-950">Secure</p>
+                <p className="mt-1 text-sm text-slate-500">Admin-first onboarding flow</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="relative">
+            <div className="absolute -inset-6 rounded-[2rem] bg-gradient-to-br from-blue-200/60 via-indigo-100/50 to-purple-200/50 blur-2xl" />
+            <div className="relative rounded-[2rem] border border-white/70 bg-white/90 p-6 shadow-2xl shadow-slate-200">
+              <div className="rounded-[1.75rem] bg-gradient-to-br from-slate-950 via-indigo-950 to-blue-900 p-6 text-white">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-sm text-blue-100">WorkNest Command Center</p>
+                    <h2 className="mt-2 text-2xl font-semibold">Everything organized from day one</h2>
+                  </div>
+                  <span className="rounded-2xl bg-white/10 px-4 py-2 text-sm font-medium text-blue-50">Live</span>
+                </div>
+
+                <div className="mt-8 space-y-4">
+                  <div className="rounded-2xl bg-white/10 p-5 backdrop-blur">
+                    <p className="text-sm text-blue-100">Company Setup</p>
+                    <p className="mt-2 text-xl font-semibold">Branches, settings, and operations in one flow</p>
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="rounded-2xl bg-white/10 p-5 backdrop-blur">
+                      <p className="text-sm text-blue-100">Attendance Ready</p>
+                      <p className="mt-2 text-3xl font-semibold">98%</p>
+                    </div>
+                    <div className="rounded-2xl bg-white/10 p-5 backdrop-blur">
+                      <p className="text-sm text-blue-100">Admin Setup</p>
+                      <p className="mt-2 text-3xl font-semibold">Fast</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                  <p className="text-sm font-medium text-slate-500">Attendance</p>
+                  <p className="mt-2 text-lg font-semibold text-slate-900">Daily visibility across every team</p>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                  <p className="text-sm font-medium text-slate-500">Company Config</p>
+                  <p className="mt-2 text-lg font-semibold text-slate-900">Structured settings for payroll-ready ops</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
+
+      <section className="mx-auto max-w-7xl px-6 py-24 lg:px-8">
+        <div className="mx-auto max-w-2xl text-center">
+          <p className="text-sm font-semibold uppercase tracking-[0.28em] text-indigo-600">Features</p>
+          <h2 className="mt-4 text-3xl font-semibold tracking-tight text-slate-950 md:text-4xl">
+            Designed for teams that want structure without complexity
+          </h2>
+          <p className="mt-4 text-base leading-7 text-slate-600">
+            Give HR teams one elegant system for onboarding, settings, attendance, and organizational control.
+          </p>
+        </div>
+        <div className="mt-14 grid gap-6 lg:grid-cols-3">
+          {features.map((feature) => (
+            <div
+              key={feature.title}
+              className="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-lg shadow-slate-100 transition hover:-translate-y-1 hover:shadow-xl"
+            >
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-purple-500 text-xl font-semibold text-white">
+                {feature.icon}
+              </div>
+              <h3 className="mt-6 text-xl font-semibold text-slate-950">{feature.title}</h3>
+              <p className="mt-3 text-sm leading-7 text-slate-600">{feature.description}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="border-y border-slate-200 bg-white/70">
+        <div className="mx-auto grid max-w-7xl gap-12 px-6 py-24 lg:grid-cols-[0.9fr_1.1fr] lg:px-8">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[0.28em] text-indigo-600">How It Works</p>
+            <h2 className="mt-4 text-3xl font-semibold tracking-tight text-slate-950 md:text-4xl">
+              From signup to HR operations in three simple steps
+            </h2>
+          </div>
+          <div className="space-y-5">
+            {steps.map((step, index) => (
+              <div key={step} className="flex gap-5 rounded-[2rem] border border-slate-200 bg-slate-50 p-6 shadow-sm">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-sm font-semibold text-white">
+                  0{index + 1}
+                </div>
+                <p className="pt-1 text-base leading-7 text-slate-700">{step}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-6 py-24 lg:px-8">
+        <div className="mx-auto max-w-2xl text-center">
+          <p className="text-sm font-semibold uppercase tracking-[0.28em] text-indigo-600">Pricing</p>
+          <h2 className="mt-4 text-3xl font-semibold tracking-tight text-slate-950 md:text-4xl">
+            Flexible plans for every stage of growth
+          </h2>
+        </div>
+        <div className="mt-14 grid gap-6 lg:grid-cols-3">
+          {plans.map((plan) => (
+            <div
+              key={plan.name}
+              className={`rounded-[2rem] border border-slate-200 bg-white p-8 shadow-lg shadow-slate-100 ${plan.highlight}`}
+            >
+              <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-500">{plan.name}</p>
+              <p className="mt-6 text-4xl font-semibold tracking-tight text-slate-950">{plan.price}</p>
+              <p className="mt-3 text-sm leading-7 text-slate-600">{plan.subtitle}</p>
+              <button
+                type="button"
+                className="mt-8 inline-flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-500 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-200 transition hover:opacity-95"
+              >
+                Choose Plan
+              </button>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="bg-slate-950">
+        <div className="mx-auto max-w-7xl px-6 py-24 lg:px-8">
+          <div className="mx-auto max-w-2xl text-center">
+            <p className="text-sm font-semibold uppercase tracking-[0.28em] text-blue-200">Testimonials</p>
+            <h2 className="mt-4 text-3xl font-semibold tracking-tight text-white md:text-4xl">
+              Loved by teams building modern HR operations
+            </h2>
+          </div>
+          <div className="mt-14 grid gap-6 lg:grid-cols-2">
+            {testimonials.map((testimonial) => (
+              <div
+                key={testimonial.author}
+                className="rounded-[2rem] border border-white/10 bg-white/5 p-8 shadow-xl shadow-slate-950/30 backdrop-blur"
+              >
+                <p className="text-lg leading-8 text-slate-100">“{testimonial.quote}”</p>
+                <div className="mt-8">
+                  <p className="font-semibold text-white">{testimonial.author}</p>
+                  <p className="mt-1 text-sm text-slate-300">{testimonial.role}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <footer className="border-t border-slate-200 bg-white">
+        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-6 py-10 text-sm text-slate-500 md:flex-row md:items-center md:justify-between lg:px-8">
+          <p>© 2026 WorkNest. Built for modern HR teams.</p>
+          <div className="flex gap-5">
+            <Link href="/register" className="transition hover:text-slate-900">
+              Get Started
+            </Link>
+            <Link href="/login" className="transition hover:text-slate-900">
+              Sign In
+            </Link>
+          </div>
+        </div>
+      </footer>
     </main>
   );
 }

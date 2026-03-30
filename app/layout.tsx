@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { AppToaster } from "@/components/providers/app-toaster";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -26,8 +27,15 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      style={{ backgroundColor: "#f8fafc", colorScheme: "light" }}
     >
-      <body className="min-h-full bg-slate-950 font-sans text-slate-100">{children}</body>
+      <body
+        className="min-h-full bg-slate-50 font-sans text-slate-900"
+        style={{ backgroundColor: "#f8fafc", color: "#0f172a" }}
+      >
+        {children}
+        <AppToaster />
+      </body>
     </html>
   );
 }

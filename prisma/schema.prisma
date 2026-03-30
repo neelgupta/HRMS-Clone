@@ -8,11 +8,31 @@ datasource db {
 }
 
 model Company {
-  id        String        @id @default(uuid())
-  name      String
-  status    CompanyStatus @default(PENDING)
-  createdAt DateTime      @default(now())
-  users     User[]
+  id                   String                @id @default(uuid())
+  name                 String
+  status               CompanyStatus         @default(PENDING)
+  logoUrl              String?
+  iconUrl              String?
+  industry             String?
+  registrationNumber   String?
+  panNumber            String?
+  tanNumber            String?
+  gstNumber            String?
+  startDate            DateTime?
+  fiscalYearStart      DateTime?
+  fiscalYearEnd        DateTime?
+  primaryEmail         String?
+  primaryPhone         String?
+  website              String?
+  setupCompleted       Boolean               @default(false)
+  addresses            CompanyAddress[]
+  branches             Branch[]
+  bankDetail           BankDetail?
+  generalSetting       GeneralSetting?
+  employeeCustomFields EmployeeCustomField[]
+  users                User[]
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
 
   @@map("companies")
 }
@@ -26,9 +46,12 @@ model User {
   role        Role                 @default(HR_ADMIN)
   status      UserStatus           @default(INACTIVE)
   companyId   String
+  branchId    String?
+  branch      Branch?              @relation(fields: [branchId], references: [id])
   company     Company              @relation(fields: [companyId], references: [id])
   resetTokens PasswordResetToken[]
   createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
 
   @@map("users")
 }
@@ -43,6 +66,90 @@ model PasswordResetToken {
   createdAt DateTime @default(now())
 
   @@map("password_reset_tokens")
+}
+
+model CompanyAddress {
+  id           String      @id @default(uuid())
+  companyId    String
+  company      Company     @relation(fields: [companyId], references: [id])
+  type         AddressType
+  label        String?
+  addressLine1 String
+  addressLine2 String?
+  city         String
+  state        String
+  country      String
+  pincode      String
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@map("company_addresses")
+}
+
+model Branch {
+  id           String   @id @default(uuid())
+  companyId    String
+  company      Company  @relation(fields: [companyId], references: [id])
+  name         String
+  contactEmail String?
+  contactPhone String?
+  addressLine1 String
+  addressLine2 String?
+  city         String
+  state        String
+  country      String
+  pincode      String
+  users        User[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("branches")
+}
+
+model BankDetail {
+  id                String   @id @default(uuid())
+  companyId         String   @unique
+  company           Company  @relation(fields: [companyId], references: [id])
+  bankName          String
+  accountHolderName String
+  accountNumber     String
+  ifscCode          String
+  branchName        String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("bank_details")
+}
+
+model GeneralSetting {
+  id                 String       @id @default(uuid())
+  companyId          String       @unique
+  company            Company      @relation(fields: [companyId], references: [id])
+  currency           String       @default("INR")
+  dateFormat         String       @default("DD/MM/YYYY")
+  timeZone           String       @default("Asia/Kolkata")
+  workweek           WorkweekType @default(MON_FRI)
+  holidayList        DateTime[]
+  emailNotifications Boolean      @default(true)
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  @@map("general_settings")
+}
+
+model EmployeeCustomField {
+  id        String          @id @default(uuid())
+  companyId String
+  company   Company         @relation(fields: [companyId], references: [id])
+  fieldName String
+  fieldType CustomFieldType
+  required  Boolean         @default(false)
+  options   String[]
+  sortOrder Int             @default(0)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  @@map("employee_custom_fields")
 }
 
 enum Role {
@@ -62,4 +169,22 @@ enum CompanyStatus {
 enum UserStatus {
   INACTIVE
   ACTIVE
+}
+
+enum AddressType {
+  HEAD_OFFICE
+  BRANCH
+}
+
+enum WorkweekType {
+  MON_FRI
+  MON_SAT
+}
+
+enum CustomFieldType {
+  TEXT
+  NUMBER
+  DATE
+  DROPDOWN
+  CHECKBOX
 }
