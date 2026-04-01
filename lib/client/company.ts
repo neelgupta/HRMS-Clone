@@ -7,7 +7,12 @@ export type CurrentUser = {
   email: string;
   role: string;
   companyId: string;
-  companyName: string;
+  company: {
+    id: string;
+    name: string;
+    status: string;
+    setupCompleted: boolean;
+  };
 };
 
 export type CompanySetupRecord = {

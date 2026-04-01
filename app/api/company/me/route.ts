@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getErrorResponse } from "@/lib/api-response";
-import { requireHRAdmin } from "@/lib/auth-guard";
+import { requireHRAdmin, type AuthenticatedHRUser } from "@/lib/auth-guard";
 import { getCompanyById, serializeCompany } from "@/lib/server/company";
 
 export async function GET(request: NextRequest) {
@@ -10,7 +10,8 @@ export async function GET(request: NextRequest) {
       return auth.response;
     }
 
-    const company = await getCompanyById(auth.user.companyId);
+    const { companyId } = auth as AuthenticatedHRUser;
+    const company = await getCompanyById(companyId);
     return NextResponse.json({ company: serializeCompany(company) });
   } catch (error) {
     console.error("Company me error:", error);

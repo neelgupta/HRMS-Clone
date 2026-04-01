@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getErrorResponse } from "@/lib/api-response";
-import { requireHRAdmin } from "@/lib/auth-guard";
+import { requireHRAdmin, type AuthenticatedHRUser } from "@/lib/auth-guard";
 import { saveCompanySetup, serializeCompany } from "@/lib/server/company";
 import { companySetupSchema } from "@/lib/validations/company";
 
@@ -11,8 +11,9 @@ export async function PUT(request: NextRequest) {
       return auth.response;
     }
 
+    const { companyId } = auth as AuthenticatedHRUser;
     const payload = companySetupSchema.parse(await request.json());
-    const company = await saveCompanySetup(auth.user.companyId, payload);
+    const company = await saveCompanySetup(companyId, payload);
 
     return NextResponse.json({
       message: payload.markSetupComplete ? "Company settings updated." : "Draft updated.",

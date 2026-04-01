@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { MdBusiness, MdDashboard, MdPayments, MdPeople, MdSettings } from "react-icons/md";
+import { MdAccountTree, MdBusiness, MdDashboard, MdPayments, MdPeople, MdSettings } from "react-icons/md";
 
 type DashboardSidebarProps = {
   mobileOpen: boolean;
@@ -12,7 +12,8 @@ type DashboardSidebarProps = {
 const navItems = [
   { label: "Dashboard", href: "/dashboard/hr", icon: MdDashboard, available: true },
   { label: "Company Setup", href: "/dashboard/hr/company-setup", icon: MdBusiness, available: true },
-  { label: "Employees", href: "", icon: MdPeople, available: false },
+  { label: "Employees", href: "/dashboard/hr/employees", icon: MdPeople, available: true },
+  { label: "Organization", href: "", icon: MdAccountTree, available: false },
   { label: "Payroll", href: "", icon: MdPayments, available: false },
   { label: "Settings", href: "", icon: MdSettings, available: false },
 ] as const;
@@ -36,11 +37,10 @@ function NavItem({
   const content = (
     <>
       <span
-        className={`flex h-10 w-10 items-center justify-center rounded-2xl ${
-          active
-            ? "bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-md shadow-indigo-200"
-            : "bg-slate-100 text-slate-500"
-        }`}
+        className={`flex h-10 w-10 items-center justify-center rounded-2xl ${active
+          ? "bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-md shadow-indigo-200"
+          : "bg-slate-100 text-slate-500"
+          }`}
       >
         <Icon className="text-lg" />
       </span>
@@ -66,9 +66,8 @@ function NavItem({
     <Link
       href={href}
       onClick={onClose}
-      className={`flex items-center gap-3 rounded-2xl px-3 py-3 transition ${
-        active ? "bg-indigo-50 shadow-sm ring-1 ring-indigo-100" : "hover:bg-slate-50"
-      }`}
+      className={`flex items-center gap-3 rounded-2xl px-3 py-3 transition ${active ? "bg-indigo-50 shadow-sm ring-1 ring-indigo-100" : "hover:bg-slate-50"
+        }`}
     >
       {content}
     </Link>
@@ -81,16 +80,14 @@ export function DashboardSidebar({ mobileOpen, onClose }: DashboardSidebarProps)
   return (
     <>
       <div
-        className={`fixed inset-0 z-40 bg-slate-950/30 backdrop-blur-sm transition lg:hidden ${
-          mobileOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
-        }`}
+        className={`fixed inset-0 z-40 bg-slate-950/30 backdrop-blur-sm transition lg:hidden ${mobileOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
+          }`}
         onClick={onClose}
       />
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-[292px] flex-col border-r border-slate-200 bg-white transition-transform duration-300 lg:translate-x-0 ${
-          mobileOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
+        className={`fixed inset-y-0 left-0 z-50 flex w-[292px] flex-col border-r border-slate-200 bg-white transition-transform duration-300 lg:translate-x-0 ${mobileOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
       >
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-5">
           <div>

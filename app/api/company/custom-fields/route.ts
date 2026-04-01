@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getErrorResponse } from "@/lib/api-response";
-import { requireHRAdmin } from "@/lib/auth-guard";
+import { requireHRAdmin, type AuthenticatedHRUser } from "@/lib/auth-guard";
 import { getCompanyById, replaceEmployeeCustomFields, serializeCompany } from "@/lib/server/company";
 import { companyCustomFieldPayloadSchema } from "@/lib/validations/company";
 
@@ -11,9 +11,10 @@ export async function POST(request: NextRequest) {
       return auth.response;
     }
 
+    const { companyId } = auth as AuthenticatedHRUser;
     const payload = companyCustomFieldPayloadSchema.parse(await request.json());
-    await replaceEmployeeCustomFields(auth.user.companyId, payload.employeeCustomFields);
-    const company = await getCompanyById(auth.user.companyId);
+    await replaceEmployeeCustomFields(companyId, payload.employeeCustomFields);
+    const company = await getCompanyById(companyId);
 
     return NextResponse.json({
       message: "Employee custom fields saved.",

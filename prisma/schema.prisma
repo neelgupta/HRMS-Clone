@@ -30,6 +30,10 @@ model Company {
   bankDetail           BankDetail?
   generalSetting       GeneralSetting?
   employeeCustomFields EmployeeCustomField[]
+  employees            Employee[]
+  departments          Department[]
+  designations         Designation[]
+  auditLogs            AuditLog[]
   users                User[]
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
@@ -47,8 +51,10 @@ model User {
   status      UserStatus           @default(INACTIVE)
   companyId   String
   branchId    String?
+  employeeId  String?              @unique
   branch      Branch?              @relation(fields: [branchId], references: [id])
   company     Company              @relation(fields: [companyId], references: [id])
+  employee    Employee?            @relation(fields: [employeeId], references: [id])
   resetTokens PasswordResetToken[]
   createdAt   DateTime             @default(now())
   updatedAt   DateTime             @updatedAt
@@ -100,6 +106,7 @@ model Branch {
   country      String
   pincode      String
   users        User[]
+  employees    Employee[]
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -148,8 +155,212 @@ model EmployeeCustomField {
   sortOrder Int             @default(0)
   createdAt DateTime        @default(now())
   updatedAt DateTime        @updatedAt
+  values    EmployeeCustomFieldValue[]
 
   @@map("employee_custom_fields")
+}
+
+model Department {
+  id          String     @id @default(uuid())
+  companyId   String
+  company     Company    @relation(fields: [companyId], references: [id])
+  name        String
+  code        String
+  description String?
+  headId      String?
+  isActive    Boolean    @default(true)
+  employees   Employee[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@unique([companyId, code])
+  @@index([companyId])
+  @@map("departments")
+}
+
+model Designation {
+  id          String     @id @default(uuid())
+  companyId   String
+  company     Company    @relation(fields: [companyId], references: [id])
+  name        String
+  code        String
+  level       Int        @default(1)
+  description String?
+  isActive    Boolean    @default(true)
+  employees   Employee[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@unique([companyId, code])
+  @@index([companyId])
+  @@map("designations")
+}
+
+model Employee {
+  id                 String             @id @default(uuid())
+  companyId          String
+  company            Company            @relation(fields: [companyId], references: [id])
+  branchId           String?
+  branch             Branch?            @relation(fields: [branchId], references: [id])
+  departmentId       String?
+  department         Department?        @relation(fields: [departmentId], references: [id])
+  designationId      String?
+  designation        Designation?       @relation(fields: [designationId], references: [id])
+  reportingManagerId String?
+  reportingManager   Employee?          @relation("ManagerReports", fields: [reportingManagerId], references: [id])
+  reports           Employee[]         @relation("ManagerReports")
+
+  employeeCode       String             @unique
+  firstName          String
+  lastName           String
+  email              String             @unique
+  phone              String?
+  photoUrl           String?
+  dateOfBirth        DateTime?
+  gender             Gender?
+  maritalStatus      MaritalStatus?
+  bloodGroup          String?
+  dateOfJoining      DateTime?
+  probationEndDate   DateTime?
+  dateOfLeaving       DateTime?
+  employmentType      EmploymentType     @default(FULL_TIME)
+  employmentStatus    EmploymentStatus   @default(PROBATION)
+
+  emergencyContactName  String?
+  emergencyContactPhone String?
+  emergencyContactRelation String?
+
+  presentAddressLine1 String?
+  presentAddressLine2 String?
+  presentCity         String?
+  presentState        String?
+  presentCountry      String?
+  presentPincode      String?
+
+  permanentAddressLine1 String?
+  permanentAddressLine2 String?
+  permanentCity         String?
+  permanentState        String?
+  permanentCountry      String?
+  permanentPincode      String?
+
+  bankAccountHolderName String?
+  bankAccountNumber     String?
+  bankName              String?
+  bankBranchName        String?
+  bankIfscCode          String?
+
+  panNumber            String?
+  aadharNumber         String?
+
+  pfNumber             String?
+  pfUAN                String?
+  esiNumber            String?
+
+  education            EmployeeEducation[]
+  workHistory          EmployeeWorkHistory[]
+  documents            Document[]
+  customFieldValues    EmployeeCustomFieldValue[]
+  user                 User?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
+  @@index([branchId])
+  @@index([departmentId])
+  @@index([designationId])
+  @@index([reportingManagerId])
+  @@map("employees")
+}
+
+model EmployeeEducation {
+  id            String    @id @default(uuid())
+  employeeId    String
+  employee      Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  degree        String
+  institution   String
+  yearOfPassing Int?
+  percentage    Float?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@map("employee_educations")
+}
+
+model EmployeeWorkHistory {
+  id            String    @id @default(uuid())
+  employeeId    String
+  employee      Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  companyName   String
+  designation   String
+  startDate     DateTime
+  endDate       DateTime?
+  isCurrent     Boolean   @default(false)
+  reasonForLeaving String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@map("employee_work_histories")
+}
+
+model EmployeeCustomFieldValue {
+  id            String            @id @default(uuid())
+  employeeId    String
+  employee      Employee          @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  fieldId       String
+  field         EmployeeCustomField @relation(fields: [fieldId], references: [id])
+  value         String
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  @@unique([employeeId, fieldId])
+  @@map("employee_custom_field_values")
+}
+
+model Document {
+  id           String       @id @default(uuid())
+  employeeId   String
+  employee     Employee     @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  type         DocumentType
+  name         String
+  fileUrl      String
+  fileSize     Int?
+  mimeType     String?
+  expiryDate   DateTime?
+  version      Int          @default(1)
+  parentId     String?
+  parent       Document?    @relation("DocumentVersion", fields: [parentId], references: [id])
+  versions     Document[]   @relation("DocumentVersion")
+  isExpired    Boolean      @default(false)
+  accessRoles  Role[]
+  createdBy    String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@index([employeeId])
+  @@index([expiryDate])
+  @@index([type])
+  @@map("documents")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  companyId  String
+  company    Company  @relation(fields: [companyId], references: [id])
+  userId     String
+  action     String
+  entityType String
+  entityId   String?
+  oldValues  Json?
+  newValues  Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@index([companyId])
+  @@index([entityType, entityId])
+  @@map("audit_logs")
 }
 
 enum Role {
@@ -187,4 +398,53 @@ enum CustomFieldType {
   DATE
   DROPDOWN
   CHECKBOX
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum MaritalStatus {
+  SINGLE
+  MARRIED
+  DIVORCED
+  WIDOWED
+}
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  INTERNSHIP
+  PROBATION
+}
+
+enum EmploymentStatus {
+  PROBATION
+  CONFIRMED
+  TERMINATED
+  RESIGNED
+  RETIRED
+}
+
+enum DocumentType {
+  AADHAR_CARD
+  PAN_CARD
+  PASSPORT
+  DRIVING_LICENSE
+  VOTER_ID
+  BANK_PASSBOOK
+  EDUCATION_CERTIFICATE
+  EXPERIENCE_LETTER
+  OFFER_LETTER
+  APPOINTMENT_LETTER
+  SALARY_SLIP
+  FORM_16
+  PF_DOCUMENT
+  ESI_DOCUMENT
+  PHOTO
+  SIGNATURE
+  OTHER
 }

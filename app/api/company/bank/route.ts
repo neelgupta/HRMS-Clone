@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getErrorResponse } from "@/lib/api-response";
-import { requireHRAdmin } from "@/lib/auth-guard";
+import { requireHRAdmin, type AuthenticatedHRUser } from "@/lib/auth-guard";
 import { getCompanyById, serializeCompany, upsertCompanyBankDetail } from "@/lib/server/company";
 import { companyBankSchema } from "@/lib/validations/company";
 
@@ -11,9 +11,10 @@ export async function POST(request: NextRequest) {
       return auth.response;
     }
 
+    const { companyId } = auth as AuthenticatedHRUser;
     const payload = companyBankSchema.parse(await request.json());
-    await upsertCompanyBankDetail(auth.user.companyId, payload.bankDetail);
-    const company = await getCompanyById(auth.user.companyId);
+    await upsertCompanyBankDetail(companyId, payload.bankDetail);
+    const company = await getCompanyById(companyId);
 
     return NextResponse.json({
       message: "Bank details saved.",

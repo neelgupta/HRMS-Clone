@@ -4,7 +4,12 @@ import { startTransition, useEffect, useState } from "react";
 import { Controller, useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { MdAdd, MdArrowBack, MdArrowForward, MdCheckCircle } from "react-icons/md";
+import {
+  MdAdd,
+  MdArrowBack,
+  MdArrowForward,
+  MdCheckCircle,
+} from "react-icons/md";
 import {
   COMPANY_CURRENCY_OPTIONS,
   COMPANY_DATE_FORMAT_OPTIONS,
@@ -72,7 +77,10 @@ export function CompanySetupForm() {
   useEffect(() => {
     async function load() {
       try {
-        const [userData, companyData] = await Promise.all([fetchCurrentUser(), fetchCompanySetup()]);
+        const [userData, companyData] = await Promise.all([
+          fetchCurrentUser(),
+          fetchCompanySetup(),
+        ]);
         setUser(userData);
         if (companyData.company) {
           setCompanyExists(true);
@@ -98,7 +106,9 @@ export function CompanySetupForm() {
         ...rawValues,
         markSetupComplete: mode === "complete",
       };
-      const toastId = showLoading(mode === "complete" ? "Saving company settings..." : "Saving draft...");
+      const toastId = showLoading(
+        mode === "complete" ? "Saving company settings..." : "Saving draft...",
+      );
 
       try {
         const data = await saveCompanySetupRequest(payload, companyExists);
@@ -116,7 +126,11 @@ export function CompanySetupForm() {
         }
 
         dismissToast(toastId);
-        showError(error instanceof Error ? error.message : "Could not save company settings.");
+        showError(
+          error instanceof Error
+            ? error.message
+            : "Could not save company settings.",
+        );
       }
     })();
   }
@@ -131,7 +145,9 @@ export function CompanySetupForm() {
       return;
     }
 
-    setValue("generalSetting.holidayList", [...holidayList, holidayInput], { shouldValidate: true });
+    setValue("generalSetting.holidayList", [...holidayList, holidayInput], {
+      shouldValidate: true,
+    });
     setHolidayInput("");
   }
 
@@ -167,7 +183,11 @@ export function CompanySetupForm() {
   }
 
   if (!user) {
-    return <div className="rounded-3xl border border-rose-200 bg-rose-50 p-6 text-rose-700">{pageError || "Unauthorized"}</div>;
+    return (
+      <div className="rounded-3xl border border-rose-200 bg-rose-50 p-6 text-rose-700">
+        {pageError || "Unauthorized"}
+      </div>
+    );
   }
 
   return (
@@ -181,15 +201,25 @@ export function CompanySetupForm() {
         <div className="mb-6 rounded-[2rem] border border-slate-200 bg-white p-6 shadow-lg shadow-slate-100">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <p className="text-xs uppercase tracking-[0.35em] text-indigo-600">Company Settings</p>
-              <h1 className="mt-3 text-3xl font-semibold text-slate-950">Configure {values.companyName || user.companyName}</h1>
+              <p className="text-xs uppercase tracking-[0.35em] text-indigo-600">
+                Company Settings
+              </p>
+              <h1 className="mt-3 text-3xl font-semibold text-slate-950">
+                Configure {values.companyName || user.companyName}
+              </h1>
               <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-600">
-                Build the core operating profile for your HR workspace. Save a draft anytime, or complete setup once the essentials are in place.
+                Build the core operating profile for your HR workspace. Save a
+                draft anytime, or complete setup once the essentials are in
+                place.
               </p>
             </div>
             <div className="rounded-2xl border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm text-indigo-700">
               <p className="font-medium">HR Admin: {user.name}</p>
-              <p className="mt-1 text-indigo-500">{companyExists ? "Existing company profile loaded" : "Starting a fresh company profile"}</p>
+              <p className="mt-1 text-indigo-500">
+                {companyExists
+                  ? "Existing company profile loaded"
+                  : "Starting a fresh company profile"}
+              </p>
             </div>
           </div>
         </div>
@@ -236,15 +266,30 @@ export function CompanySetupForm() {
             }}
             className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-lg shadow-slate-100"
           >
-            {pageError ? <div className="mb-5 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{pageError}</div> : null}
+            {pageError ? (
+              <div className="mb-5 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                {pageError}
+              </div>
+            ) : null}
 
             {currentStep === 0 ? (
               <section className="space-y-6">
                 <div className="grid gap-6 md:grid-cols-2">
-                  <FormField label="Company Name" error={errors.companyName?.message} required>
-                    <TextInput {...register("companyName")} placeholder="WorkNest Technologies Pvt Ltd" />
+                  <FormField
+                    label="Company Name"
+                    error={errors.companyName?.message}
+                    required
+                  >
+                    <TextInput
+                      {...register("companyName")}
+                      placeholder="WorkNest Technologies Pvt Ltd"
+                    />
                   </FormField>
-                  <FormField label="Industry" error={errors.industry?.message} required>
+                  <FormField
+                    label="Industry"
+                    error={errors.industry?.message}
+                    required
+                  >
                     <SelectInput {...register("industry")}>
                       {COMPANY_INDUSTRY_OPTIONS.map((industry) => (
                         <option key={industry} value={industry}>
@@ -281,41 +326,90 @@ export function CompanySetupForm() {
                 </div>
 
                 <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-                  <FormField label="Registration Number" error={errors.registrationNumber?.message}>
-                    <TextInput {...register("registrationNumber")} placeholder="U74999KA2026PTC000123" />
+                  <FormField
+                    label="Registration Number"
+                    error={errors.registrationNumber?.message}
+                  >
+                    <TextInput
+                      {...register("registrationNumber")}
+                      placeholder="U74999KA2026PTC000123"
+                    />
                   </FormField>
-                  <FormField label="PAN Number" error={errors.panNumber?.message}>
-                    <TextInput {...register("panNumber")} placeholder="ABCDE1234F" />
+                  <FormField
+                    label="PAN Number"
+                    error={errors.panNumber?.message}
+                  >
+                    <TextInput
+                      {...register("panNumber")}
+                      placeholder="ABCDE1234F"
+                    />
                   </FormField>
-                  <FormField label="TAN Number" error={errors.tanNumber?.message}>
-                    <TextInput {...register("tanNumber")} placeholder="BLRA12345B" />
+                  <FormField
+                    label="TAN Number"
+                    error={errors.tanNumber?.message}
+                  >
+                    <TextInput
+                      {...register("tanNumber")}
+                      placeholder="BLRA12345B"
+                    />
                   </FormField>
-                  <FormField label="GST Number" error={errors.gstNumber?.message}>
-                    <TextInput {...register("gstNumber")} placeholder="29ABCDE1234F1Z5" />
+                  <FormField
+                    label="GST Number"
+                    error={errors.gstNumber?.message}
+                  >
+                    <TextInput
+                      {...register("gstNumber")}
+                      placeholder="29ABCDE1234F1Z5"
+                    />
                   </FormField>
                 </div>
 
                 <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-                  <FormField label="Company Start Date" error={errors.companyStartDate?.message}>
+                  <FormField
+                    label="Company Start Date"
+                    error={errors.companyStartDate?.message}
+                  >
                     <TextInput type="date" {...register("companyStartDate")} />
                   </FormField>
-                  <FormField label="Fiscal Year Start" error={errors.fiscalYearStart?.message}>
+                  <FormField
+                    label="Fiscal Year Start"
+                    error={errors.fiscalYearStart?.message}
+                  >
                     <TextInput type="date" {...register("fiscalYearStart")} />
                   </FormField>
-                  <FormField label="Fiscal Year End" error={errors.fiscalYearEnd?.message}>
+                  <FormField
+                    label="Fiscal Year End"
+                    error={errors.fiscalYearEnd?.message}
+                  >
                     <TextInput type="date" {...register("fiscalYearEnd")} />
                   </FormField>
                 </div>
 
                 <div className="grid gap-6 md:grid-cols-3">
-                  <FormField label="Primary Email" error={errors.primaryEmail?.message}>
-                    <TextInput type="email" {...register("primaryEmail")} placeholder="hr@worknest.com" />
+                  <FormField
+                    label="Primary Email"
+                    error={errors.primaryEmail?.message}
+                  >
+                    <TextInput
+                      type="email"
+                      {...register("primaryEmail")}
+                      placeholder="hr@worknest.com"
+                    />
                   </FormField>
-                  <FormField label="Primary Phone" error={errors.primaryPhone?.message}>
-                    <TextInput {...register("primaryPhone")} placeholder="+91 98765 43210" />
+                  <FormField
+                    label="Primary Phone"
+                    error={errors.primaryPhone?.message}
+                  >
+                    <TextInput
+                      {...register("primaryPhone")}
+                      placeholder="+91 98765 43210"
+                    />
                   </FormField>
                   <FormField label="Website" error={errors.website?.message}>
-                    <TextInput {...register("website")} placeholder="https://worknest.com" />
+                    <TextInput
+                      {...register("website")}
+                      placeholder="https://worknest.com"
+                    />
                   </FormField>
                 </div>
               </section>
@@ -324,9 +418,14 @@ export function CompanySetupForm() {
             {currentStep === 1 ? (
               <section className="space-y-5">
                 {addresses.fields.map((field, index) => (
-                  <div key={field.id} className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-5">
+                  <div
+                    key={field.id}
+                    className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-5"
+                  >
                     <div className="mb-4 flex items-center justify-between">
-                      <h2 className="text-lg font-semibold text-slate-900">Address {index + 1}</h2>
+                      <h2 className="text-lg font-semibold text-slate-900">
+                        Address {index + 1}
+                      </h2>
                       {addresses.fields.length > 1 ? (
                         <button
                           type="button"
@@ -339,32 +438,75 @@ export function CompanySetupForm() {
                     </div>
 
                     <div className="grid gap-5 md:grid-cols-2">
-                      <FormField label="Address Type" error={errors.addresses?.[index]?.type?.message} required>
+                      <FormField
+                        label="Address Type"
+                        error={errors.addresses?.[index]?.type?.message}
+                        required
+                      >
                         <SelectInput {...register(`addresses.${index}.type`)}>
                           <option value="HEAD_OFFICE">Head Office</option>
                           <option value="BRANCH">Branch</option>
                         </SelectInput>
                       </FormField>
-                      <FormField label="Label" error={errors.addresses?.[index]?.label?.message}>
-                        <TextInput {...register(`addresses.${index}.label`)} placeholder="Corporate HQ" />
+                      <FormField
+                        label="Label"
+                        error={errors.addresses?.[index]?.label?.message}
+                      >
+                        <TextInput
+                          {...register(`addresses.${index}.label`)}
+                          placeholder="Corporate HQ"
+                        />
                       </FormField>
-                      <FormField label="Address Line 1" error={errors.addresses?.[index]?.addressLine1?.message} required>
-                        <TextInput {...register(`addresses.${index}.addressLine1`)} placeholder="Building, street, area" />
+                      <FormField
+                        label="Address Line 1"
+                        error={errors.addresses?.[index]?.addressLine1?.message}
+                        required
+                      >
+                        <TextInput
+                          {...register(`addresses.${index}.addressLine1`)}
+                          placeholder="Building, street, area"
+                        />
                       </FormField>
-                      <FormField label="Address Line 2" error={errors.addresses?.[index]?.addressLine2?.message}>
-                        <TextInput {...register(`addresses.${index}.addressLine2`)} placeholder="Landmark or suite" />
+                      <FormField
+                        label="Address Line 2"
+                        error={errors.addresses?.[index]?.addressLine2?.message}
+                      >
+                        <TextInput
+                          {...register(`addresses.${index}.addressLine2`)}
+                          placeholder="Landmark or suite"
+                        />
                       </FormField>
-                      <FormField label="City" error={errors.addresses?.[index]?.city?.message} required>
+                      <FormField
+                        label="City"
+                        error={errors.addresses?.[index]?.city?.message}
+                        required
+                      >
                         <TextInput {...register(`addresses.${index}.city`)} />
                       </FormField>
-                      <FormField label="State" error={errors.addresses?.[index]?.state?.message} required>
+                      <FormField
+                        label="State"
+                        error={errors.addresses?.[index]?.state?.message}
+                        required
+                      >
                         <TextInput {...register(`addresses.${index}.state`)} />
                       </FormField>
-                      <FormField label="Country" error={errors.addresses?.[index]?.country?.message} required>
-                        <TextInput {...register(`addresses.${index}.country`)} />
+                      <FormField
+                        label="Country"
+                        error={errors.addresses?.[index]?.country?.message}
+                        required
+                      >
+                        <TextInput
+                          {...register(`addresses.${index}.country`)}
+                        />
                       </FormField>
-                      <FormField label="Pincode" error={errors.addresses?.[index]?.pincode?.message} required>
-                        <TextInput {...register(`addresses.${index}.pincode`)} />
+                      <FormField
+                        label="Pincode"
+                        error={errors.addresses?.[index]?.pincode?.message}
+                        required
+                      >
+                        <TextInput
+                          {...register(`addresses.${index}.pincode`)}
+                        />
                       </FormField>
                     </div>
                   </div>
@@ -401,9 +543,14 @@ export function CompanySetupForm() {
                 ) : null}
 
                 {branches.fields.map((field, index) => (
-                  <div key={field.id} className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-5">
+                  <div
+                    key={field.id}
+                    className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-5"
+                  >
                     <div className="mb-4 flex items-center justify-between">
-                      <h2 className="text-lg font-semibold text-slate-900">Branch {index + 1}</h2>
+                      <h2 className="text-lg font-semibold text-slate-900">
+                        Branch {index + 1}
+                      </h2>
                       <button
                         type="button"
                         onClick={() => branches.remove(index)}
@@ -414,31 +561,78 @@ export function CompanySetupForm() {
                     </div>
 
                     <div className="grid gap-5 md:grid-cols-2">
-                      <FormField label="Branch Name" error={errors.branches?.[index]?.name?.message} required>
-                        <TextInput {...register(`branches.${index}.name`)} placeholder="Bengaluru Branch" />
+                      <FormField
+                        label="Branch Name"
+                        error={errors.branches?.[index]?.name?.message}
+                        required
+                      >
+                        <TextInput
+                          {...register(`branches.${index}.name`)}
+                          placeholder="Bengaluru Branch"
+                        />
                       </FormField>
-                      <FormField label="Contact Email" error={errors.branches?.[index]?.contactEmail?.message}>
-                        <TextInput type="email" {...register(`branches.${index}.contactEmail`)} placeholder="blr@company.com" />
+                      <FormField
+                        label="Contact Email"
+                        error={errors.branches?.[index]?.contactEmail?.message}
+                      >
+                        <TextInput
+                          type="email"
+                          {...register(`branches.${index}.contactEmail`)}
+                          placeholder="blr@company.com"
+                        />
                       </FormField>
-                      <FormField label="Contact Phone" error={errors.branches?.[index]?.contactPhone?.message}>
-                        <TextInput {...register(`branches.${index}.contactPhone`)} placeholder="+91 91234 56789" />
+                      <FormField
+                        label="Contact Phone"
+                        error={errors.branches?.[index]?.contactPhone?.message}
+                      >
+                        <TextInput
+                          {...register(`branches.${index}.contactPhone`)}
+                          placeholder="+91 91234 56789"
+                        />
                       </FormField>
-                      <FormField label="Address Line 1" error={errors.branches?.[index]?.addressLine1?.message} required>
-                        <TextInput {...register(`branches.${index}.addressLine1`)} />
+                      <FormField
+                        label="Address Line 1"
+                        error={errors.branches?.[index]?.addressLine1?.message}
+                        required
+                      >
+                        <TextInput
+                          {...register(`branches.${index}.addressLine1`)}
+                        />
                       </FormField>
-                      <FormField label="Address Line 2" error={errors.branches?.[index]?.addressLine2?.message}>
-                        <TextInput {...register(`branches.${index}.addressLine2`)} />
+                      <FormField
+                        label="Address Line 2"
+                        error={errors.branches?.[index]?.addressLine2?.message}
+                      >
+                        <TextInput
+                          {...register(`branches.${index}.addressLine2`)}
+                        />
                       </FormField>
-                      <FormField label="City" error={errors.branches?.[index]?.city?.message} required>
+                      <FormField
+                        label="City"
+                        error={errors.branches?.[index]?.city?.message}
+                        required
+                      >
                         <TextInput {...register(`branches.${index}.city`)} />
                       </FormField>
-                      <FormField label="State" error={errors.branches?.[index]?.state?.message} required>
+                      <FormField
+                        label="State"
+                        error={errors.branches?.[index]?.state?.message}
+                        required
+                      >
                         <TextInput {...register(`branches.${index}.state`)} />
                       </FormField>
-                      <FormField label="Country" error={errors.branches?.[index]?.country?.message} required>
+                      <FormField
+                        label="Country"
+                        error={errors.branches?.[index]?.country?.message}
+                        required
+                      >
                         <TextInput {...register(`branches.${index}.country`)} />
                       </FormField>
-                      <FormField label="Pincode" error={errors.branches?.[index]?.pincode?.message} required>
+                      <FormField
+                        label="Pincode"
+                        error={errors.branches?.[index]?.pincode?.message}
+                        required
+                      >
                         <TextInput {...register(`branches.${index}.pincode`)} />
                       </FormField>
                     </div>
@@ -470,20 +664,55 @@ export function CompanySetupForm() {
 
             {currentStep === 3 ? (
               <section className="grid gap-6 md:grid-cols-2">
-                <FormField label="Bank Name" error={errors.bankDetail?.bankName?.message} required>
-                  <TextInput {...register("bankDetail.bankName")} placeholder="HDFC Bank" />
+                <FormField
+                  label="Bank Name"
+                  error={errors.bankDetail?.bankName?.message}
+                  required
+                >
+                  <TextInput
+                    {...register("bankDetail.bankName")}
+                    placeholder="HDFC Bank"
+                  />
                 </FormField>
-                <FormField label="Account Holder Name" error={errors.bankDetail?.accountHolderName?.message} required>
-                  <TextInput {...register("bankDetail.accountHolderName")} placeholder="WorkNest Technologies Pvt Ltd" />
+                <FormField
+                  label="Account Holder Name"
+                  error={errors.bankDetail?.accountHolderName?.message}
+                  required
+                >
+                  <TextInput
+                    {...register("bankDetail.accountHolderName")}
+                    placeholder="WorkNest Technologies Pvt Ltd"
+                  />
                 </FormField>
-                <FormField label="Account Number" error={errors.bankDetail?.accountNumber?.message} required>
-                  <TextInput {...register("bankDetail.accountNumber")} placeholder="50200012345678" />
+                <FormField
+                  label="Account Number"
+                  error={errors.bankDetail?.accountNumber?.message}
+                  required
+                >
+                  <TextInput
+                    {...register("bankDetail.accountNumber")}
+                    placeholder="50200012345678"
+                  />
                 </FormField>
-                <FormField label="IFSC Code" error={errors.bankDetail?.ifscCode?.message} required>
-                  <TextInput {...register("bankDetail.ifscCode")} placeholder="HDFC0000123" />
+                <FormField
+                  label="IFSC Code"
+                  error={errors.bankDetail?.ifscCode?.message}
+                  required
+                >
+                  <TextInput
+                    {...register("bankDetail.ifscCode")}
+                    placeholder="HDFC0000123"
+                  />
                 </FormField>
-                <FormField label="Branch Name" error={errors.bankDetail?.branchName?.message} required>
-                  <TextInput {...register("bankDetail.branchName")} placeholder="Koramangala" />
+                <FormField
+                  label="Branch Name"
+                  error={errors.bankDetail?.branchName?.message}
+                  required
+                >
+                  <TextInput
+                    {...register("bankDetail.branchName")}
+                    placeholder="Koramangala"
+                  />
                 </FormField>
               </section>
             ) : null}
@@ -491,7 +720,11 @@ export function CompanySetupForm() {
             {currentStep === 4 ? (
               <section className="space-y-6">
                 <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-                  <FormField label="Currency" error={errors.generalSetting?.currency?.message} required>
+                  <FormField
+                    label="Currency"
+                    error={errors.generalSetting?.currency?.message}
+                    required
+                  >
                     <SelectInput {...register("generalSetting.currency")}>
                       {COMPANY_CURRENCY_OPTIONS.map((currency) => (
                         <option key={currency} value={currency}>
@@ -500,7 +733,11 @@ export function CompanySetupForm() {
                       ))}
                     </SelectInput>
                   </FormField>
-                  <FormField label="Date Format" error={errors.generalSetting?.dateFormat?.message} required>
+                  <FormField
+                    label="Date Format"
+                    error={errors.generalSetting?.dateFormat?.message}
+                    required
+                  >
                     <SelectInput {...register("generalSetting.dateFormat")}>
                       {COMPANY_DATE_FORMAT_OPTIONS.map((format) => (
                         <option key={format} value={format}>
@@ -509,7 +746,11 @@ export function CompanySetupForm() {
                       ))}
                     </SelectInput>
                   </FormField>
-                  <FormField label="Time Zone" error={errors.generalSetting?.timeZone?.message} required>
+                  <FormField
+                    label="Time Zone"
+                    error={errors.generalSetting?.timeZone?.message}
+                    required
+                  >
                     <SelectInput {...register("generalSetting.timeZone")}>
                       {COMPANY_TIME_ZONE_OPTIONS.map((timeZone) => (
                         <option key={timeZone} value={timeZone}>
@@ -518,7 +759,11 @@ export function CompanySetupForm() {
                       ))}
                     </SelectInput>
                   </FormField>
-                  <FormField label="Workweek" error={errors.generalSetting?.workweek?.message} required>
+                  <FormField
+                    label="Workweek"
+                    error={errors.generalSetting?.workweek?.message}
+                    required
+                  >
                     <SelectInput {...register("generalSetting.workweek")}>
                       <option value="MON_FRI">Mon-Fri</option>
                       <option value="MON_SAT">Mon-Sat</option>
@@ -542,8 +787,17 @@ export function CompanySetupForm() {
                 <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-5">
                   <div className="flex flex-col gap-4 md:flex-row md:items-end">
                     <div className="flex-1">
-                      <FormField label="Holiday List" hint="Add one holiday date at a time.">
-                        <TextInput type="date" value={holidayInput} onChange={(event) => setHolidayInput(event.target.value)} />
+                      <FormField
+                        label="Holiday List"
+                        hint="Add one holiday date at a time."
+                      >
+                        <TextInput
+                          type="date"
+                          value={holidayInput}
+                          onChange={(event) =>
+                            setHolidayInput(event.target.value)
+                          }
+                        />
                       </FormField>
                     </div>
                     <button
@@ -557,7 +811,11 @@ export function CompanySetupForm() {
                   </div>
 
                   <div className="mt-4 flex flex-wrap gap-2">
-                    {holidayList.length === 0 ? <p className="text-sm text-slate-400">No holidays added yet.</p> : null}
+                    {holidayList.length === 0 ? (
+                      <p className="text-sm text-slate-400">
+                        No holidays added yet.
+                      </p>
+                    ) : null}
                     {holidayList.map((holiday) => (
                       <button
                         key={holiday}
@@ -576,7 +834,9 @@ export function CompanySetupForm() {
                     ))}
                   </div>
                   {errors.generalSetting?.holidayList?.message ? (
-                    <p className="mt-3 text-sm text-rose-600">{errors.generalSetting.holidayList.message}</p>
+                    <p className="mt-3 text-sm text-rose-600">
+                      {errors.generalSetting.holidayList.message}
+                    </p>
                   ) : null}
                 </div>
               </section>
@@ -586,7 +846,9 @@ export function CompanySetupForm() {
               <section className="space-y-5">
                 {customFields.fields.length === 0 ? (
                   <div className="rounded-[1.5rem] border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-500">
-                    No employee custom fields yet. Add fields for IDs, probation notes, equipment ownership, or any company-specific employee metadata.
+                    No employee custom fields yet. Add fields for IDs, probation
+                    notes, equipment ownership, or any company-specific employee
+                    metadata.
                   </div>
                 ) : null}
 
@@ -594,9 +856,14 @@ export function CompanySetupForm() {
                   const fieldType = watchedCustomFields?.[index]?.fieldType;
 
                   return (
-                    <div key={field.id} className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-5">
+                    <div
+                      key={field.id}
+                      className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-5"
+                    >
                       <div className="mb-4 flex items-center justify-between">
-                        <h2 className="text-lg font-semibold text-slate-900">Field {index + 1}</h2>
+                        <h2 className="text-lg font-semibold text-slate-900">
+                          Field {index + 1}
+                        </h2>
                         <button
                           type="button"
                           onClick={() => customFields.remove(index)}
@@ -607,11 +874,34 @@ export function CompanySetupForm() {
                       </div>
 
                       <div className="grid gap-5 md:grid-cols-3">
-                        <FormField label="Field Name" error={errors.employeeCustomFields?.[index]?.fieldName?.message} required>
-                          <TextInput {...register(`employeeCustomFields.${index}.fieldName`)} placeholder="Blood Group" />
+                        <FormField
+                          label="Field Name"
+                          error={
+                            errors.employeeCustomFields?.[index]?.fieldName
+                              ?.message
+                          }
+                          required
+                        >
+                          <TextInput
+                            {...register(
+                              `employeeCustomFields.${index}.fieldName`,
+                            )}
+                            placeholder="Blood Group"
+                          />
                         </FormField>
-                        <FormField label="Field Type" error={errors.employeeCustomFields?.[index]?.fieldType?.message} required>
-                          <SelectInput {...register(`employeeCustomFields.${index}.fieldType`)}>
+                        <FormField
+                          label="Field Type"
+                          error={
+                            errors.employeeCustomFields?.[index]?.fieldType
+                              ?.message
+                          }
+                          required
+                        >
+                          <SelectInput
+                            {...register(
+                              `employeeCustomFields.${index}.fieldType`,
+                            )}
+                          >
                             <option value="TEXT">Text</option>
                             <option value="NUMBER">Number</option>
                             <option value="DATE">Date</option>
@@ -641,7 +931,10 @@ export function CompanySetupForm() {
                             <FormField
                               label="Dropdown Options"
                               hint="Enter one option per line."
-                              error={errors.employeeCustomFields?.[index]?.options?.message as string | undefined}
+                              error={
+                                errors.employeeCustomFields?.[index]?.options
+                                  ?.message as string | undefined
+                              }
                             >
                               <textarea
                                 value={optionsField.value.join("\n")}
@@ -686,7 +979,9 @@ export function CompanySetupForm() {
               <div className="flex gap-3">
                 <button
                   type="button"
-                  onClick={() => setCurrentStep((step) => Math.max(step - 1, 0))}
+                  onClick={() =>
+                    setCurrentStep((step) => Math.max(step - 1, 0))
+                  }
                   disabled={currentStep === 0}
                   className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300 disabled:cursor-not-allowed disabled:opacity-40"
                 >
@@ -695,7 +990,11 @@ export function CompanySetupForm() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setCurrentStep((step) => Math.min(step + 1, steps.length - 1))}
+                  onClick={() =>
+                    setCurrentStep((step) =>
+                      Math.min(step + 1, steps.length - 1),
+                    )
+                  }
                   disabled={currentStep === steps.length - 1}
                   className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300 disabled:cursor-not-allowed disabled:opacity-40"
                 >
@@ -711,8 +1010,11 @@ export function CompanySetupForm() {
                   disabled={isSubmitting}
                   className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-blue-300 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  <MdCheckCircle className="text-base" />
-                  {isSubmitting ? <Spinner className="text-current" label="Saving draft" /> : <MdCheckCircle className="text-base" />}
+                  {isSubmitting ? (
+                    <Spinner className="text-current" label="Saving draft" />
+                  ) : (
+                    <MdCheckCircle className="text-base" />
+                  )}
                   {isSubmitting ? "Saving..." : "Save Draft"}
                 </button>
                 <button
@@ -721,8 +1023,16 @@ export function CompanySetupForm() {
                   disabled={isSubmitting}
                   className="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-500 px-5 py-3 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {isSubmitting ? <Spinner className="text-white" label="Saving settings" /> : <MdArrowForward className="text-base" />}
-                  {isSubmitting ? "Saving..." : companyExists ? "Update Settings" : "Complete Setup"}
+                  {isSubmitting ? (
+                    <Spinner className="text-white" label="Saving settings" />
+                  ) : (
+                    <MdArrowForward className="text-base" />
+                  )}
+                  {isSubmitting
+                    ? "Saving..."
+                    : companyExists
+                      ? "Update Settings"
+                      : "Complete Setup"}
                 </button>
               </div>
             </div>

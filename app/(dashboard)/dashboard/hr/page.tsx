@@ -13,39 +13,32 @@ type CurrentUser = {
   email: string;
   role: string;
   companyId: string;
-  companyName: string;
-};
-
-type CompanySettingsResponse = {
   company: {
+    id: string;
+    name: string;
+    status: string;
     setupCompleted: boolean;
-  } | null;
+  };
 };
 
 export default function HRDashboardPage() {
   const router = useRouter();
   const [user, setUser] = useState<CurrentUser | null>(null);
-  const [companySetupComplete, setCompanySetupComplete] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
     const loadUser = async () => {
       try {
-        const [userResponse, companyResponse] = await Promise.all([fetch("/api/auth/me"), fetch("/api/company/me")]);
-        const data = (await userResponse.json()) as CurrentUser & { message?: string };
+        const userResponse = await fetch("/api/auth/me");
 
         if (!userResponse.ok) {
           router.push("/login");
           return;
         }
 
+        const data = (await userResponse.json()) as CurrentUser;
         setUser(data);
-
-        if (companyResponse.ok) {
-          const companyData = (await companyResponse.json()) as CompanySettingsResponse;
-          setCompanySetupComplete(Boolean(companyData.company?.setupCompleted));
-        }
       } catch {
         setError("Could not load profile.");
       } finally {
@@ -90,6 +83,9 @@ export default function HRDashboardPage() {
     return <div className="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-rose-700">{error || "Unauthorized"}</div>;
   }
 
+  const companySetupComplete = user.company.setupCompleted;
+  const companyName = user.company.name;
+
   return (
     <DashboardLayout
       title="Dashboard"
@@ -104,7 +100,7 @@ export default function HRDashboardPage() {
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.24em] text-indigo-600">Overview</p>
               <h2 className="mt-4 text-3xl font-semibold tracking-tight text-slate-950">
-                Welcome, {user.name}! {companySetupComplete ? `${user.companyName} is configured.` : `Let's set up ${user.companyName}.`}
+                Welcome, {user.name}! {companySetupComplete ? `${companyName} is configured.` : `Let's set up ${companyName}.`}
               </h2>
               <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-600">
                 {companySetupComplete
@@ -124,7 +120,7 @@ export default function HRDashboardPage() {
                 <MdBusiness className="text-base" />
                 Company
               </p>
-              <p className="mt-2 text-xl font-semibold text-slate-950">{user.companyName}</p>
+              <p className="mt-2 text-xl font-semibold text-slate-950">{companyName}</p>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
               <p className="inline-flex items-center gap-2 text-sm font-medium text-slate-500">

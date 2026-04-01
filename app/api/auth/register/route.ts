@@ -16,12 +16,18 @@ export async function POST(request: Request) {
     };
 
     if (!name || !companyName || !phone || !email) {
-      return NextResponse.json({ message: "Missing required fields." }, { status: 400 });
+      return NextResponse.json(
+        { message: "Missing required fields." },
+        { status: 400 },
+      );
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      return NextResponse.json({ message: "Invalid email format." }, { status: 400 });
+      return NextResponse.json(
+        { message: "Invalid email format." },
+        { status: 400 },
+      );
     }
 
     const existingUser = await prisma.user.findUnique({
@@ -30,7 +36,10 @@ export async function POST(request: Request) {
     });
 
     if (existingUser) {
-      return NextResponse.json({ message: "This email is already registered." }, { status: 409 });
+      return NextResponse.json(
+        { message: "This email is already registered." },
+        { status: 409 },
+      );
     }
 
     const tempPassword = generateTempPassword();
@@ -71,7 +80,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json(
       {
-        message: "Registration successful. Check the response for your temporary reset link.",
+        message:
+          "Registration successful. Check the response for your temporary reset link.",
         resetLink,
         resetEmailPreview: buildResetEmailPreview(user.name, token),
       },

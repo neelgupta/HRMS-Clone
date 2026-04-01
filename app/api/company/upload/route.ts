@@ -3,7 +3,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { NextResponse, type NextRequest } from "next/server";
 import { getErrorResponse } from "@/lib/api-response";
-import { requireHRAdmin } from "@/lib/auth-guard";
+import { requireHRAdmin, type AuthenticatedHRUser } from "@/lib/auth-guard";
 
 const uploadDirectory = path.join(process.cwd(), "public", "uploads", "company-assets");
 
@@ -14,6 +14,7 @@ export async function POST(request: NextRequest) {
       return auth.response;
     }
 
+    const { companyId } = auth as AuthenticatedHRUser;
     const formData = await request.formData();
     const file = formData.get("file");
 
@@ -28,7 +29,7 @@ export async function POST(request: NextRequest) {
     await mkdir(uploadDirectory, { recursive: true });
 
     const extension = file.name.includes(".") ? file.name.split(".").pop() : "png";
-    const fileName = `${auth.user.companyId}-${crypto.randomUUID()}.${extension}`;
+    const fileName = `${companyId}-${crypto.randomUUID()}.${extension}`;
     const filePath = path.join(uploadDirectory, fileName);
     const fileBuffer = Buffer.from(await file.arrayBuffer());
 
