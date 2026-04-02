@@ -1,0 +1,36 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: hrms_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: hrms_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - hrms_db_data:/var/lib/postgresql/data
+
+  app:
+    build: .
+    container_name: hrms_app
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: "postgresql://postgres:admin@db:5432/hrms_db"
+      JWT_SECRET: "6de17084520dfd2d5a11b0b7f8bebb04383601ccd69085ea493e027a"
+      EMAIL_HOST: "smtp.gmail.com"
+      EMAIL_PORT: "587"
+      EMAIL_USER: "your@gmail.com"
+      EMAIL_PASS: "your-app-password"
+      EMAIL_FROM: "WorkNest "
+      NEXT_PUBLIC_APP_URL: "http://192.168.1.31:3000"
+    depends_on:
+      - db
+
+volumes:
+  hrms_db_data:
