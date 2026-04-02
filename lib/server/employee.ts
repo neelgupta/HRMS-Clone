@@ -6,6 +6,7 @@ import type {
   DocumentUploadInput,
 } from "@/lib/validations/employee";
 import { Prisma } from "@prisma/client";
+import { hashPassword } from "@/lib/password";
 
 export type EmployeeListItem = {
   id: string;
@@ -92,6 +93,11 @@ export type EmployeeDetail = EmployeeListItem & {
 
 type CreateEmployeeResult = {
   employee: EmployeeDetail;
+  loginCredentials?: {
+    email: string;
+    tempPassword: string;
+    userId: string;
+  };
 };
 
 type UpdateEmployeeResult = {
@@ -128,6 +134,15 @@ async function generateEmployeeCode(companyId: string): Promise<string> {
   const timestamp = Date.now().toString(36).toUpperCase();
   const random = Math.random().toString(36).substring(2, 7).toUpperCase();
   return `${prefix}-${timestamp}-${random}`;
+}
+
+function generateTempPassword(): string {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$";
+  let password = "";
+  for (let i = 0; i < 12; i++) {
+    password += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return password;
 }
 
 async function createAuditLog(params: {
@@ -286,13 +301,45 @@ export async function createEmployee(
     newValues: employee,
   });
 
+  const tempPassword = generateTempPassword();
+  const hashedPassword = await hashPassword(tempPassword);
+
+  const user = await prisma.user.create({
+    data: {
+      name: `${employee.firstName} ${employee.lastName}`,
+      email: employee.email,
+      phone: employee.phone || "",
+      password: hashedPassword,
+      role: "EMPLOYEE",
+      status: "INACTIVE",
+      companyId,
+      employeeId: employee.id,
+    },
+  });
+
+  await createAuditLog({
+    companyId,
+    userId,
+    action: "CREATE",
+    entityType: "User",
+    entityId: user.id,
+    newValues: { role: "EMPLOYEE", email: user.email },
+  });
+
   const flattened = {
     ...employee,
     department: employee.department?.name || null,
     designation: employee.designation?.name || null,
   };
 
-  return { employee: flattened as unknown as EmployeeDetail };
+  return { 
+    employee: flattened as unknown as EmployeeDetail,
+    loginCredentials: {
+      email: employee.email,
+      tempPassword: tempPassword,
+      userId: user.id,
+    }
+  };
   } catch (createError) {
     console.error("Create employee error:", createError);
     throw createError;

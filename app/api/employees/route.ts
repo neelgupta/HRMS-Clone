@@ -45,24 +45,39 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    console.log("Parsed body:", JSON.stringify(body, null, 2));
     const parsed = createEmployeeSchema.parse(body);
-    console.log("Schema parsed successfully");
 
-    const existingEmail = await prisma.employee.findFirst({
+    const existingEmailEmployee = await prisma.employee.findFirst({
       where: { companyId, email: parsed.email.toLowerCase() },
     });
-    console.log("Existing email check done");
 
-    if (existingEmail) {
-      return NextResponse.json({ message: "An employee with this email already exists." }, { status: 409 });
+    if (existingEmailEmployee) {
+      return NextResponse.json(
+        { message: "An employee with this email already exists." },
+        { status: 409 }
+      );
     }
 
-    console.log("Calling createEmployee with:", companyId, userId);
+    const existingEmailUser = await prisma.user.findFirst({
+      where: { email: parsed.email.toLowerCase() },
+    });
+
+    if (existingEmailUser) {
+      return NextResponse.json(
+        { message: "This email is already registered as a user. Please use a different email." },
+        { status: 409 }
+      );
+    }
+
     const result = await createEmployee(companyId, userId, parsed);
-    console.log("Employee created successfully");
     return NextResponse.json(result, { status: 201 });
   } catch (error) {
+    if (error instanceof Error && error.message.includes("Unique constraint")) {
+      return NextResponse.json(
+        { message: "This email is already in use. Please use a different email." },
+        { status: 409 }
+      );
+    }
     console.error("Create employee error:", error);
     return getErrorResponse(error, "Failed to create employee.");
   }

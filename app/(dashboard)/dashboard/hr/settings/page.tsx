@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from "react";
 import { MdAdd, MdEdit, MdDelete, MdBusiness, MdWork } from "react-icons/md";
 import { Spinner } from "@/components/ui/loaders/spinner";
 import { dismissToast, showError, showLoading, showSuccess } from "@/lib/toast";
-import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 
 type Department = {
   id: string;
@@ -50,38 +49,38 @@ function DepartmentModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-xl">
-        <h3 className="text-lg font-semibold text-slate-900">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 dark:bg-black/70">
+      <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-xl dark:bg-slate-800">
+        <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
           {department ? "Edit Department" : "Add Department"}
         </h3>
         <form onSubmit={handleSubmit} className="mt-4 space-y-4">
           <div>
-            <label className="mb-2 block text-sm font-medium text-slate-700">Name</label>
+            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Name</label>
             <input
               type="text"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:focus:border-blue-400 dark:focus:ring-blue-900"
               placeholder="Human Resources"
             />
           </div>
           <div>
-            <label className="mb-2 block text-sm font-medium text-slate-700">Code</label>
+            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Code</label>
             <input
               type="text"
               value={formData.code}
               onChange={(e) => setFormData({ ...formData, code: e.target.value.toLowerCase().replace(/\s+/g, "-") })}
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:focus:border-blue-400 dark:focus:ring-blue-900"
               placeholder="hr"
             />
           </div>
           <div>
-            <label className="mb-2 block text-sm font-medium text-slate-700">Description</label>
+            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Description</label>
             <textarea
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:focus:border-blue-400 dark:focus:ring-blue-900"
               rows={3}
               placeholder="Department description..."
             />
@@ -90,13 +89,13 @@ function DepartmentModal({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+              className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 dark:hover:bg-indigo-500"
             >
               {department ? "Update" : "Create"}
             </button>
@@ -133,49 +132,49 @@ function DesignationModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-xl">
-        <h3 className="text-lg font-semibold text-slate-900">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 dark:bg-black/70">
+      <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-xl dark:bg-slate-800">
+        <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
           {designation ? "Edit Designation" : "Add Designation"}
         </h3>
         <form onSubmit={handleSubmit} className="mt-4 space-y-4">
           <div>
-            <label className="mb-2 block text-sm font-medium text-slate-700">Name</label>
+            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Name</label>
             <input
               type="text"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:focus:border-blue-400 dark:focus:ring-blue-900"
               placeholder="Software Developer"
             />
           </div>
           <div>
-            <label className="mb-2 block text-sm font-medium text-slate-700">Code</label>
+            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Code</label>
             <input
               type="text"
               value={formData.code}
               onChange={(e) => setFormData({ ...formData, code: e.target.value.toLowerCase().replace(/\s+/g, "-") })}
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:focus:border-blue-400 dark:focus:ring-blue-900"
               placeholder="software-developer"
             />
           </div>
           <div>
-            <label className="mb-2 block text-sm font-medium text-slate-700">Level</label>
+            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Level</label>
             <input
               type="number"
               value={formData.level}
               onChange={(e) => setFormData({ ...formData, level: parseInt(e.target.value) || 1 })}
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:focus:border-blue-400 dark:focus:ring-blue-900"
               min={1}
               max={20}
             />
           </div>
           <div>
-            <label className="mb-2 block text-sm font-medium text-slate-700">Description</label>
+            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Description</label>
             <textarea
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:focus:border-blue-400 dark:focus:ring-blue-900"
               rows={3}
               placeholder="Job role description..."
             />
@@ -184,13 +183,13 @@ function DesignationModal({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+              className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 dark:hover:bg-indigo-500"
             >
               {designation ? "Update" : "Create"}
             </button>
@@ -203,31 +202,31 @@ function DesignationModal({
 
 function DepartmentCard({ department, onEdit, onDelete }: { department: Department; onEdit: () => void; onDelete: () => void }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md">
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md dark:border-slate-700 dark:bg-slate-800">
       <div className="flex items-start justify-between">
         <div>
-          <h4 className="text-base font-semibold text-slate-900">{department.name}</h4>
-          <p className="text-xs text-slate-500">Code: {department.code}</p>
+          <h4 className="text-base font-semibold text-slate-900 dark:text-white">{department.name}</h4>
+          <p className="text-xs text-slate-500 dark:text-slate-400">Code: {department.code}</p>
         </div>
-        <span className="rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-medium text-indigo-600">
+        <span className="rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-medium text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400">
           {department._count.employees} employees
         </span>
       </div>
       {department.description && (
-        <p className="mt-2 text-sm text-slate-500">{department.description}</p>
+        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{department.description}</p>
       )}
       <div className="mt-4 flex items-center gap-2">
         <button
           type="button"
           onClick={onEdit}
-          className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+          className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-200"
         >
           <MdEdit className="text-lg" />
         </button>
         <button
           type="button"
           onClick={onDelete}
-          className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-rose-600"
+          className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-rose-600 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-rose-400"
         >
           <MdDelete className="text-lg" />
         </button>
@@ -238,31 +237,31 @@ function DepartmentCard({ department, onEdit, onDelete }: { department: Departme
 
 function DesignationCard({ designation, onEdit, onDelete }: { designation: Designation; onEdit: () => void; onDelete: () => void }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md">
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md dark:border-slate-700 dark:bg-slate-800">
       <div className="flex items-start justify-between">
         <div>
-          <h4 className="text-base font-semibold text-slate-900">{designation.name}</h4>
-          <p className="text-xs text-slate-500">Code: {designation.code}</p>
+          <h4 className="text-base font-semibold text-slate-900 dark:text-white">{designation.name}</h4>
+          <p className="text-xs text-slate-500 dark:text-slate-400">Code: {designation.code}</p>
         </div>
-        <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-600">
+        <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400">
           Level {designation.level}
         </span>
       </div>
       {designation.description && (
-        <p className="mt-2 text-sm text-slate-500">{designation.description}</p>
+        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{designation.description}</p>
       )}
       <div className="mt-4 flex items-center gap-2">
         <button
           type="button"
           onClick={onEdit}
-          className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+          className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-200"
         >
           <MdEdit className="text-lg" />
         </button>
         <button
           type="button"
           onClick={onDelete}
-          className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-rose-600"
+          className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-rose-600 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-rose-400"
         >
           <MdDelete className="text-lg" />
         </button>
@@ -466,15 +465,15 @@ export default function SettingsPage() {
   };
 
   return (
-    <DashboardLayout title="Settings" subtitle="Manage departments, designations & more">
-      <div className="mb-6 flex items-center gap-4 border-b border-slate-200">
+    <>
+      <div className="mb-6 flex items-center gap-4 border-b border-slate-200 dark:border-slate-700">
         <button
           type="button"
           onClick={() => setActiveTab("departments")}
           className={`flex items-center gap-2 border-b-2 px-1 py-4 text-sm font-medium transition ${
             activeTab === "departments"
-              ? "border-indigo-600 text-indigo-600"
-              : "border-transparent text-slate-500 hover:text-slate-700"
+              ? "border-indigo-600 text-indigo-600 dark:text-indigo-400"
+              : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
           }`}
         >
           <MdBusiness className="text-lg" />
@@ -485,8 +484,8 @@ export default function SettingsPage() {
           onClick={() => setActiveTab("designations")}
           className={`flex items-center gap-2 border-b-2 px-1 py-4 text-sm font-medium transition ${
             activeTab === "designations"
-              ? "border-indigo-600 text-indigo-600"
-              : "border-transparent text-slate-500 hover:text-slate-700"
+              ? "border-indigo-600 text-indigo-600 dark:text-indigo-400"
+              : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
           }`}
         >
           <MdWork className="text-lg" />
@@ -506,7 +505,7 @@ export default function SettingsPage() {
                 <button
                   type="button"
                   onClick={() => openModal()}
-                  className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-indigo-700"
+                  className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-indigo-700 dark:hover:bg-indigo-500"
                 >
                   <MdAdd className="text-lg" />
                   Add Department
@@ -514,7 +513,7 @@ export default function SettingsPage() {
               </div>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {departments.length === 0 ? (
-                  <p className="col-span-full py-8 text-center text-slate-500">No departments found.</p>
+                  <p className="col-span-full py-8 text-center text-slate-500 dark:text-slate-400">No departments found.</p>
                 ) : (
                   departments.map((dept) => (
                     <DepartmentCard
@@ -535,7 +534,7 @@ export default function SettingsPage() {
                 <button
                   type="button"
                   onClick={() => openModal()}
-                  className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-indigo-700"
+                  className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-indigo-700 dark:hover:bg-indigo-500"
                 >
                   <MdAdd className="text-lg" />
                   Add Designation
@@ -543,7 +542,7 @@ export default function SettingsPage() {
               </div>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {designations.length === 0 ? (
-                  <p className="col-span-full py-8 text-center text-slate-500">No designations found.</p>
+                  <p className="col-span-full py-8 text-center text-slate-500 dark:text-slate-400">No designations found.</p>
                 ) : (
                   designations.map((desig) => (
                     <DesignationCard
@@ -581,6 +580,6 @@ export default function SettingsPage() {
           />
         )
       )}
-    </DashboardLayout>
+    </>
   );
 }

@@ -65,11 +65,11 @@ export default function EditEmployeePage() {
     return (
       <DashboardLayout title="Edit Employee" subtitle="Update employee information">
         <div className="flex flex-col items-center justify-center py-20">
-          <p className="text-slate-600">Employee not found.</p>
+          <p className="text-slate-600 dark:text-slate-400">Employee not found.</p>
           <button
             type="button"
             onClick={() => router.push("/dashboard/hr/employees")}
-            className="mt-4 text-sm font-medium text-indigo-600 hover:text-indigo-500"
+            className="mt-4 text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400"
           >
             Back to Employees
           </button>
@@ -84,7 +84,7 @@ export default function EditEmployeePage() {
         <button
           type="button"
           onClick={() => router.push(`/dashboard/hr/employees/${employeeId}`)}
-          className="text-sm text-slate-500 hover:text-slate-700"
+          className="text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
         >
           ← Back to Profile
         </button>

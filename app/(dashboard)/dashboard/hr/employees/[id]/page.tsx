@@ -46,11 +46,12 @@ export default function EmployeeDetailPage() {
 
   if (loading) {
     return (
-      <DashboardLayout title="Employee Profile" subtitle="View employee details">
+      <>
+      
         <div className="flex items-center justify-center py-20">
           <Spinner className="text-indigo-600" label="Loading" />
         </div>
-      </DashboardLayout>
+      </>
     );
   }
 
@@ -58,11 +59,11 @@ export default function EmployeeDetailPage() {
     return (
       <DashboardLayout title="Employee Profile" subtitle="View employee details">
         <div className="flex flex-col items-center justify-center py-20">
-          <p className="text-slate-600">{error || "Employee not found."}</p>
+          <p className="text-slate-600 dark:text-slate-400">{error || "Employee not found."}</p>
           <button
             type="button"
             onClick={() => router.push("/dashboard/hr/employees")}
-            className="mt-4 text-sm font-medium text-indigo-600 hover:text-indigo-500"
+            className="mt-4 text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400"
           >
             Back to Employees
           </button>
@@ -72,18 +73,18 @@ export default function EmployeeDetailPage() {
   }
 
   return (
-    <DashboardLayout title="Employee Profile" subtitle={`${employee.firstName} ${employee.lastName}`}>
+    <>
       <div className="mb-6">
         <button
           type="button"
           onClick={() => router.push("/dashboard/hr/employees")}
-          className="text-sm text-slate-500 hover:text-slate-700"
+          className="text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
         >
           ← Back to Employees
         </button>
       </div>
 
       <EmployeeProfile employee={employee} onUpdate={fetchEmployee} />
-    </DashboardLayout>
+    </>
   );
 }

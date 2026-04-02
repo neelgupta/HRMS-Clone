@@ -13,12 +13,12 @@ export function FormField({ label, htmlFor, hint, error, required, children }: F
   return (
     <label htmlFor={htmlFor} className="block space-y-2">
       <div className="flex items-center gap-2">
-        <span className="text-sm font-medium text-slate-700">{label}</span>
-        {required ? <span className="text-xs uppercase tracking-[0.2em] text-indigo-600">Required</span> : null}
+        <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{label}</span>
+        {required ? <span className="text-xs uppercase tracking-[0.2em] text-indigo-600 dark:text-indigo-400">Required</span> : null}
       </div>
-      {hint ? <p className="text-xs text-slate-500">{hint}</p> : null}
+      {hint ? <p className="text-xs text-slate-500 dark:text-slate-400">{hint}</p> : null}
       {children}
-      {error ? <p className="text-sm text-rose-600">{error}</p> : null}
+      {error ? <p className="text-sm text-rose-600 dark:text-rose-400">{error}</p> : null}
     </label>
   );
 }

@@ -1,6 +1,8 @@
 "use client";
 
+import { useTheme } from "@/contexts/theme-context";
 import { MdLogout, MdMenu, MdNotificationsNone, MdOutlineAccountCircle } from "react-icons/md";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 type DashboardTopbarProps = {
   title: string;
@@ -19,6 +21,7 @@ export function DashboardTopbar({
   onMenuClick,
   onLogout,
 }: DashboardTopbarProps) {
+  const { theme } = useTheme();
   const initials = userName
     ?.split(" ")
     .map((part) => part[0])
@@ -27,28 +30,42 @@ export function DashboardTopbar({
     .toUpperCase();
 
   return (
-    <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/85 px-4 py-4 backdrop-blur md:px-6">
+    <header className={`sticky top-0 z-30 border-b px-4 py-4 backdrop-blur md:px-6 ${
+      theme === "dark"
+        ? "border-slate-700 bg-slate-900/85"
+        : "border-slate-200 bg-white/85"
+    }`}>
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-start gap-3">
           <button
             type="button"
             onClick={onMenuClick}
-            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:bg-slate-50 lg:hidden"
+            className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border shadow-sm transition lg:hidden ${
+              theme === "dark"
+                ? "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700"
+                : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+            }`}
           >
             <MdMenu className="text-xl" />
           </button>
 
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-indigo-600">Dashboard</p>
-            <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">{title}</h1>
-            {subtitle ? <p className="mt-1 text-sm leading-6 text-slate-500">{subtitle}</p> : null}
+            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-indigo-600 dark:text-indigo-400">Dashboard</p>
+            <h1 className={`mt-2 text-2xl font-semibold tracking-tight ${theme === "dark" ? "text-white" : "text-slate-950"}`}>{title}</h1>
+            {subtitle ? <p className={`mt-1 text-sm leading-6 ${theme === "dark" ? "text-slate-400" : "text-slate-500"}`}>{subtitle}</p> : null}
           </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
+          <ThemeToggle />
+          
           <button
             type="button"
-            className="relative inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:bg-slate-50"
+            className={`relative inline-flex h-11 w-11 items-center justify-center rounded-2xl border shadow-sm transition ${
+              theme === "dark"
+                ? "border-slate-700 bg-slate-800 text-slate-400 hover:bg-slate-700"
+                : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50"
+            }`}
           >
             <MdNotificationsNone className="text-xl" />
             <span className="absolute right-3 top-3 flex h-2.5 w-2.5 rounded-full bg-indigo-500">
@@ -56,13 +73,17 @@ export function DashboardTopbar({
             </span>
           </button>
 
-          <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
+          <div className={`flex items-center gap-3 rounded-2xl border px-3 py-2 shadow-sm ${
+            theme === "dark"
+              ? "border-slate-700 bg-slate-800"
+              : "border-slate-200 bg-white"
+          }`}>
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-500 text-sm font-semibold text-white">
               {initials || <MdOutlineAccountCircle className="text-2xl" />}
             </div>
             <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-slate-900">{userName || "HR Admin"}</p>
-              <p className="truncate text-xs text-slate-500">{userEmail || "Workspace access"}</p>
+              <p className={`truncate text-sm font-medium ${theme === "dark" ? "text-white" : "text-slate-900"}`}>{userName || "HR Admin"}</p>
+              <p className={`truncate text-xs ${theme === "dark" ? "text-slate-400" : "text-slate-500"}`}>{userEmail || "Workspace access"}</p>
             </div>
           </div>
 
@@ -70,10 +91,14 @@ export function DashboardTopbar({
             <button
               type="button"
               onClick={onLogout}
-              className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+              className={`inline-flex items-center gap-2 rounded-2xl border px-4 py-2.5 text-sm font-semibold shadow-sm transition ${
+                theme === "dark"
+                  ? "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700"
+                  : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+              }`}
             >
-              <MdLogout className="text-base" />
-              Logout
+              <MdLogout className={`text-base ${theme === "dark" ? "text-red-400" : ""}`} />
+              <span className={theme === "dark" ? "text-red-400" : ""}>Logout</span>
             </button>
           ) : null}
         </div>

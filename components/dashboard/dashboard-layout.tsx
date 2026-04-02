@@ -24,10 +24,11 @@ export function DashboardLayout({
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
       <DashboardSidebar mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
 
-      <div className="lg:pl-[292px]">
+      {/* <div className="lg:pl-[292px]"> */}
+       <div>
         <DashboardTopbar
           title={title}
           subtitle={subtitle}

@@ -1,4 +1,3 @@
-import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { EmployeeTable } from "@/components/employees/employee-table";
 import { requireUser } from "@/lib/auth-guard";
 import { listEmployees } from "@/lib/server/employee";
@@ -25,9 +24,5 @@ export default async function EmployeesPage() {
     totalPages: number;
   } = initialData as never;
 
-  return (
-    <DashboardLayout title="Employees" subtitle="Manage your organization workforce">
-      <EmployeeTable initialData={typedData} />
-    </DashboardLayout>
-  );
+  return <EmployeeTable initialData={typedData} />;
 }

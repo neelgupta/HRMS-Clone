@@ -35,6 +35,8 @@ model Company {
   designations         Designation[]
   auditLogs            AuditLog[]
   users                User[]
+  shifts               Shift[]
+  attendancePolicy     AttendancePolicy?
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
 
@@ -262,6 +264,8 @@ model Employee {
   documents            Document[]
   customFieldValues    EmployeeCustomFieldValue[]
   user                 User?
+  attendances          Attendance[]
+  shiftAssignments      ShiftAssignment[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -447,4 +451,144 @@ enum DocumentType {
   PHOTO
   SIGNATURE
   OTHER
+}
+
+model Shift {
+  id                String            @id @default(uuid())
+  companyId         String
+  company           Company           @relation(fields: [companyId], references: [id])
+  name              String
+  code              String
+  startTime         String
+  endTime           String
+  gracePeriodMins   Int               @default(0)
+  halfDayHours      Float             @default(4)
+  minWorkingHours   Float             @default(8)
+  isFlexible        Boolean           @default(false)
+  isNightShift      Boolean           @default(false)
+  isActive          Boolean           @default(true)
+  shiftAssignments  ShiftAssignment[]
+  attendances       Attendance[]
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  @@unique([companyId, code])
+  @@index([companyId])
+  @@map("shifts")
+}
+
+model ShiftAssignment {
+  id         String    @id @default(uuid())
+  employeeId String
+  employee   Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  shiftId    String
+  shift      Shift     @relation(fields: [shiftId], references: [id])
+  effectiveFrom DateTime
+  effectiveTo   DateTime?
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@unique([employeeId, shiftId, effectiveFrom])
+  @@index([employeeId])
+  @@index([shiftId])
+  @@map("shift_assignments")
+}
+
+model Attendance {
+  id             String            @id @default(uuid())
+  employeeId     String
+  employee       Employee          @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  companyId      String
+  date           DateTime          @db.Date
+  shiftId        String?
+  shift          Shift?            @relation(fields: [shiftId], references: [id])
+  clockIn        DateTime?
+  clockOut       DateTime?
+  clockInIp      String?
+  clockOutIp     String?
+  clockInLocation Json?
+  clockOutLocation Json?
+  clockInPhoto   String?
+  clockOutPhoto  String?
+  breakStart     DateTime?
+  breakEnd       DateTime?
+  totalBreakMins Int?
+  totalHours     Float?
+  overtimeHours  Float?
+  status         AttendanceStatus @default(PENDING)
+  remarks        String?
+  regularizations AttendanceRegularization[]
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@unique([employeeId, date])
+  @@index([employeeId])
+  @@index([companyId])
+  @@index([date])
+  @@map("attendances")
+}
+
+model AttendancePolicy {
+  id                    String   @id @default(uuid())
+  companyId             String   @unique
+  company               Company  @relation(fields: [companyId], references: [id])
+  allowLateArrival      Boolean  @default(true)
+  gracePeriodMins       Int      @default(0)
+  allowEarlyDeparture   Boolean  @default(true)
+  earlyDepartureMins    Int      @default(0)
+  halfDayHours          Float    @default(4)
+  minWorkingHours       Float    @default(8)
+  allowOvertime         Boolean  @default(false)
+  maxOvertimeHoursDay   Float    @default(4)
+  deductSalaryForLate   Boolean  @default(false)
+  lateArrivalDeductPerc Float    @default(0)
+  requirePhotoCapture   Boolean  @default(false)
+  requireGpsLocation    Boolean  @default(false)
+  requireIpRestriction  Boolean  @default(false)
+  allowedIps            String[]
+  weeklyOff1            String    @default("SUNDAY")
+  weeklyOff2            String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@map("attendance_policies")
+}
+
+model AttendanceRegularization {
+  id           String               @id @default(uuid())
+  attendanceId String
+  attendance   Attendance           @relation(fields: [attendanceId], references: [id], onDelete: Cascade)
+  employeeId   String
+  requestedClockIn DateTime?
+  requestedClockOut DateTime?
+  reason       String
+  status       RegularizationStatus @default(PENDING)
+  reviewedBy   String?
+  reviewedAt   DateTime?
+  reviewRemarks String?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  @@index([attendanceId])
+  @@index([employeeId])
+  @@index([status])
+  @@map("attendance_regularizations")
+}
+
+enum AttendanceStatus {
+  PENDING
+  PRESENT
+  ABSENT
+  HALF_DAY
+  LATE
+  ON_LEAVE
+  HOLIDAY
+  WEEK_OFF
+}
+
+enum RegularizationStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }

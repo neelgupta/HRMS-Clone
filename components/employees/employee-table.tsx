@@ -110,20 +110,20 @@ export function EmployeeTable({ initialData }: EmployeeTableProps) {
 
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
-      PROBATION: "bg-amber-100 text-amber-700",
-      CONFIRMED: "bg-emerald-100 text-emerald-700",
-      TERMINATED: "bg-rose-100 text-rose-700",
-      RESIGNED: "bg-slate-100 text-slate-700",
-      RETIRED: "bg-blue-100 text-blue-700",
+      PROBATION: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+      CONFIRMED: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
+      TERMINATED: "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400",
+      RESIGNED: "bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300",
+      RETIRED: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
     };
-    return styles[status] || "bg-slate-100 text-slate-700";
+    return styles[status] || "bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300";
   };
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative max-w-md flex-1">
-          <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+          <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500">
             <MdSearch className="text-lg" />
           </span>
           <input
@@ -131,7 +131,7 @@ export function EmployeeTable({ initialData }: EmployeeTableProps) {
             placeholder="Search by name, email, code..."
             value={search}
             onChange={(e) => handleSearch(e.target.value)}
-            className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-12 pr-4 text-sm outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+            className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-12 pr-4 text-sm outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-blue-400 dark:focus:ring-blue-900"
           />
         </div>
 
@@ -139,7 +139,7 @@ export function EmployeeTable({ initialData }: EmployeeTableProps) {
           <button
             type="button"
             onClick={() => loadEmployees({ search })}
-            className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+            className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
           >
             <MdRefresh className="text-lg" />
             Refresh
@@ -149,16 +149,16 @@ export function EmployeeTable({ initialData }: EmployeeTableProps) {
             type="button"
             onClick={handleExport}
             disabled={exporting}
-            className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
           >
-            {exporting ? <Spinner className="text-slate-600" label="Exporting" /> : <MdFileDownload className="text-lg" />}
+            {exporting ? <Spinner className="text-slate-600 dark:text-slate-400" label="Exporting" /> : <MdFileDownload className="text-lg" />}
             Export
           </button>
 
           <button
             type="button"
             onClick={() => router.push("/dashboard/hr/employees/new")}
-            className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-500 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-200 transition hover:-translate-y-0.5 hover:shadow-xl"
+            className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-500 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-200 transition hover:-translate-y-0.5 hover:shadow-xl dark:shadow-indigo-900/50"
           >
             <MdAdd className="text-lg" />
             Add Employee
@@ -166,35 +166,35 @@ export function EmployeeTable({ initialData }: EmployeeTableProps) {
         </div>
       </div>
 
-      <div className="rounded-3xl border border-slate-200 bg-white shadow-sm">
+      <div className="rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-slate-100">
-                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+              <tr className="border-b border-slate-100 dark:border-slate-700">
+                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                   Employee
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                   Code
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                   Department
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                   Designation
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                   Status
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                   Branch
                 </th>
-                <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">
+                <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
               {loading ? (
                 <tr>
                   <td colSpan={7} className="px-6 py-12 text-center">
@@ -204,11 +204,11 @@ export function EmployeeTable({ initialData }: EmployeeTableProps) {
               ) : data.employees.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-6 py-12 text-center">
-                    <p className="text-sm text-slate-500">No employees found.</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">No employees found.</p>
                     <button
                       type="button"
                       onClick={() => router.push("/dashboard/hr/employees/new")}
-                      className="mt-3 text-sm font-medium text-indigo-600 hover:text-indigo-500"
+                      className="mt-3 text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400"
                     >
                       Add your first employee
                     </button>
@@ -216,23 +216,23 @@ export function EmployeeTable({ initialData }: EmployeeTableProps) {
                 </tr>
               ) : (
                 data.employees.map((employee) => (
-                  <tr key={employee.id} className="group hover:bg-slate-50/50">
+                  <tr key={employee.id} className="group hover:bg-slate-50/50 dark:hover:bg-slate-700/50">
                     <td className="px-6 py-4">
                       <div>
-                        <p className="text-sm font-medium text-slate-900">
+                        <p className="text-sm font-medium text-slate-900 dark:text-white">
                           {employee.firstName} {employee.lastName}
                         </p>
-                        <p className="text-xs text-slate-500">{employee.email}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">{employee.email}</p>
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="text-sm font-mono text-slate-600">{employee.employeeCode}</span>
+                      <span className="text-sm font-mono text-slate-600 dark:text-slate-400">{employee.employeeCode}</span>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="text-sm text-slate-700">{employee.department || "—"}</span>
+                      <span className="text-sm text-slate-700 dark:text-slate-300">{employee.department || "—"}</span>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="text-sm text-slate-700">{employee.designation || "—"}</span>
+                      <span className="text-sm text-slate-700 dark:text-slate-300">{employee.designation || "—"}</span>
                     </td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusBadge(employee.employmentStatus)}`}>
@@ -240,13 +240,13 @@ export function EmployeeTable({ initialData }: EmployeeTableProps) {
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="text-sm text-slate-700">{employee.branch?.name || "—"}</span>
+                      <span className="text-sm text-slate-700 dark:text-slate-300">{employee.branch?.name || "—"}</span>
                     </td>
                     <td className="px-6 py-4 text-right">
                       <button
                         type="button"
                         onClick={() => router.push(`/dashboard/hr/employees/${employee.id}`)}
-                        className="text-sm font-medium text-indigo-600 hover:text-indigo-500"
+                        className="text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400"
                       >
                         View
                       </button>
@@ -259,8 +259,8 @@ export function EmployeeTable({ initialData }: EmployeeTableProps) {
         </div>
 
         {data.totalPages > 1 && (
-          <div className="flex items-center justify-between border-t border-slate-100 px-6 py-4">
-            <p className="text-sm text-slate-500">
+          <div className="flex items-center justify-between border-t border-slate-100 px-6 py-4 dark:border-slate-700">
+            <p className="text-sm text-slate-500 dark:text-slate-400">
               Showing {(data.page - 1) * data.limit + 1} to {Math.min(data.page * data.limit, data.total)} of {data.total} employees
             </p>
             <div className="flex items-center gap-2">
@@ -268,18 +268,18 @@ export function EmployeeTable({ initialData }: EmployeeTableProps) {
                 type="button"
                 onClick={() => handlePageChange(data.page - 1)}
                 disabled={data.page <= 1}
-                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
               >
                 Previous
               </button>
-              <span className="px-3 text-sm text-slate-600">
+              <span className="px-3 text-sm text-slate-600 dark:text-slate-400">
                 Page {data.page} of {data.totalPages}
               </span>
               <button
                 type="button"
                 onClick={() => handlePageChange(data.page + 1)}
                 disabled={data.page >= data.totalPages}
-                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
               >
                 Next
               </button>

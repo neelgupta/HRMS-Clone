@@ -1,20 +1,32 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { requireHRAdmin } from "@/lib/auth-guard";
+import { requireUser } from "@/lib/auth-guard";
 import { getErrorResponse } from "@/lib/api-response";
 import { getEmployeeById, updateEmployee, deleteEmployee } from "@/lib/server/employee";
 import { updateEmployeeSchema } from "@/lib/validations/employee";
+import { prisma } from "@/lib/prisma";
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const authResult = await requireHRAdmin(request);
+  const authResult = await requireUser();
 
   if ("response" in authResult) {
     return authResult.response;
   }
 
-  const { companyId } = authResult;
+  const { userId, companyId, role } = authResult;
   const { id } = await params;
 
   try {
+    if (role === "EMPLOYEE") {
+      const user = await prisma.user.findFirst({
+        where: { id: userId },
+        select: { employeeId: true },
+      });
+
+      if (user?.employeeId !== id) {
+        return NextResponse.json({ message: "Not authorized to view this employee." }, { status: 403 });
+      }
+    }
+
     const employee = await getEmployeeById(companyId, id);
 
     if (!employee) {
@@ -28,14 +40,18 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 }
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const authResult = await requireHRAdmin(request);
+  const authResult = await requireUser();
 
   if ("response" in authResult) {
     return authResult.response;
   }
 
-  const { userId, companyId } = authResult;
+  const { userId, companyId, role } = authResult;
   const { id } = await params;
+
+  if (role !== "HR_ADMIN" && role !== "SUPER_ADMIN") {
+    return NextResponse.json({ message: "Not authorized to update employee." }, { status: 403 });
+  }
 
   try {
     const body = await request.json();
@@ -47,7 +63,6 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     if (parsed.email && parsed.email !== existing.email) {
-      const { prisma } = await import("@/lib/prisma");
       const emailExists = await prisma.employee.findFirst({
         where: { companyId, email: parsed.email.toLowerCase(), id: { not: id } },
       });
@@ -64,14 +79,18 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 }
 
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const authResult = await requireHRAdmin(request);
+  const authResult = await requireUser();
 
   if ("response" in authResult) {
     return authResult.response;
   }
 
-  const { userId, companyId } = authResult;
+  const { userId, companyId, role } = authResult;
   const { id } = await params;
+
+  if (role !== "HR_ADMIN" && role !== "SUPER_ADMIN") {
+    return NextResponse.json({ message: "Not authorized to delete employee." }, { status: 403 });
+  }
 
   try {
     await deleteEmployee(companyId, userId, id);

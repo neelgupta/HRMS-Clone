@@ -3,6 +3,22 @@ import { prisma } from "@/lib/prisma";
 import { comparePassword } from "@/lib/password";
 import { signJWT } from "@/lib/jwt";
 
+function getRedirectPath(role: string): string {
+  switch (role) {
+    case "HR_ADMIN":
+    case "SUPER_ADMIN":
+      return "/dashboard/hr";
+    case "PAYROLL_MANAGER":
+      return "/dashboard/hr";
+    case "DEPT_MANAGER":
+      return "/dashboard/hr";
+    case "EMPLOYEE":
+      return "/dashboard/employee";
+    default:
+      return "/dashboard/hr";
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -40,7 +56,13 @@ export async function POST(request: Request) {
       email: user.email,
     });
 
-    const response = NextResponse.json({ redirectTo: "/dashboard/hr" });
+    const redirectTo = getRedirectPath(user.role);
+
+    const response = NextResponse.json({ 
+      redirectTo,
+      role: user.role,
+      name: user.name 
+    });
     response.cookies.set("auth_token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
