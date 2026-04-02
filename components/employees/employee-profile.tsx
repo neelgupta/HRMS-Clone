@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { MdEdit, MdDelete, MdUpload, MdWarning } from "react-icons/md";
+import Image from "next/image";
+import { MdEdit, MdDelete, MdUpload, MdWarning, MdVisibility } from "react-icons/md";
 import { dismissToast, showError, showLoading, showSuccess } from "@/lib/toast";
 import { deleteEmployee, uploadEmployeeDocument, deleteEmployeeDocument, type EmployeeDetail } from "@/lib/client/employee";
 
@@ -16,6 +17,9 @@ export function EmployeeProfile({ employee, onUpdate }: EmployeeProfileProps) {
   const [deleting, setDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [uploadingDoc, setUploadingDoc] = useState(false);
+  const [pendingUploads, setPendingUploads] = useState<Array<{ file: File; preview: string }>>([]);
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const formatDate = (date: string | null) => {
     if (!date) return "—";
@@ -51,31 +55,50 @@ export function EmployeeProfile({ employee, onUpdate }: EmployeeProfileProps) {
     }
   };
 
-  const handleDocumentUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const isImageFile = (fileName: string) => {
+    const ext = fileName.split(".").pop()?.toLowerCase();
+    return ["jpg", "jpeg", "png", "gif", "webp", "bmp"].includes(ext || "");
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    const newPreviews = files.map((file) => ({
+      file,
+      preview: URL.createObjectURL(file),
+    }));
+
+    setPendingUploads((prev) => [...prev, ...newPreviews]);
+    e.target.value = "";
+  };
+
+  const handleUploadPendingFiles = async () => {
+    if (pendingUploads.length === 0) return;
 
     setUploadingDoc(true);
-    const toastId = showLoading("Uploading document...");
+    const toastId = showLoading(`Uploading ${pendingUploads.length} document(s)...`);
 
     try {
-      const formData = new FormData();
-      formData.append("employeeId", employee.id);
-      formData.append("type", "OTHER");
-      formData.append("name", file.name);
-      formData.append("file", file);
+      for (const { file } of pendingUploads) {
+        const formData = new FormData();
+        formData.append("employeeId", employee.id);
+        formData.append("type", "OTHER");
+        formData.append("name", file.name);
+        formData.append("file", file);
 
-      const result = await uploadEmployeeDocument(formData);
+        const result = await uploadEmployeeDocument(formData);
 
-      if (result.error) {
-        dismissToast(toastId);
-        showError(result.error);
-        return;
+        if (result.error) {
+          dismissToast(toastId);
+          showError(result.error);
+          return;
+        }
       }
 
       dismissToast(toastId);
-      showSuccess("Document uploaded successfully.");
-
+      showSuccess("Documents uploaded successfully.");
+      setPendingUploads([]);
       if (onUpdate) {
         onUpdate();
       }
@@ -84,8 +107,16 @@ export function EmployeeProfile({ employee, onUpdate }: EmployeeProfileProps) {
       showError("Something went wrong. Please try again.");
     } finally {
       setUploadingDoc(false);
-      e.target.value = "";
     }
+  };
+
+  const removePendingUpload = (index: number) => {
+    setPendingUploads((prev) => {
+      const updated = [...prev];
+      URL.revokeObjectURL(updated[index].preview);
+      updated.splice(index, 1);
+      return updated;
+    });
   };
 
   const handleDocumentDelete = async (documentId: string) => {
@@ -147,8 +178,19 @@ export function EmployeeProfile({ employee, onUpdate }: EmployeeProfileProps) {
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-xl font-semibold text-white shadow-lg shadow-indigo-200">
-            {employee.firstName.charAt(0)}{employee.lastName.charAt(0)}
+          <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-xl font-semibold text-white shadow-lg shadow-indigo-200">
+            {employee.photoUrl ? (
+              <Image
+                src={employee.photoUrl}
+                alt={`${employee.firstName} ${employee.lastName}`}
+                fill
+                className="object-cover"
+              />
+            ) : (
+              <span className="absolute inset-0 flex items-center justify-center">
+                {employee.firstName.charAt(0)}{employee.lastName.charAt(0)}
+              </span>
+            )}
           </div>
           <div>
             <div className="flex items-center gap-3">
@@ -250,39 +292,126 @@ export function EmployeeProfile({ employee, onUpdate }: EmployeeProfileProps) {
             <div className="mt-6 border-t border-slate-100 pt-6">
               <div className="flex items-center justify-between mb-4">
                 <h4 className="text-sm font-medium text-slate-900">Uploaded Documents</h4>
-                <label className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 cursor-pointer">
-                  <MdUpload className="text-lg" />
-                  {uploadingDoc ? "Uploading..." : "Upload"}
-                  <input
-                    type="file"
-                    className="hidden"
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    onChange={handleDocumentUpload}
-                    disabled={uploadingDoc}
-                  />
-                </label>
+                <div className="flex items-center gap-2">
+                  {pendingUploads.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleUploadPendingFiles}
+                      disabled={uploadingDoc}
+                      className="inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <MdUpload className="text-lg" />
+                      {uploadingDoc ? "Uploading..." : `Upload ${pendingUploads.length} file(s)`}
+                    </button>
+                  )}
+                  <label className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 cursor-pointer">
+                    <MdUpload className="text-lg" />
+                    Select Files
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      className="hidden"
+                      accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.bmp"
+                      onChange={handleFileSelect}
+                      disabled={uploadingDoc}
+                      multiple
+                    />
+                  </label>
+                </div>
               </div>
 
-              {employee.documents.length === 0 ? (
+              {pendingUploads.length > 0 && (
+                <div className="mb-4">
+                  <p className="mb-2 text-xs font-medium text-slate-500">Pending Upload Preview</p>
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                    {pendingUploads.map((upload, index) => (
+                      <div key={index} className="group relative rounded-xl border border-slate-200 bg-slate-50 overflow-hidden">
+                        {isImageFile(upload.file.name) ? (
+                          <div className="aspect-square relative">
+                            <Image
+                              src={upload.preview}
+                              alt={upload.file.name}
+                              fill
+                              className="object-cover"
+                            />
+                          </div>
+                        ) : (
+                          <div className="flex aspect-square items-center justify-center">
+                            <span className="text-4xl font-semibold uppercase text-slate-400">
+                              {upload.file.name.split(".").pop()}
+                            </span>
+                          </div>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => removePendingUpload(index)}
+                          className="absolute right-1 top-1 rounded-full bg-rose-500 p-1 text-white opacity-0 transition-opacity group-hover:opacity-100"
+                        >
+                          <MdDelete className="text-sm" />
+                        </button>
+                        <p className="truncate px-2 py-1 text-xs text-slate-600">{upload.file.name}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {employee.documents.length === 0 && pendingUploads.length === 0 ? (
                 <p className="text-sm text-slate-500">No documents uploaded yet.</p>
               ) : (
                 <div className="space-y-2">
                   {employee.documents.map((doc) => (
                     <div key={doc.id} className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
-                      <div>
-                        <p className="text-sm font-medium text-slate-900">{doc.name}</p>
-                        <p className="text-xs text-slate-500">
-                          {documentTypeLabels[doc.type] || doc.type} • {formatDate(doc.expiryDate)}
-                          {doc.isExpired && <span className="ml-2 text-rose-500">Expired</span>}
-                        </p>
+                      <div className="flex items-center gap-3">
+                        {isImageFile(doc.name) && doc.fileUrl ? (
+                          <button
+                            type="button"
+                            onClick={() => setLightboxImage(doc.fileUrl)}
+                            className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-lg border border-slate-200"
+                          >
+                            <Image
+                              src={doc.fileUrl}
+                              alt={doc.name}
+                              fill
+                              className="object-cover"
+                            />
+                            <div className="absolute inset-0 flex items-center justify-center bg-slate-900/50 opacity-0 transition-opacity hover:opacity-100">
+                              <MdVisibility className="text-white text-lg" />
+                            </div>
+                          </button>
+                        ) : (
+                          <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white">
+                            <span className="text-sm font-semibold uppercase text-slate-400">
+                              {doc.name.split(".").pop()}
+                            </span>
+                          </div>
+                        )}
+                        <div>
+                          <p className="text-sm font-medium text-slate-900">{doc.name}</p>
+                          <p className="text-xs text-slate-500">
+                            {documentTypeLabels[doc.type] || doc.type} • {formatDate(doc.expiryDate)}
+                            {doc.isExpired && <span className="ml-2 text-rose-500">Expired</span>}
+                          </p>
+                        </div>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => handleDocumentDelete(doc.id)}
-                        className="text-sm text-rose-600 hover:text-rose-500"
-                      >
-                        <MdDelete />
-                      </button>
+                      <div className="flex items-center gap-2">
+                        {isImageFile(doc.name) && doc.fileUrl && (
+                          <button
+                            type="button"
+                            onClick={() => setLightboxImage(doc.fileUrl)}
+                            className="text-slate-500 hover:text-indigo-600"
+                          >
+                            <MdVisibility />
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleDocumentDelete(doc.id)}
+                          className="text-sm text-rose-600 hover:text-rose-500"
+                        >
+                          <MdDelete />
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -364,6 +493,30 @@ export function EmployeeProfile({ employee, onUpdate }: EmployeeProfileProps) {
                 {deleting ? "Deleting..." : "Delete"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {lightboxImage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm"
+          onClick={() => setLightboxImage(null)}
+        >
+          <button
+            type="button"
+            onClick={() => setLightboxImage(null)}
+            className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white transition hover:bg-white/20"
+          >
+            <MdDelete className="text-xl" />
+          </button>
+          <div className="relative max-h-[90vh] max-w-[90vw]" onClick={(e) => e.stopPropagation()}>
+            <Image
+              src={lightboxImage}
+              alt="Document preview"
+              width={1200}
+              height={800}
+              className="max-h-[90vh] w-auto rounded-2xl object-contain"
+            />
           </div>
         </div>
       )}
