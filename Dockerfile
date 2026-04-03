@@ -40,9 +40,8 @@ COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma.config.ts ./
 
-COPY --from=prod-deps /app/node_modules/prisma ./node_modules/prisma
-COPY --from=prod-deps /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+# Full prod node_modules for Prisma CLI only (migrate needs pathe and transitive deps)
+COPY --from=prod-deps /app/node_modules /prisma-cli/node_modules
 
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
