@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { useSecureAuthCookie } from "@/lib/auth-cookie";
 import { prisma } from "@/lib/prisma";
 import { comparePassword } from "@/lib/password";
 import { signJWT } from "@/lib/jwt";
@@ -58,14 +59,14 @@ export async function POST(request: Request) {
 
     const redirectTo = getRedirectPath(user.role);
 
-    const response = NextResponse.json({ 
+    const response = NextResponse.json({
       redirectTo,
       role: user.role,
-      name: user.name 
+      name: user.name,
     });
     response.cookies.set("auth_token", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: useSecureAuthCookie(request),
       sameSite: "lax",
       maxAge: 60 * 60 * 24 * 7,
       path: "/",

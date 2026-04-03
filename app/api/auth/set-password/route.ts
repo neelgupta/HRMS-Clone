@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { useSecureAuthCookie } from "@/lib/auth-cookie";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/password";
 import { signJWT } from "@/lib/jwt";
@@ -80,7 +81,7 @@ export async function POST(request: Request) {
 
     response.cookies.set("auth_token", jwt, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: useSecureAuthCookie(request),
       sameSite: "lax",
       maxAge: 60 * 60 * 24 * 7,
       path: "/",
