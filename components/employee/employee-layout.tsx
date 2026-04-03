@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect, Suspense, ReactNode } from "react";
+import { useState, useEffect, Suspense, ReactNode, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { EmployeeSidebar, EmployeeTopbar, useEmployeeLogout } from "@/components/employee";
 import { PageLoader } from "@/components/ui/loader";
+import { useTheme } from "@/contexts/theme-context";
 
 type EmployeeLayoutProps = {
   children: ReactNode;
@@ -35,8 +36,37 @@ type NotificationItem = {
   createdAt: string;
 };
 
+// Cache for API responses
+let profileCache: { data: EmployeeProfile | null; timestamp: number } | null = null;
+let notificationsCache: { data: { count: number; notifications: NotificationItem[] }; timestamp: number } | null = null;
+const CACHE_DURATION = 30000; // 30 seconds
+
+async function fetchWithCache<T>(
+  url: string,
+  cache: { data: T | null; timestamp: number } | null,
+  credentials: RequestCredentials = "include"
+): Promise<T | null> {
+  const now = Date.now();
+  
+  if (cache && now - cache.timestamp < CACHE_DURATION) {
+    return cache.data;
+  }
+  
+  try {
+    const res = await fetch(url, { credentials });
+    if (res.ok) {
+      const data = await res.json();
+      return data as T;
+    }
+  } catch (e) {
+    console.error("Fetch error:", e);
+  }
+  return null;
+}
+
 export function EmployeeLayout({ children, title, subtitle }: EmployeeLayoutProps) {
   const router = useRouter();
+  const { mounted } = useTheme();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profile, setProfile] = useState<EmployeeProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -45,58 +75,84 @@ export function EmployeeLayout({ children, title, subtitle }: EmployeeLayoutProp
   const handleLogout = useEmployeeLogout();
 
   useEffect(() => {
-    const loadProfile = async () => {
+    let isMounted = true;
+    
+    async function loadData() {
       try {
-        const response = await fetch("/api/employees/me");
-        if (response.ok) {
-          const data = await response.json();
-          setProfile(data);
-        }
-      } catch {
-        console.error("Failed to load profile");
-      } finally {
-        setLoading(false);
-      }
-    };
-    void loadProfile();
-  }, []);
+        const res = await fetch("/api/employees/dashboard", { credentials: "include" });
+        
+        if (!isMounted) return;
 
-  useEffect(() => {
-    const fetchNotifications = async () => {
-      try {
-        const res = await fetch("/api/leave/notifications?unread=true", { credentials: "include" });
         if (res.ok) {
           const data = await res.json();
+          setProfile(data.profile);
+          
           const notifications = data.notifications || [];
-          setNotificationCount(notifications.length);
+          setNotificationCount(data.unreadCount || 0);
           setRecentNotifications(notifications.slice(0, 5));
         }
-      } catch {
-        console.error("Failed to fetch notifications");
+      } catch (e) {
+        console.error("Failed to load data:", e);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
       }
-    };
+    }
 
-    fetchNotifications();
-    const interval = setInterval(fetchNotifications, 30000);
-    return () => clearInterval(interval);
+    loadData();
+
+    // Poll for notifications every 30 seconds (fast count-only endpoint)
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch("/api/leave/notifications?count=true", { credentials: "include" });
+        if (res.ok) {
+          const data = await res.json();
+          setNotificationCount(data.count || data.unreadCount || 0);
+        }
+      } catch (e) {
+        console.error("Failed to fetch notifications:", e);
+      }
+    }, 30000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
   }, []);
 
-  const markNotificationAsRead = async (id: string) => {
+  const markNotificationAsRead = useCallback(async (id: string) => {
     try {
-      const res = await fetch(`/api/leave/notifications/${id}`, {
+      await fetch(`/api/leave/notifications/${id}`, {
         method: "PUT",
         credentials: "include",
       });
-      if (res.ok) {
-        setNotificationCount((prev) => Math.max(0, prev - 1));
-        setRecentNotifications((prev) =>
-          prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
-        );
-      }
-    } catch {
-      console.error("Failed to mark notification as read");
+      setNotificationCount(prev => Math.max(0, prev - 1));
+      setRecentNotifications(prev =>
+        prev.map(n => n.id === id ? { ...n, isRead: true } : n)
+      );
+    } catch (e) {
+      console.error("Failed to mark notification as read:", e);
     }
-  };
+  }, []);
+
+  const markAllNotificationsAsRead = useCallback(async () => {
+    try {
+      const unreadNotifications = recentNotifications.filter((n) => !n.isRead);
+      await Promise.all(
+        unreadNotifications.map((n) =>
+          fetch(`/api/leave/notifications/${n.id}`, {
+            method: "PUT",
+            credentials: "include",
+          })
+        )
+      );
+      setNotificationCount(0);
+      setRecentNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+    } catch (e) {
+      console.error("Failed to mark all notifications as read:", e);
+    }
+  }, [recentNotifications]);
 
   const fullName = profile?.employee
     ? `${profile.employee.firstName} ${profile.employee.lastName}`
@@ -105,6 +161,17 @@ export function EmployeeLayout({ children, title, subtitle }: EmployeeLayoutProp
   const initials = profile?.employee
     ? `${profile.employee.firstName.charAt(0)}${profile.employee.lastName.charAt(0)}`
     : "E";
+
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center">
+        <div className="animate-pulse flex flex-col items-center gap-4">
+          <div className="w-12 h-12 bg-slate-200 dark:bg-slate-700 rounded-2xl"></div>
+          <div className="w-32 h-4 bg-slate-200 dark:bg-slate-700 rounded-lg"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-indigo-950">
@@ -123,6 +190,7 @@ export function EmployeeLayout({ children, title, subtitle }: EmployeeLayoutProp
           notificationCount={notificationCount}
           notifications={recentNotifications}
           onMarkAsRead={markNotificationAsRead}
+          onMarkAllAsRead={markAllNotificationsAsRead}
           notificationHref="/dashboard/employee/notifications"
         />
 

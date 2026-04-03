@@ -43,6 +43,9 @@ function NavItemComponent({
   onClose: () => void;
 }) {
   const Icon = item.icon;
+  const { theme, mounted } = useTheme();
+  const isDark = mounted && theme === "dark";
+  
   const isRoot = item.href === "/dashboard/employee";
   const active = isRoot ? isActive : isActive;
 
@@ -53,23 +56,25 @@ function NavItemComponent({
       className={`flex items-center gap-3 rounded-xl px-3 py-3 transition-all duration-200 ${
         active 
           ? "bg-gradient-to-r from-indigo-500/10 to-indigo-500/5 dark:from-indigo-400/20 dark:to-indigo-400/10 shadow-sm ring-1 ring-indigo-200 dark:ring-indigo-800/50" 
-          : "hover:bg-slate-100 dark:hover:bg-slate-800/50"
+          : isDark ? "hover:bg-slate-800/50" : "hover:bg-slate-100"
       }`}
     >
       <span
         className={`flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-200 ${
           active
             ? "bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-200/50 dark:shadow-indigo-900/30"
-            : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
+            : isDark 
+              ? "bg-slate-800 text-slate-400 hover:bg-slate-700" 
+              : "bg-slate-100 text-slate-500 hover:bg-slate-200"
         }`}
       >
         <Icon className="text-lg" />
       </span>
       <span className="flex-1">
-        <span className={`block text-sm font-medium transition-colors ${active ? "text-indigo-700 dark:text-indigo-300" : "text-slate-700 dark:text-slate-300"}`}>
+        <span className={`block text-sm font-medium transition-colors ${active ? "text-indigo-700 dark:text-indigo-300" : isDark ? "text-slate-300" : "text-slate-700"}`}>
           {item.label}
         </span>
-        <span className="block text-xs text-slate-400 dark:text-slate-500">Open section</span>
+        <span className={`block text-xs ${isDark ? "text-slate-500" : "text-slate-400"}`}>Open section</span>
       </span>
     </Link>
   );
@@ -84,7 +89,7 @@ type EmployeeSidebarProps = {
 
 export function EmployeeSidebar({ mobileOpen, onClose, userName = "Employee", activeItem }: EmployeeSidebarProps) {
   const pathname = usePathname();
-  const { theme } = useTheme();
+  const { theme, mounted } = useTheme();
 
   const isActive = (itemHref: string) => {
     if (itemHref === "/dashboard/employee") {
@@ -92,6 +97,8 @@ export function EmployeeSidebar({ mobileOpen, onClose, userName = "Employee", ac
     }
     return pathname.startsWith(itemHref);
   };
+
+  const isDark = mounted && theme === "dark";
 
   return (
     <>
@@ -108,19 +115,19 @@ export function EmployeeSidebar({ mobileOpen, onClose, userName = "Employee", ac
         className={`fixed inset-y-0 left-0 z-50 flex w-[292px] flex-col border-r transition-all duration-300 lg:translate-x-0 ${
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         } ${
-          theme === "dark" 
+          isDark 
             ? "bg-slate-900 border-slate-800" 
             : "bg-white border-slate-200"
         }`}
       >
         <div className={`flex items-center justify-between border-b px-5 py-5 ${
-          theme === "dark" ? "border-slate-800" : "border-slate-200"
+          isDark ? "border-slate-800" : "border-slate-200"
         }`}>
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.28em] bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
               WorkNest
             </p>
-            <h2 className={`mt-2 text-xl font-semibold ${theme === "dark" ? "text-white" : "text-slate-950"}`}>
+            <h2 className={`mt-2 text-xl font-semibold ${isDark ? "text-white" : "text-slate-950"}`}>
               Employee Portal
             </h2>
           </div>
@@ -128,7 +135,7 @@ export function EmployeeSidebar({ mobileOpen, onClose, userName = "Employee", ac
             type="button"
             onClick={onClose}
             className={`rounded-xl border px-3 py-2 text-sm font-medium transition hover:bg-slate-100 dark:hover:bg-slate-800 lg:hidden ${
-              theme === "dark" ? "border-slate-700 text-slate-400 bg-slate-800" : "border-slate-200 text-slate-600 bg-white"
+              isDark ? "border-slate-700 text-slate-400 bg-slate-800" : "border-slate-200 text-slate-600 bg-white"
             }`}
           >
             Close
@@ -156,14 +163,14 @@ export function EmployeeSidebar({ mobileOpen, onClose, userName = "Employee", ac
           </nav>
         </div>
 
-        <div className={`border-t px-5 py-5 ${theme === "dark" ? "border-slate-800" : "border-slate-200"}`}>
+        <div className={`border-t px-5 py-5 ${isDark ? "border-slate-800" : "border-slate-200"}`}>
           <div className={`rounded-2xl p-4 ${
-            theme === "dark" ? "bg-slate-800/50" : "bg-slate-50"
+            isDark ? "bg-slate-800/50" : "bg-slate-50"
           }`}>
-            <p className={`text-sm font-medium ${theme === "dark" ? "text-slate-200" : "text-slate-900"}`}>
+            <p className={`text-sm font-medium ${isDark ? "text-slate-200" : "text-slate-900"}`}>
               Need help?
             </p>
-            <p className={`mt-1 text-xs leading-6 ${theme === "dark" ? "text-slate-400" : "text-slate-500"}`}>
+            <p className={`mt-1 text-xs leading-6 ${isDark ? "text-slate-400" : "text-slate-500"}`}>
               Contact HR for any queries about your account.
             </p>
           </div>

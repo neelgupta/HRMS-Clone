@@ -18,41 +18,35 @@ function getSystemTheme(): Theme {
   return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
+function getInitialTheme(): Theme {
+  if (typeof window === "undefined") return "light";
+  const stored = localStorage.getItem("theme") as Theme | null;
+  if (stored === "light" || stored === "dark") return stored;
+  return getSystemTheme();
+}
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>("light");
   const [mounted, setMounted] = useState(false);
+  const [theme, setThemeState] = useState<Theme>("light");
 
   useEffect(() => {
-    const stored = localStorage.getItem("theme") as Theme | null;
-    const initialTheme = stored === "light" || stored === "dark" 
-      ? stored 
-      : getSystemTheme();
-    
+    const initialTheme = getInitialTheme();
     setThemeState(initialTheme);
     setMounted(true);
   }, []);
-
-  useEffect(() => {
-    if (!mounted) return;
-    
-    const classList = document.documentElement.classList;
-    if (theme === "dark") {
-      classList.add("dark");
-    } else {
-      classList.remove("dark");
-    }
-  }, [theme, mounted]);
 
   const toggleTheme = useCallback(() => {
     setThemeState((prev) => {
       const newTheme = prev === "light" ? "dark" : "light";
       localStorage.setItem("theme", newTheme);
+      document.documentElement.classList.toggle("dark", newTheme === "dark");
       return newTheme;
     });
   }, []);
 
   const setTheme = useCallback((newTheme: Theme) => {
     localStorage.setItem("theme", newTheme);
+    document.documentElement.classList.toggle("dark", newTheme === "dark");
     setThemeState(newTheme);
   }, []);
 
