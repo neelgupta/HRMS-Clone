@@ -163,8 +163,8 @@ async function createAuditLog(params: {
       action: params.action,
       entityType: params.entityType,
       entityId: params.entityId,
-      oldValues: params.oldValues as Prisma.JsonValue | undefined,
-      newValues: params.newValues as Prisma.JsonValue | undefined,
+      oldValues: params.oldValues ?? undefined,
+      newValues: params.newValues ?? undefined,
       ipAddress: params.ipAddress,
       userAgent: params.userAgent,
     },
@@ -674,8 +674,8 @@ export async function getEmployeeStats(companyId: string) {
   const [total, byDepartment, byStatus, byEmploymentType, expiringDocuments] = await Promise.all([
     prisma.employee.count({ where: { companyId } }),
     prisma.employee.groupBy({
-      by: ["department"],
-      where: { companyId, department: { not: null } },
+      by: ["departmentId"],
+      where: { companyId, departmentId: { not: null } },
       _count: { id: true },
     }),
     prisma.employee.groupBy({
@@ -709,9 +709,16 @@ export async function getEmployeeStats(companyId: string) {
     }),
   ]);
 
+  const departmentIds = byDepartment.map((d) => d.departmentId).filter(Boolean) as string[];
+  const departments = await prisma.department.findMany({
+    where: { id: { in: departmentIds } },
+    select: { id: true, name: true },
+  });
+  const deptMap = new Map(departments.map((d) => [d.id, d.name]));
+
   return {
     total,
-    byDepartment: byDepartment.map((d) => ({ department: d.department, count: d._count.id })),
+    byDepartment: byDepartment.map((d) => ({ department: d.departmentId ? (deptMap.get(d.departmentId) ?? "Unknown") : "Unknown", count: d._count.id })),
     byStatus: byStatus.map((s) => ({ status: s.employmentStatus, count: s._count.id })),
     byEmploymentType: byEmploymentType.map((t) => ({ type: t.employmentType, count: t._count.id })),
     expiringDocuments,
@@ -786,8 +793,7 @@ export async function getOrganizationChart(companyId: string): Promise<OrgChartN
   const employees = await prisma.employee.findMany({
     where: {
       companyId,
-      employmentStatus: { not: "TERMINATED" },
-      employmentStatus: { not: "RESIGNED" },
+      employmentStatus: { notIn: ["TERMINATED", "RESIGNED"] },
     },
     select: {
       id: true,

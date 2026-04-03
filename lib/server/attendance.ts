@@ -112,8 +112,8 @@ async function createAuditLog(params: {
       action: params.action,
       entityType: params.entityType,
       entityId: params.entityId,
-      oldValues: params.oldValues as Prisma.JsonValue | undefined,
-      newValues: params.newValues as Prisma.JsonValue | undefined,
+      oldValues: params.oldValues ?? undefined,
+      newValues: params.newValues ?? undefined,
     },
   });
 }
@@ -379,7 +379,7 @@ export async function clockIn(
       shiftId: shift?.id,
       clockIn: new Date(),
       clockInIp: input.clockInIp,
-      clockInLocation: input.clockInLocation as Prisma.JsonValue,
+      clockInLocation: input.clockInLocation ?? undefined,
       clockInPhoto: input.clockInPhoto,
       status,
       remarks: input.remarks || remarks,
@@ -472,7 +472,7 @@ export async function clockOut(
     data: {
       clockOut: new Date(),
       clockOutIp: input.clockOutIp,
-      clockOutLocation: input.clockOutLocation as Prisma.JsonValue,
+      clockOutLocation: input.clockOutLocation ?? undefined,
       clockOutPhoto: input.clockOutPhoto,
       totalHours,
       overtimeHours,
@@ -1053,6 +1053,8 @@ export async function getAttendancePolicy(
     requireGpsLocation: policy.requireGpsLocation,
     requireIpRestriction: policy.requireIpRestriction,
     allowedIps: policy.allowedIps as string[],
+    weeklyOff1: policy.weeklyOff1,
+    weeklyOff2: policy.weeklyOff2 ?? undefined,
   };
 }
 

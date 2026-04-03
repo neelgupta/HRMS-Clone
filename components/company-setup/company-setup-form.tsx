@@ -53,18 +53,12 @@ export function CompanySetupForm() {
   const [companyExists, setCompanyExists] = useState(false);
   const [holidayInput, setHolidayInput] = useState("");
 
-  const {
-    control,
-    register,
-    handleSubmit,
-    reset,
-    watch,
-    setValue,
-    formState: { errors, isSubmitting },
-  } = useForm<CompanySetupInput>({
-    resolver: zodResolver(companySetupSchema),
+  const form = useForm<CompanySetupInput>({
+    resolver: zodResolver(companySetupSchema) as any,
     defaultValues: getDefaultCompanySetupValues(),
   });
+
+  const { register, control, handleSubmit, watch, setValue, reset, formState: { errors, isSubmitting } } = form;
 
   const addresses = useFieldArray({ control, name: "addresses" });
   const branches = useFieldArray({ control, name: "branches" });
@@ -86,7 +80,7 @@ export function CompanySetupForm() {
           setCompanyExists(true);
           reset(companyData.company.values);
         } else {
-          reset(getDefaultCompanySetupValues(userData.companyName));
+          reset(getDefaultCompanySetupValues(userData.company?.name || ""));
         }
       } catch {
         const message = "Could not load company setup.";
@@ -114,9 +108,11 @@ export function CompanySetupForm() {
         const data = await saveCompanySetupRequest(payload, companyExists);
 
         setCompanyExists(true);
-        reset(data.company.values);
         dismissToast(toastId);
         showSuccess(data.message || "Saved successfully.");
+        if (data.company) {
+          reset(data.company.values);
+        }
         startTransition(() => router.refresh());
       } catch (error) {
         if (error instanceof Error && error.message === "Unauthorized.") {
@@ -205,7 +201,7 @@ export function CompanySetupForm() {
               Company Settings
             </p>
             <h1 className="mt-3 text-3xl font-semibold text-slate-950 dark:text-white">
-              Configure {values.companyName || user.companyName}
+              Configure {values.companyName || user.company?.name}
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-600 dark:text-slate-400">
               Build the core operating profile for your HR workspace. Save a

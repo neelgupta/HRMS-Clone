@@ -160,14 +160,18 @@ export async function fetchEmployeeById(id: string): Promise<ApiResponse<Employe
   }
 }
 
-export async function createEmployee(values: CreateEmployeeInput): Promise<ApiResponse<{ 
+export type LoginCredentials = {
+  email: string;
+  tempPassword: string;
+  userId: string;
+};
+
+export type CreateEmployeeResponse = {
   employee: EmployeeDetail;
-  loginCredentials?: {
-    email: string;
-    tempPassword: string;
-    userId: string;
-  };
-}>> {
+  loginCredentials?: LoginCredentials;
+};
+
+export async function createEmployee(values: CreateEmployeeInput): Promise<ApiResponse<CreateEmployeeResponse>> {
   try {
     const response = await fetch("/api/employees", {
       method: "POST",
@@ -180,21 +184,14 @@ export async function createEmployee(values: CreateEmployeeInput): Promise<ApiRe
       return { error: data.message || "Failed to create employee." };
     }
 
-    const data = await parseJson<{ 
-      employee: EmployeeDetail;
-      loginCredentials?: {
-        email: string;
-        tempPassword: string;
-        userId: string;
-      };
-    }>(response);
+    const data = await parseJson<CreateEmployeeResponse>(response);
     return { data };
   } catch {
     return { error: "Something went wrong. Please try again." };
   }
 }
 
-export async function updateEmployee(values: UpdateEmployeeInput): Promise<ApiResponse<{ employee: EmployeeDetail }>> {
+export async function updateEmployee(values: UpdateEmployeeInput): Promise<ApiResponse<CreateEmployeeResponse>> {
   try {
     const response = await fetch(`/api/employees/${values.id}`, {
       method: "PUT",
@@ -207,7 +204,7 @@ export async function updateEmployee(values: UpdateEmployeeInput): Promise<ApiRe
       return { error: data.message || "Failed to update employee." };
     }
 
-    const data = await parseJson<{ employee: EmployeeDetail }>(response);
+    const data = await parseJson<CreateEmployeeResponse>(response);
     return { data };
   } catch {
     return { error: "Something went wrong. Please try again." };

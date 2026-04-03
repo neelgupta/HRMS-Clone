@@ -23,31 +23,36 @@ const TIME_ZONES = [
   "Asia/Singapore",
 ] as const;
 
-const emptyToUndefined = (value: unknown) => {
-  if (typeof value === "string" && value.trim() === "") {
-    return undefined;
-  }
+const optionalTrimmedString = z
+  .string()
+  .trim()
+  .max(255)
+  .optional()
+  .transform((val) => (val === "" ? undefined : val));
 
-  return value;
-};
+const dateStringSchema = z
+  .string()
+  .trim()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD format.")
+  .optional()
+  .transform((val) => (val === "" ? undefined : val));
 
-const optionalTrimmedString = z.preprocess(emptyToUndefined, z.string().trim().max(255).optional());
-const dateStringSchema = z.preprocess(
-  emptyToUndefined,
-  z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD format.").optional(),
-);
-const emailSchema = z.preprocess(
-  emptyToUndefined,
-  z.string().trim().email("Enter a valid email address.").optional(),
-);
-const websiteSchema = z.preprocess(
-  emptyToUndefined,
-  z
-    .string()
-    .trim()
-    .refine((value) => /^https?:\/\/.+/i.test(value), "Website must start with http:// or https://")
-    .optional(),
-);
+const emailSchema = z
+  .string()
+  .trim()
+  .email("Enter a valid email address.")
+  .optional()
+  .transform((val) => (val === "" ? undefined : val));
+
+const websiteSchema = z
+  .string()
+  .trim()
+  .refine(
+    (val) => val === "" || /^https?:\/\/.+/i.test(val),
+    "Website must start with http:// or https://",
+  )
+  .optional()
+  .transform((val) => (val === "" ? undefined : val));
 
 export const addressSchema = z.object({
   type: z.enum(["HEAD_OFFICE", "BRANCH"]),
@@ -74,7 +79,10 @@ export const branchSchema = z.object({
 
 export const bankDetailSchema = z.object({
   bankName: z.string().trim().min(2, "Bank name is required."),
-  accountHolderName: z.string().trim().min(2, "Account holder name is required."),
+  accountHolderName: z
+    .string()
+    .trim()
+    .min(2, "Account holder name is required."),
   accountNumber: z.string().trim().min(6, "Account number is required."),
   ifscCode: z.string().trim().min(4, "IFSC code is required."),
   branchName: z.string().trim().min(2, "Branch name is required."),
@@ -85,7 +93,9 @@ export const generalSettingSchema = z.object({
   dateFormat: z.enum(DATE_FORMATS),
   timeZone: z.enum(TIME_ZONES),
   workweek: z.enum(["MON_FRI", "MON_SAT"]),
-  holidayList: z.array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD format.")),
+  holidayList: z.array(
+    z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD format."),
+  ),
   emailNotifications: z.boolean(),
 });
 
@@ -94,7 +104,9 @@ export const employeeCustomFieldSchema = z
     fieldName: z.string().trim().min(2, "Field name is required."),
     fieldType: z.enum(["TEXT", "NUMBER", "DATE", "DROPDOWN", "CHECKBOX"]),
     required: z.boolean(),
-    options: z.array(z.string().trim().min(1, "Option cannot be empty.")).default([]),
+    options: z
+      .array(z.string().trim().min(1, "Option cannot be empty."))
+      .default([]),
   })
   .superRefine((value, context) => {
     if (value.fieldType === "DROPDOWN" && value.options.length === 0) {
@@ -108,8 +120,8 @@ export const employeeCustomFieldSchema = z
 
 export const companySetupSchema = z.object({
   companyName: z.string().trim().min(2, "Company name is required."),
-  logoUrl: optionalTrimmedString,
-  iconUrl: optionalTrimmedString,
+  logoUrl: z.string().trim().max(255).default(""),
+  iconUrl: z.string().trim().max(255).default(""),
   industry: z.enum(INDUSTRIES),
   registrationNumber: optionalTrimmedString,
   panNumber: optionalTrimmedString,
@@ -173,7 +185,9 @@ export type CompanyAddressInput = z.infer<typeof addressSchema>;
 export type CompanyBranchInput = z.infer<typeof branchSchema>;
 export type BankDetailInput = z.infer<typeof bankDetailSchema>;
 export type GeneralSettingInput = z.infer<typeof generalSettingSchema>;
-export type EmployeeCustomFieldInput = z.infer<typeof employeeCustomFieldSchema>;
+export type EmployeeCustomFieldInput = z.infer<
+  typeof employeeCustomFieldSchema
+>;
 
 export const COMPANY_INDUSTRY_OPTIONS = [...INDUSTRIES];
 export const COMPANY_DATE_FORMAT_OPTIONS = [...DATE_FORMATS];
