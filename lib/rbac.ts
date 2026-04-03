@@ -17,7 +17,6 @@ export type RolePermissions = {
     documents: { read: boolean; write: boolean; delete: boolean };
     company: { read: boolean; write: boolean; delete: boolean };
     departments: { read: boolean; write: boolean; delete: boolean };
-    payroll: { read: boolean; write: boolean; delete: boolean };
   };
 };
 
@@ -27,35 +26,24 @@ const rolePermissions: RolePermissions = {
     documents: { read: true, write: true, delete: true },
     company: { read: true, write: true, delete: true },
     departments: { read: true, write: true, delete: true },
-    payroll: { read: true, write: true, delete: true },
   },
   HR_ADMIN: {
     employees: { read: true, write: true, delete: true },
     documents: { read: true, write: true, delete: true },
     company: { read: true, write: true, delete: true },
     departments: { read: true, write: true, delete: true },
-    payroll: { read: true, write: false, delete: false },
-  },
-  PAYROLL_MANAGER: {
-    employees: { read: true, write: false, delete: false },
-    documents: { read: true, write: false, delete: false },
-    company: { read: true, write: false, delete: false },
-    departments: { read: true, write: false, delete: false },
-    payroll: { read: true, write: true, delete: false },
   },
   DEPT_MANAGER: {
     employees: { read: true, write: true, delete: false },
     documents: { read: true, write: true, delete: false },
     company: { read: false, write: false, delete: false },
     departments: { read: true, write: false, delete: false },
-    payroll: { read: false, write: false, delete: false },
   },
   EMPLOYEE: {
     employees: { read: false, write: false, delete: false },
     documents: { read: true, write: false, delete: false },
     company: { read: false, write: false, delete: false },
     departments: { read: false, write: false, delete: false },
-    payroll: { read: false, write: false, delete: false },
   },
 };
 
@@ -111,7 +99,7 @@ export function requireRole(allowedRoles: string[]) {
 
 export function checkPermission(
   userRole: string,
-  resource: "employees" | "documents" | "company" | "departments" | "payroll",
+  resource: "employees" | "documents" | "company" | "departments",
   action: "read" | "write" | "delete"
 ): boolean {
   const permissions = rolePermissions[userRole];
@@ -125,7 +113,7 @@ export function getUserPermissions(userRole: string) {
 
 export function requirePermission(
   user: AuthenticatedUser,
-  resource: "employees" | "documents" | "company" | "departments" | "payroll",
+  resource: "employees" | "documents" | "company" | "departments",
   action: "read" | "write" | "delete"
 ) {
   if (!checkPermission(user.role, resource, action)) {

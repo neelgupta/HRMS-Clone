@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { EmployeeTopbar } from "@/components/employee/employee-topbar";
 import { PageLoader } from "@/components/ui/loader";
+import { getHRNotifications } from "@/lib/client/leave";
 
 type HRLayoutProps = {
   children: ReactNode;
@@ -21,6 +22,7 @@ export default function HRDashboardLayout({ children }: HRLayoutProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [notificationCount, setNotificationCount] = useState(0);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -41,6 +43,27 @@ export default function HRDashboardLayout({ children }: HRLayoutProps) {
 
     void loadUser();
   }, [router]);
+
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        const result = await getHRNotifications(true);
+        if (result.data?.notifications) {
+          setNotificationCount(result.data.notifications.length);
+        }
+      } catch {
+        // Ignore notification fetch errors
+      }
+    };
+
+    if (user) {
+      void fetchNotifications();
+      const interval = setInterval(() => {
+        void fetchNotifications();
+      }, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [user]);
 
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -79,6 +102,8 @@ export default function HRDashboardLayout({ children }: HRLayoutProps) {
           userInitials={initials}
           designation="HR Admin"
           onLogout={handleLogout}
+          notificationCount={notificationCount}
+          notificationHref="/dashboard/hr/notifications"
         />
 
         <main className="px-4 py-6 md:px-6 lg:px-8">

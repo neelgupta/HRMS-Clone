@@ -26,11 +26,22 @@ type EmployeeProfile = {
   } | null;
 };
 
+type NotificationItem = {
+  id: string;
+  type: string;
+  title: string;
+  message: string;
+  isRead: boolean;
+  createdAt: string;
+};
+
 export function EmployeeLayout({ children, title, subtitle }: EmployeeLayoutProps) {
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profile, setProfile] = useState<EmployeeProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [notificationCount, setNotificationCount] = useState(0);
+  const [recentNotifications, setRecentNotifications] = useState<NotificationItem[]>([]);
   const handleLogout = useEmployeeLogout();
 
   useEffect(() => {
@@ -49,6 +60,43 @@ export function EmployeeLayout({ children, title, subtitle }: EmployeeLayoutProp
     };
     void loadProfile();
   }, []);
+
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        const res = await fetch("/api/leave/notifications?unread=true", { credentials: "include" });
+        if (res.ok) {
+          const data = await res.json();
+          const notifications = data.notifications || [];
+          setNotificationCount(notifications.length);
+          setRecentNotifications(notifications.slice(0, 5));
+        }
+      } catch {
+        console.error("Failed to fetch notifications");
+      }
+    };
+
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const markNotificationAsRead = async (id: string) => {
+    try {
+      const res = await fetch(`/api/leave/notifications/${id}`, {
+        method: "PUT",
+        credentials: "include",
+      });
+      if (res.ok) {
+        setNotificationCount((prev) => Math.max(0, prev - 1));
+        setRecentNotifications((prev) =>
+          prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
+        );
+      }
+    } catch {
+      console.error("Failed to mark notification as read");
+    }
+  };
 
   const fullName = profile?.employee
     ? `${profile.employee.firstName} ${profile.employee.lastName}`
@@ -72,6 +120,10 @@ export function EmployeeLayout({ children, title, subtitle }: EmployeeLayoutProp
           userInitials={initials}
           designation={profile?.employee?.designation || "Employee"}
           onLogout={handleLogout}
+          notificationCount={notificationCount}
+          notifications={recentNotifications}
+          onMarkAsRead={markNotificationAsRead}
+          notificationHref="/dashboard/employee/notifications"
         />
 
         <main className="px-6 py-6">

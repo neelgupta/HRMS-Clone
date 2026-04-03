@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { MdAccountTree, MdBusiness, MdDashboard, MdPayments, MdPeople, MdSettings, MdAccessTime, MdSchedule, MdPerson, MdAssessment } from "react-icons/md";
+import { MdAccountTree, MdBusiness, MdDashboard, MdPayments, MdPeople, MdSettings, MdAccessTime, MdSchedule, MdPerson, MdAssessment, MdEventNote, MdCalendarMonth, MdPolicy, MdNotifications } from "react-icons/md";
 import { useTheme } from "@/contexts/theme-context";
 
 type DashboardSidebarProps = {
@@ -26,6 +26,11 @@ const hrNavItems: NavItem[] = [
   { label: "Attendance", href: "/dashboard/hr/attendance", icon: MdAccessTime, available: true },
   { label: "Attendance Reports", href: "/dashboard/hr/attendance/reports", icon: MdAssessment, available: true },
   { label: "Shifts", href: "/dashboard/hr/shifts", icon: MdSchedule, available: true },
+  { label: "Leave Management", href: "/dashboard/hr/leave", icon: MdEventNote, available: true },
+  { label: "Leave Types", href: "/dashboard/hr/leave-types", icon: MdPolicy, available: true },
+  { label: "Leave Policy", href: "/dashboard/hr/leave-policy", icon: MdPolicy, available: true },
+  { label: "Holidays", href: "/dashboard/hr/holidays", icon: MdCalendarMonth, available: true },
+  { label: "Notifications", href: "/dashboard/hr/notifications", icon: MdNotifications, available: true },
   { label: "Organization", href: "/dashboard/hr/organization", icon: MdAccountTree, available: true },
   { label: "Payroll", href: "", icon: MdPayments, available: false },
   { label: "Settings", href: "/dashboard/hr/settings", icon: MdSettings, available: true },
