@@ -1,9 +1,8 @@
 "use client";
 
 import { startTransition, useEffect, useState } from "react";
-import { Controller, useFieldArray, useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
+import * as Yup from "yup";
 import {
   MdAdd,
   MdArrowBack,
@@ -15,17 +14,18 @@ import {
   COMPANY_DATE_FORMAT_OPTIONS,
   COMPANY_INDUSTRY_OPTIONS,
   COMPANY_TIME_ZONE_OPTIONS,
-  companySetupSchema,
   type CompanySetupInput,
+  type CompanyAddressInput,
+  type CompanyBranchInput,
+  type EmployeeCustomFieldInput,
 } from "@/lib/validations/company";
+import { getDefaultCompanySetupValues } from "@/lib/company-defaults";
 import {
   fetchCompanySetup,
   fetchCurrentUser,
-  getDefaultCompanySetupValues,
   saveCompanySetup as saveCompanySetupRequest,
   type CurrentUser,
 } from "@/lib/client/company";
-import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { Skeleton } from "@/components/ui/loaders/skeleton";
 import { Spinner } from "@/components/ui/loaders/spinner";
 import { FormField } from "@/components/ui/form-field";
@@ -44,6 +44,117 @@ const steps = [
   "Custom Fields",
 ] as const;
 
+const addressSchema = Yup.object().shape({
+  type: Yup.string().oneOf(["HEAD_OFFICE", "BRANCH"]).required(),
+  label: Yup.string().max(255),
+  addressLine1: Yup.string().min(2, "Address line 1 is required.").required(),
+  addressLine2: Yup.string().max(255),
+  city: Yup.string().min(2, "City is required.").required(),
+  state: Yup.string().min(2, "State is required.").required(),
+  country: Yup.string().min(2, "Country is required.").required(),
+  pincode: Yup.string().min(4, "Pincode is required.").required(),
+});
+
+const branchSchema = Yup.object().shape({
+  name: Yup.string().min(2, "Branch name is required.").required(),
+  contactEmail: Yup.string().email("Enter a valid email address."),
+  contactPhone: Yup.string().max(255),
+  addressLine1: Yup.string().min(2, "Address line 1 is required.").required(),
+  addressLine2: Yup.string().max(255),
+  city: Yup.string().min(2, "City is required.").required(),
+  state: Yup.string().min(2, "State is required.").required(),
+  country: Yup.string().min(2, "Country is required.").required(),
+  pincode: Yup.string().min(4, "Pincode is required.").required(),
+});
+
+const bankDetailSchema = Yup.object().shape({
+  bankName: Yup.string().min(2, "Bank name is required.").required(),
+  accountHolderName: Yup.string()
+    .min(2, "Account holder name is required.")
+    .required(),
+  accountNumber: Yup.string()
+    .min(6, "Account number is required.")
+    .required(),
+  ifscCode: Yup.string().min(4, "IFSC code is required.").required(),
+  branchName: Yup.string().min(2, "Branch name is required.").required(),
+});
+
+const employeeCustomFieldSchema = Yup.object().shape({
+  fieldName: Yup.string().min(2, "Field name is required.").required(),
+  fieldType: Yup.string()
+    .oneOf(["TEXT", "NUMBER", "DATE", "DROPDOWN", "CHECKBOX"])
+    .required(),
+  required: Yup.boolean(),
+  options: Yup.array().of(Yup.string().required()),
+});
+
+const generalSettingSchema = Yup.object().shape({
+  currency: Yup.string()
+    .oneOf(["INR", "USD", "EUR", "GBP", "AED", "SGD"])
+    .required(),
+  dateFormat: Yup.string()
+    .oneOf(["DD/MM/YYYY", "MM/DD/YYYY", "YYYY-MM-DD"])
+    .required(),
+  timeZone: Yup.string()
+    .oneOf([
+      "Asia/Kolkata",
+      "Asia/Dubai",
+      "Europe/London",
+      "America/New_York",
+      "Asia/Singapore",
+    ])
+    .required(),
+  workweek: Yup.string().oneOf(["MON_FRI", "MON_SAT"]).required(),
+  holidayList: Yup.array().of(
+    Yup.string().matches(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD format."),
+  ),
+  emailNotifications: Yup.boolean().required(),
+});
+
+const validationSchema = Yup.object().shape({
+  companyName: Yup.string().min(2, "Company name is required.").required(),
+  logoUrl: Yup.string().max(255).default(""),
+  iconUrl: Yup.string().max(255).default(""),
+  industry: Yup.string()
+    .oneOf([
+      "Information Technology",
+      "Manufacturing",
+      "Healthcare",
+      "Education",
+      "Finance",
+      "Retail",
+      "Consulting",
+      "Logistics",
+      "Real Estate",
+      "Hospitality",
+    ])
+    .required(),
+  registrationNumber: Yup.string().max(255),
+  panNumber: Yup.string().max(255),
+  tanNumber: Yup.string().max(255),
+  gstNumber: Yup.string().max(255),
+  companyStartDate: Yup.string().matches(
+    /^\d{4}-\d{2}-\d{2}$/,
+    "Use YYYY-MM-DD format.",
+  ),
+  fiscalYearStart: Yup.string().matches(
+    /^\d{4}-\d{2}-\d{2}$/,
+    "Use YYYY-MM-DD format.",
+  ),
+  fiscalYearEnd: Yup.string().matches(
+    /^\d{4}-\d{2}-\d{2}$/,
+    "Use YYYY-MM-DD format.",
+  ),
+  primaryEmail: Yup.string().email("Enter a valid email address."),
+  primaryPhone: Yup.string().max(255),
+  website: Yup.string().matches(/^https?:\/\/.+/i, "Must start with http:// or https://"),
+  addresses: Yup.array().of(addressSchema).min(1, "Add at least one address."),
+  branches: Yup.array().of(branchSchema).default([]),
+  bankDetail: bankDetailSchema,
+  generalSetting: generalSettingSchema,
+  employeeCustomFields: Yup.array().of(employeeCustomFieldSchema).default([]),
+});
+
 export function CompanySetupForm() {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(0);
@@ -53,20 +164,139 @@ export function CompanySetupForm() {
   const [companyExists, setCompanyExists] = useState(false);
   const [holidayInput, setHolidayInput] = useState("");
 
-  const form = useForm<CompanySetupInput>({
-    resolver: zodResolver(companySetupSchema) as any,
-    defaultValues: getDefaultCompanySetupValues(),
-  });
+  const [formValues, setFormValues] = useState<CompanySetupInput>(() =>
+    getDefaultCompanySetupValues(),
+  );
 
-  const { register, control, handleSubmit, watch, setValue, reset, formState: { errors, isSubmitting } } = form;
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const addresses = useFieldArray({ control, name: "addresses" });
-  const branches = useFieldArray({ control, name: "branches" });
-  const customFields = useFieldArray({ control, name: "employeeCustomFields" });
+  const formik = {
+    values: formValues,
+    errors: formErrors,
+    touched,
+    isSubmitting,
+    handleChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+      const { name, value } = e.target;
+      setFormValues((prev) => ({ ...prev, [name]: value }));
+      setTouched((prev) => ({ ...prev, [name]: true }));
+    },
+    handleBlur: (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+      setTouched((prev) => ({ ...prev, [e.target.name]: true }));
+    },
+    setFieldValue: (name: string, value: unknown) => {
+      setFormValues((prev) => ({ ...prev, [name]: value }));
+    },
+    setFieldTouched: (name: string, isTouched: boolean = true) => {
+      setTouched((prev) => ({ ...prev, [name]: isTouched }));
+    },
+    resetForm: (values?: CompanySetupInput) => {
+      if (values) {
+        setFormValues(values);
+      } else {
+        setFormValues(getDefaultCompanySetupValues());
+      }
+      setFormErrors({});
+      setTouched({});
+    },
+    validateForm: async () => {
+      try {
+        await validationSchema.validate(formValues, { abortEarly: false });
+        setFormErrors({});
+        return {};
+      } catch (err) {
+        if (err instanceof Yup.ValidationError) {
+          const errors: Record<string, string> = {};
+          err.inner.forEach((e) => {
+            if (e.path) {
+              errors[e.path] = e.message;
+            }
+          });
+          setFormErrors(errors);
+          return errors;
+        }
+        return {};
+      }
+    },
+    submitForm: async () => {
+      const errors = await formik.validateForm();
+      if (Object.keys(errors).length === 0) {
+        return formValues;
+      }
+      return null;
+    },
+  };
 
-  const holidayList = watch("generalSetting.holidayList");
-  const watchedCustomFields = watch("employeeCustomFields");
-  const values = watch();
+  const handleArrayFieldChange = (
+    index: number,
+    field: "addresses" | "branches" | "employeeCustomFields",
+    prop: string,
+    value: unknown,
+  ) => {
+    const path = `${field}.${index}.${prop}`;
+    setFormValues((prev) => {
+      const currentArray = prev[field];
+      if (!Array.isArray(currentArray)) return prev;
+      const updated = [...currentArray];
+      updated[index] = { ...updated[index], [prop]: value };
+      return { ...prev, [field]: updated as never };
+    });
+    setTouched((prev) => ({ ...prev, [path]: true }));
+  };
+
+  const addresses = {
+    fields: formValues.addresses as CompanyAddressInput[],
+    append: (value: CompanyAddressInput) => {
+      setFormValues((prev) => ({
+        ...prev,
+        addresses: [...prev.addresses, value],
+      }));
+    },
+    remove: (index: number) => {
+      setFormValues((prev) => ({
+        ...prev,
+        addresses: prev.addresses.filter((_, i) => i !== index),
+      }));
+    },
+  };
+
+  const branches = {
+    fields: formValues.branches as CompanyBranchInput[],
+    append: (value: CompanyBranchInput) => {
+      setFormValues((prev) => ({
+        ...prev,
+        branches: [...prev.branches, value],
+      }));
+    },
+    remove: (index: number) => {
+      setFormValues((prev) => ({
+        ...prev,
+        branches: prev.branches.filter((_, i) => i !== index),
+      }));
+    },
+  };
+
+  const customFields = {
+    fields: formValues.employeeCustomFields as EmployeeCustomFieldInput[],
+    append: (value: EmployeeCustomFieldInput) => {
+      setFormValues((prev) => ({
+        ...prev,
+        employeeCustomFields: [...prev.employeeCustomFields, value],
+      }));
+    },
+    remove: (index: number) => {
+      setFormValues((prev) => ({
+        ...prev,
+        employeeCustomFields: prev.employeeCustomFields.filter(
+          (_, i) => i !== index,
+        ),
+      }));
+    },
+  };
+
+  const holidayList = formValues.generalSetting.holidayList;
+  const watchedCustomFields = formValues.employeeCustomFields;
 
   useEffect(() => {
     async function load() {
@@ -78,9 +308,9 @@ export function CompanySetupForm() {
         setUser(userData);
         if (companyData.company) {
           setCompanyExists(true);
-          reset(companyData.company.values);
+          setFormValues(companyData.company.values);
         } else {
-          reset(getDefaultCompanySetupValues(userData.company?.name || ""));
+          setFormValues(getDefaultCompanySetupValues(userData.company?.name || ""));
         }
       } catch {
         const message = "Could not load company setup.";
@@ -92,10 +322,17 @@ export function CompanySetupForm() {
     }
 
     void load();
-  }, [reset, router]);
+  }, []);
 
   async function submitForm(mode: "draft" | "complete") {
-    await handleSubmit(async (rawValues) => {
+    setIsSubmitting(true);
+    try {
+      const rawValues = await formik.submitForm();
+      if (!rawValues) {
+        setIsSubmitting(false);
+        return;
+      }
+
       const payload = {
         ...rawValues,
         markSetupComplete: mode === "complete",
@@ -104,31 +341,29 @@ export function CompanySetupForm() {
         mode === "complete" ? "Saving company settings..." : "Saving draft...",
       );
 
-      try {
-        const data = await saveCompanySetupRequest(payload, companyExists);
+      const data = await saveCompanySetupRequest(payload, companyExists);
 
-        setCompanyExists(true);
-        dismissToast(toastId);
-        showSuccess(data.message || "Saved successfully.");
-        if (data.company) {
-          reset(data.company.values);
-        }
-        startTransition(() => router.refresh());
-      } catch (error) {
-        if (error instanceof Error && error.message === "Unauthorized.") {
-          dismissToast(toastId);
-          router.push("/login");
-          return;
-        }
-
-        dismissToast(toastId);
-        showError(
-          error instanceof Error
-            ? error.message
-            : "Could not save company settings.",
-        );
+      setCompanyExists(true);
+      dismissToast(toastId);
+      showSuccess(data.message || "Saved successfully.");
+      if (data.company) {
+        setFormValues(data.company.values);
       }
-    })();
+      startTransition(() => router.refresh());
+    } catch (error) {
+      if (error instanceof Error && error.message === "Unauthorized.") {
+        router.push("/login");
+        return;
+      }
+
+      showError(
+        error instanceof Error
+          ? error.message
+          : "Could not save company settings.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   function addHoliday() {
@@ -141,10 +376,20 @@ export function CompanySetupForm() {
       return;
     }
 
-    setValue("generalSetting.holidayList", [...holidayList, holidayInput], {
-      shouldValidate: true,
-    });
+    setFormValues((prev) => ({
+      ...prev,
+      generalSetting: {
+        ...prev.generalSetting,
+        holidayList: [...prev.generalSetting.holidayList, holidayInput],
+      },
+    }));
     setHolidayInput("");
+  }
+
+  function getError(path: string): string | undefined {
+    const error = formErrors[path];
+    const isTouched = touched[path];
+    return isTouched ? error : undefined;
   }
 
   if (loading) {
@@ -187,12 +432,6 @@ export function CompanySetupForm() {
   }
 
   return (
-    // <DashboardLayout
-    //   title="Company Setup"
-    //   subtitle="Configure company details, branches, banking, and HR settings from one place."
-    //   userName={user.name}
-    //   userEmail={user.email}
-    // >
     <>
       <div className="mb-6 rounded-[2rem] border border-slate-200 bg-white p-6 shadow-lg shadow-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:shadow-slate-900/10">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -201,7 +440,7 @@ export function CompanySetupForm() {
               Company Settings
             </p>
             <h1 className="mt-3 text-3xl font-semibold text-slate-950 dark:text-white">
-              Configure {values.companyName || user.company?.name}
+              Configure {formValues.companyName || user.company?.name}
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-600 dark:text-slate-400">
               Build the core operating profile for your HR workspace. Save a
@@ -272,20 +511,28 @@ export function CompanySetupForm() {
               <div className="grid gap-6 md:grid-cols-2">
                 <FormField
                   label="Company Name"
-                  error={errors.companyName?.message}
+                  error={getError("companyName")}
                   required
                 >
                   <TextInput
-                    {...register("companyName")}
+                    name="companyName"
+                    value={formValues.companyName}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
                     placeholder="WorkNest Technologies Pvt Ltd"
                   />
                 </FormField>
                 <FormField
                   label="Industry"
-                  error={errors.industry?.message}
+                  error={getError("industry")}
                   required
                 >
-                  <SelectInput {...register("industry")}>
+                  <SelectInput
+                    name="industry"
+                    value={formValues.industry}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                  >
                     {COMPANY_INDUSTRY_OPTIONS.map((industry) => (
                       <option key={industry} value={industry}>
                         {industry}
@@ -296,55 +543,61 @@ export function CompanySetupForm() {
               </div>
 
               <div className="grid gap-6 md:grid-cols-2">
-                <Controller
-                  control={control}
-                  name="logoUrl"
-                  render={({ field }) => (
-                    <UploadField
-                      label="Company Logo"
-                      value={field.value ?? ""}
-                      onUploaded={(url) => field.onChange(url)}
-                    />
-                  )}
+                <UploadField
+                  label="Company Logo"
+                  value={formValues.logoUrl ?? ""}
+                  onUploaded={(url) => {
+                    formik.setFieldValue("logoUrl", url);
+                    formik.setFieldTouched("logoUrl", true);
+                  }}
                 />
-                <Controller
-                  control={control}
-                  name="iconUrl"
-                  render={({ field }) => (
-                    <UploadField
-                      label="Company Icon"
-                      value={field.value ?? ""}
-                      onUploaded={(url) => field.onChange(url)}
-                    />
-                  )}
+                <UploadField
+                  label="Company Icon"
+                  value={formValues.iconUrl ?? ""}
+                  onUploaded={(url) => {
+                    formik.setFieldValue("iconUrl", url);
+                    formik.setFieldTouched("iconUrl", true);
+                  }}
                 />
               </div>
 
               <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
                 <FormField
                   label="Registration Number"
-                  error={errors.registrationNumber?.message}
+                  error={getError("registrationNumber")}
                 >
                   <TextInput
-                    {...register("registrationNumber")}
+                    name="registrationNumber"
+                    value={formValues.registrationNumber ?? ""}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
                     placeholder="U74999KA2026PTC000123"
                   />
                 </FormField>
-                <FormField label="PAN Number" error={errors.panNumber?.message}>
+                <FormField label="PAN Number" error={getError("panNumber")}>
                   <TextInput
-                    {...register("panNumber")}
+                    name="panNumber"
+                    value={formValues.panNumber ?? ""}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
                     placeholder="ABCDE1234F"
                   />
                 </FormField>
-                <FormField label="TAN Number" error={errors.tanNumber?.message}>
+                <FormField label="TAN Number" error={getError("tanNumber")}>
                   <TextInput
-                    {...register("tanNumber")}
+                    name="tanNumber"
+                    value={formValues.tanNumber ?? ""}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
                     placeholder="BLRA12345B"
                   />
                 </FormField>
-                <FormField label="GST Number" error={errors.gstNumber?.message}>
+                <FormField label="GST Number" error={getError("gstNumber")}>
                   <TextInput
-                    {...register("gstNumber")}
+                    name="gstNumber"
+                    value={formValues.gstNumber ?? ""}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
                     placeholder="29ABCDE1234F1Z5"
                   />
                 </FormField>
@@ -353,47 +606,74 @@ export function CompanySetupForm() {
               <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
                 <FormField
                   label="Company Start Date"
-                  error={errors.companyStartDate?.message}
+                  error={getError("companyStartDate")}
                 >
-                  <TextInput type="date" {...register("companyStartDate")} />
+                  <TextInput
+                    type="date"
+                    name="companyStartDate"
+                    value={formValues.companyStartDate ?? ""}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                  />
                 </FormField>
                 <FormField
                   label="Fiscal Year Start"
-                  error={errors.fiscalYearStart?.message}
+                  error={getError("fiscalYearStart")}
                 >
-                  <TextInput type="date" {...register("fiscalYearStart")} />
+                  <TextInput
+                    type="date"
+                    name="fiscalYearStart"
+                    value={formValues.fiscalYearStart ?? ""}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                  />
                 </FormField>
                 <FormField
                   label="Fiscal Year End"
-                  error={errors.fiscalYearEnd?.message}
+                  error={getError("fiscalYearEnd")}
                 >
-                  <TextInput type="date" {...register("fiscalYearEnd")} />
+                  <TextInput
+                    type="date"
+                    name="fiscalYearEnd"
+                    value={formValues.fiscalYearEnd ?? ""}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                  />
                 </FormField>
               </div>
 
               <div className="grid gap-6 md:grid-cols-3">
                 <FormField
                   label="Primary Email"
-                  error={errors.primaryEmail?.message}
+                  error={getError("primaryEmail")}
                 >
                   <TextInput
                     type="email"
-                    {...register("primaryEmail")}
+                    name="primaryEmail"
+                    value={formValues.primaryEmail ?? ""}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
                     placeholder="hr@worknest.com"
                   />
                 </FormField>
                 <FormField
                   label="Primary Phone"
-                  error={errors.primaryPhone?.message}
+                  error={getError("primaryPhone")}
                 >
                   <TextInput
-                    {...register("primaryPhone")}
+                    name="primaryPhone"
+                    value={formValues.primaryPhone ?? ""}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
                     placeholder="+91 98765 43210"
                   />
                 </FormField>
-                <FormField label="Website" error={errors.website?.message}>
+                <FormField label="Website" error={getError("website")}>
                   <TextInput
-                    {...register("website")}
+                    name="website"
+                    value={formValues.website ?? ""}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
                     placeholder="https://worknest.com"
                   />
                 </FormField>
@@ -403,9 +683,9 @@ export function CompanySetupForm() {
 
           {currentStep === 1 ? (
             <section className="space-y-5">
-              {addresses.fields.map((field, index) => (
+              {addresses.fields.map((address, index) => (
                 <div
-                  key={field.id}
+                  key={index}
                   className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-700/50"
                 >
                   <div className="mb-4 flex items-center justify-between">
@@ -426,69 +706,119 @@ export function CompanySetupForm() {
                   <div className="grid gap-5 md:grid-cols-2">
                     <FormField
                       label="Address Type"
-                      error={errors.addresses?.[index]?.type?.message}
+                      error={getError(`addresses.${index}.type`)}
                       required
                     >
-                      <SelectInput {...register(`addresses.${index}.type`)}>
+                      <SelectInput
+                        name={`addresses.${index}.type`}
+                        value={address.type}
+                        onChange={(e) =>
+                          handleArrayFieldChange(index, "addresses", "type", e.target.value)
+                        }
+                        onBlur={formik.handleBlur}
+                      >
                         <option value="HEAD_OFFICE">Head Office</option>
                         <option value="BRANCH">Branch</option>
                       </SelectInput>
                     </FormField>
                     <FormField
                       label="Label"
-                      error={errors.addresses?.[index]?.label?.message}
+                      error={getError(`addresses.${index}.label`)}
                     >
                       <TextInput
-                        {...register(`addresses.${index}.label`)}
+                        name={`addresses.${index}.label`}
+                        value={address.label ?? ""}
+                        onChange={(e) =>
+                          handleArrayFieldChange(index, "addresses", "type", e.target.value)
+                        }
+                        onBlur={formik.handleBlur}
                         placeholder="Corporate HQ"
                       />
                     </FormField>
                     <FormField
                       label="Address Line 1"
-                      error={errors.addresses?.[index]?.addressLine1?.message}
+                      error={getError(`addresses.${index}.addressLine1`)}
                       required
                     >
                       <TextInput
-                        {...register(`addresses.${index}.addressLine1`)}
+                        name={`addresses.${index}.addressLine1`}
+                        value={address.addressLine1 ?? ""}
+                        onChange={(e) =>
+                          handleArrayFieldChange(index, "addresses", "type", e.target.value)
+                        }
+                        onBlur={formik.handleBlur}
                         placeholder="Building, street, area"
                       />
                     </FormField>
                     <FormField
                       label="Address Line 2"
-                      error={errors.addresses?.[index]?.addressLine2?.message}
+                      error={getError(`addresses.${index}.addressLine2`)}
                     >
                       <TextInput
-                        {...register(`addresses.${index}.addressLine2`)}
+                        name={`addresses.${index}.addressLine2`}
+                        value={address.addressLine2 ?? ""}
+                        onChange={(e) =>
+                          handleArrayFieldChange(index, "addresses", "type", e.target.value)
+                        }
+                        onBlur={formik.handleBlur}
                         placeholder="Landmark or suite"
                       />
                     </FormField>
                     <FormField
                       label="City"
-                      error={errors.addresses?.[index]?.city?.message}
+                      error={getError(`addresses.${index}.city`)}
                       required
                     >
-                      <TextInput {...register(`addresses.${index}.city`)} />
+                      <TextInput
+                        name={`addresses.${index}.city`}
+                        value={address.city ?? ""}
+                        onChange={(e) =>
+                          handleArrayFieldChange(index, "addresses", "type", e.target.value)
+                        }
+                        onBlur={formik.handleBlur}
+                      />
                     </FormField>
                     <FormField
                       label="State"
-                      error={errors.addresses?.[index]?.state?.message}
+                      error={getError(`addresses.${index}.state`)}
                       required
                     >
-                      <TextInput {...register(`addresses.${index}.state`)} />
+                      <TextInput
+                        name={`addresses.${index}.state`}
+                        value={address.state ?? ""}
+                        onChange={(e) =>
+                          handleArrayFieldChange(index, "addresses", "type", e.target.value)
+                        }
+                        onBlur={formik.handleBlur}
+                      />
                     </FormField>
                     <FormField
                       label="Country"
-                      error={errors.addresses?.[index]?.country?.message}
+                      error={getError(`addresses.${index}.country`)}
                       required
                     >
-                      <TextInput {...register(`addresses.${index}.country`)} />
+                      <TextInput
+                        name={`addresses.${index}.country`}
+                        value={address.country ?? ""}
+                        onChange={(e) =>
+                          handleArrayFieldChange(index, "addresses", "type", e.target.value)
+                        }
+                        onBlur={formik.handleBlur}
+                      />
                     </FormField>
                     <FormField
                       label="Pincode"
-                      error={errors.addresses?.[index]?.pincode?.message}
+                      error={getError(`addresses.${index}.pincode`)}
                       required
                     >
-                      <TextInput {...register(`addresses.${index}.pincode`)} />
+                      <TextInput
+                        name={`addresses.${index}.pincode`}
+                        value={address.pincode ?? ""}
+                        onChange={(e) =>
+                          handleArrayFieldChange(index, "addresses", "type", e.target.value)
+                        }
+                        onBlur={formik.handleBlur}
+                      />
                     </FormField>
                   </div>
                 </div>
@@ -524,9 +854,9 @@ export function CompanySetupForm() {
                 </div>
               ) : null}
 
-              {branches.fields.map((field, index) => (
+              {branches.fields.map((branch, index) => (
                 <div
-                  key={field.id}
+                  key={index}
                   className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-700/50"
                 >
                   <div className="mb-4 flex items-center justify-between">
@@ -545,77 +875,130 @@ export function CompanySetupForm() {
                   <div className="grid gap-5 md:grid-cols-2">
                     <FormField
                       label="Branch Name"
-                      error={errors.branches?.[index]?.name?.message}
+                      error={getError(`branches.${index}.name`)}
                       required
                     >
                       <TextInput
-                        {...register(`branches.${index}.name`)}
+                        name={`branches.${index}.name`}
+                        value={branch.name ?? ""}
+                        onChange={(e) =>
+                          handleArrayFieldChange(index, "branches", "contactEmail", e.target.value)
+                        }
+                        onBlur={formik.handleBlur}
                         placeholder="Bengaluru Branch"
                       />
                     </FormField>
                     <FormField
                       label="Contact Email"
-                      error={errors.branches?.[index]?.contactEmail?.message}
+                      error={getError(`branches.${index}.contactEmail`)}
                     >
                       <TextInput
                         type="email"
-                        {...register(`branches.${index}.contactEmail`)}
+                        name={`branches.${index}.contactEmail`}
+                        value={branch.contactEmail ?? ""}
+                        onChange={(e) =>
+                          handleArrayFieldChange(index, "branches", "contactEmail", e.target.value)
+                        }
+                        onBlur={formik.handleBlur}
                         placeholder="blr@company.com"
                       />
                     </FormField>
                     <FormField
                       label="Contact Phone"
-                      error={errors.branches?.[index]?.contactPhone?.message}
+                      error={getError(`branches.${index}.contactPhone`)}
                     >
                       <TextInput
-                        {...register(`branches.${index}.contactPhone`)}
+                        name={`branches.${index}.contactPhone`}
+                        value={branch.contactPhone ?? ""}
+                        onChange={(e) =>
+                          handleArrayFieldChange(index, "branches", "contactEmail", e.target.value)
+                        }
+                        onBlur={formik.handleBlur}
                         placeholder="+91 91234 56789"
                       />
                     </FormField>
                     <FormField
                       label="Address Line 1"
-                      error={errors.branches?.[index]?.addressLine1?.message}
+                      error={getError(`branches.${index}.addressLine1`)}
                       required
                     >
                       <TextInput
-                        {...register(`branches.${index}.addressLine1`)}
+                        name={`branches.${index}.addressLine1`}
+                        value={branch.addressLine1 ?? ""}
+                        onChange={(e) =>
+                          handleArrayFieldChange(index, "branches", "contactEmail", e.target.value)
+                        }
+                        onBlur={formik.handleBlur}
                       />
                     </FormField>
                     <FormField
                       label="Address Line 2"
-                      error={errors.branches?.[index]?.addressLine2?.message}
+                      error={getError(`branches.${index}.addressLine2`)}
                     >
                       <TextInput
-                        {...register(`branches.${index}.addressLine2`)}
+                        name={`branches.${index}.addressLine2`}
+                        value={branch.addressLine2 ?? ""}
+                        onChange={(e) =>
+                          handleArrayFieldChange(index, "branches", "contactEmail", e.target.value)
+                        }
+                        onBlur={formik.handleBlur}
                       />
                     </FormField>
                     <FormField
                       label="City"
-                      error={errors.branches?.[index]?.city?.message}
+                      error={getError(`branches.${index}.city`)}
                       required
                     >
-                      <TextInput {...register(`branches.${index}.city`)} />
+                      <TextInput
+                        name={`branches.${index}.city`}
+                        value={branch.city ?? ""}
+                        onChange={(e) =>
+                          handleArrayFieldChange(index, "branches", "contactEmail", e.target.value)
+                        }
+                        onBlur={formik.handleBlur}
+                      />
                     </FormField>
                     <FormField
                       label="State"
-                      error={errors.branches?.[index]?.state?.message}
+                      error={getError(`branches.${index}.state`)}
                       required
                     >
-                      <TextInput {...register(`branches.${index}.state`)} />
+                      <TextInput
+                        name={`branches.${index}.state`}
+                        value={branch.state ?? ""}
+                        onChange={(e) =>
+                          handleArrayFieldChange(index, "branches", "contactEmail", e.target.value)
+                        }
+                        onBlur={formik.handleBlur}
+                      />
                     </FormField>
                     <FormField
                       label="Country"
-                      error={errors.branches?.[index]?.country?.message}
+                      error={getError(`branches.${index}.country`)}
                       required
                     >
-                      <TextInput {...register(`branches.${index}.country`)} />
+                      <TextInput
+                        name={`branches.${index}.country`}
+                        value={branch.country ?? ""}
+                        onChange={(e) =>
+                          handleArrayFieldChange(index, "branches", "contactEmail", e.target.value)
+                        }
+                        onBlur={formik.handleBlur}
+                      />
                     </FormField>
                     <FormField
                       label="Pincode"
-                      error={errors.branches?.[index]?.pincode?.message}
+                      error={getError(`branches.${index}.pincode`)}
                       required
                     >
-                      <TextInput {...register(`branches.${index}.pincode`)} />
+                      <TextInput
+                        name={`branches.${index}.pincode`}
+                        value={branch.pincode ?? ""}
+                        onChange={(e) =>
+                          handleArrayFieldChange(index, "branches", "contactEmail", e.target.value)
+                        }
+                        onBlur={formik.handleBlur}
+                      />
                     </FormField>
                   </div>
                 </div>
@@ -648,51 +1031,66 @@ export function CompanySetupForm() {
             <section className="grid gap-6 md:grid-cols-2">
               <FormField
                 label="Bank Name"
-                error={errors.bankDetail?.bankName?.message}
+                error={getError("bankDetail.bankName")}
                 required
               >
                 <TextInput
-                  {...register("bankDetail.bankName")}
+                  name="bankDetail.bankName"
+                  value={formValues.bankDetail.bankName ?? ""}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
                   placeholder="HDFC Bank"
                 />
               </FormField>
               <FormField
                 label="Account Holder Name"
-                error={errors.bankDetail?.accountHolderName?.message}
+                error={getError("bankDetail.accountHolderName")}
                 required
               >
                 <TextInput
-                  {...register("bankDetail.accountHolderName")}
+                  name="bankDetail.accountHolderName"
+                  value={formValues.bankDetail.accountHolderName ?? ""}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
                   placeholder="WorkNest Technologies Pvt Ltd"
                 />
               </FormField>
               <FormField
                 label="Account Number"
-                error={errors.bankDetail?.accountNumber?.message}
+                error={getError("bankDetail.accountNumber")}
                 required
               >
                 <TextInput
-                  {...register("bankDetail.accountNumber")}
+                  name="bankDetail.accountNumber"
+                  value={formValues.bankDetail.accountNumber ?? ""}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
                   placeholder="50200012345678"
                 />
               </FormField>
               <FormField
                 label="IFSC Code"
-                error={errors.bankDetail?.ifscCode?.message}
+                error={getError("bankDetail.ifscCode")}
                 required
               >
                 <TextInput
-                  {...register("bankDetail.ifscCode")}
+                  name="bankDetail.ifscCode"
+                  value={formValues.bankDetail.ifscCode ?? ""}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
                   placeholder="HDFC0000123"
                 />
               </FormField>
               <FormField
                 label="Branch Name"
-                error={errors.bankDetail?.branchName?.message}
+                error={getError("bankDetail.branchName")}
                 required
               >
                 <TextInput
-                  {...register("bankDetail.branchName")}
+                  name="bankDetail.branchName"
+                  value={formValues.bankDetail.branchName ?? ""}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
                   placeholder="Koramangala"
                 />
               </FormField>
@@ -704,10 +1102,15 @@ export function CompanySetupForm() {
               <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
                 <FormField
                   label="Currency"
-                  error={errors.generalSetting?.currency?.message}
+                  error={getError("generalSetting.currency")}
                   required
                 >
-                  <SelectInput {...register("generalSetting.currency")}>
+                  <SelectInput
+                    name="generalSetting.currency"
+                    value={formValues.generalSetting.currency}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                  >
                     {COMPANY_CURRENCY_OPTIONS.map((currency) => (
                       <option key={currency} value={currency}>
                         {currency}
@@ -717,10 +1120,15 @@ export function CompanySetupForm() {
                 </FormField>
                 <FormField
                   label="Date Format"
-                  error={errors.generalSetting?.dateFormat?.message}
+                  error={getError("generalSetting.dateFormat")}
                   required
                 >
-                  <SelectInput {...register("generalSetting.dateFormat")}>
+                  <SelectInput
+                    name="generalSetting.dateFormat"
+                    value={formValues.generalSetting.dateFormat}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                  >
                     {COMPANY_DATE_FORMAT_OPTIONS.map((format) => (
                       <option key={format} value={format}>
                         {format}
@@ -730,10 +1138,15 @@ export function CompanySetupForm() {
                 </FormField>
                 <FormField
                   label="Time Zone"
-                  error={errors.generalSetting?.timeZone?.message}
+                  error={getError("generalSetting.timeZone")}
                   required
                 >
-                  <SelectInput {...register("generalSetting.timeZone")}>
+                  <SelectInput
+                    name="generalSetting.timeZone"
+                    value={formValues.generalSetting.timeZone}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                  >
                     {COMPANY_TIME_ZONE_OPTIONS.map((timeZone) => (
                       <option key={timeZone} value={timeZone}>
                         {timeZone}
@@ -743,27 +1156,29 @@ export function CompanySetupForm() {
                 </FormField>
                 <FormField
                   label="Workweek"
-                  error={errors.generalSetting?.workweek?.message}
+                  error={getError("generalSetting.workweek")}
                   required
                 >
-                  <SelectInput {...register("generalSetting.workweek")}>
+                  <SelectInput
+                    name="generalSetting.workweek"
+                    value={formValues.generalSetting.workweek}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                  >
                     <option value="MON_FRI">Mon-Fri</option>
                     <option value="MON_SAT">Mon-Sat</option>
                   </SelectInput>
                 </FormField>
               </div>
 
-              <Controller
-                control={control}
-                name="generalSetting.emailNotifications"
-                render={({ field }) => (
-                  <ToggleField
-                    checked={field.value}
-                    onChange={field.onChange}
-                    label="Email Notifications"
-                    description="Keep company-wide HR alerts and workflow emails enabled."
-                  />
-                )}
+              <ToggleField
+                checked={formValues.generalSetting.emailNotifications}
+                onChange={(checked) => {
+                  formik.setFieldValue("generalSetting.emailNotifications", checked);
+                  formik.setFieldTouched("generalSetting.emailNotifications", true);
+                }}
+                label="Email Notifications"
+                description="Keep company-wide HR alerts and workflow emails enabled."
               />
 
               <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-700/50">
@@ -803,11 +1218,15 @@ export function CompanySetupForm() {
                       key={holiday}
                       type="button"
                       onClick={() =>
-                        setValue(
-                          "generalSetting.holidayList",
-                          holidayList.filter((item) => item !== holiday),
-                          { shouldValidate: true },
-                        )
+                        setFormValues((prev) => ({
+                          ...prev,
+                          generalSetting: {
+                            ...prev.generalSetting,
+                            holidayList: prev.generalSetting.holidayList.filter(
+                              (item) => item !== holiday,
+                            ),
+                          },
+                        }))
                       }
                       className="rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700 dark:border-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400"
                     >
@@ -815,9 +1234,9 @@ export function CompanySetupForm() {
                     </button>
                   ))}
                 </div>
-                {errors.generalSetting?.holidayList?.message ? (
+                {getError("generalSetting.holidayList") ? (
                   <p className="mt-3 text-sm text-rose-600 dark:text-rose-400">
-                    {errors.generalSetting.holidayList.message}
+                    {getError("generalSetting.holidayList")}
                   </p>
                 ) : null}
               </div>
@@ -839,7 +1258,7 @@ export function CompanySetupForm() {
 
                 return (
                   <div
-                    key={field.id}
+                    key={index}
                     className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-700/50"
                   >
                     <div className="mb-4 flex items-center justify-between">
@@ -858,31 +1277,41 @@ export function CompanySetupForm() {
                     <div className="grid gap-5 md:grid-cols-3">
                       <FormField
                         label="Field Name"
-                        error={
-                          errors.employeeCustomFields?.[index]?.fieldName
-                            ?.message
-                        }
+                        error={getError(`employeeCustomFields.${index}.fieldName`)}
                         required
                       >
                         <TextInput
-                          {...register(
-                            `employeeCustomFields.${index}.fieldName`,
-                          )}
+                          name={`employeeCustomFields.${index}.fieldName`}
+                          value={field.fieldName ?? ""}
+                          onChange={(e) =>
+                          handleArrayFieldChange(
+                              index,
+                              "employeeCustomFields",
+                              "fieldType",
+                              e.target.value,
+                            )
+                          }
+                          onBlur={formik.handleBlur}
                           placeholder="Blood Group"
                         />
                       </FormField>
                       <FormField
                         label="Field Type"
-                        error={
-                          errors.employeeCustomFields?.[index]?.fieldType
-                            ?.message
-                        }
+                        error={getError(`employeeCustomFields.${index}.fieldType`)}
                         required
                       >
                         <SelectInput
-                          {...register(
-                            `employeeCustomFields.${index}.fieldType`,
-                          )}
+                          name={`employeeCustomFields.${index}.fieldType`}
+                          value={field.fieldType ?? "TEXT"}
+                          onChange={(e) =>
+                          handleArrayFieldChange(
+                              index,
+                              "employeeCustomFields",
+                              "fieldType",
+                              e.target.value,
+                            )
+                          }
+                          onBlur={formik.handleBlur}
                         >
                           <option value="TEXT">Text</option>
                           <option value="NUMBER">Number</option>
@@ -891,49 +1320,57 @@ export function CompanySetupForm() {
                           <option value="CHECKBOX">Checkbox</option>
                         </SelectInput>
                       </FormField>
-                      <Controller
-                        control={control}
-                        name={`employeeCustomFields.${index}.required`}
-                        render={({ field: requiredField }) => (
-                          <ToggleField
-                            checked={requiredField.value}
-                            onChange={requiredField.onChange}
-                            label="Required Field"
-                            description="Employees must fill this field."
-                          />
-                        )}
+                      <ToggleField
+                        checked={field.required ?? false}
+                        onChange={(checked) => {
+                          setFormValues((prev) => {
+                            const updated = [...prev.employeeCustomFields];
+                            updated[index] = {
+                              ...updated[index],
+                              required: checked,
+                            };
+                            return { ...prev, employeeCustomFields: updated };
+                          });
+                          setTouched((prev) => ({
+                            ...prev,
+                            [`employeeCustomFields.${index}.required`]: true,
+                          }));
+                        }}
+                        label="Required Field"
+                        description="Employees must fill this field."
                       />
                     </div>
 
                     {fieldType === "DROPDOWN" ? (
-                      <Controller
-                        control={control}
-                        name={`employeeCustomFields.${index}.options`}
-                        render={({ field: optionsField }) => (
-                          <FormField
-                            label="Dropdown Options"
-                            hint="Enter one option per line."
-                            error={
-                              errors.employeeCustomFields?.[index]?.options
-                                ?.message as string | undefined
-                            }
-                          >
-                            <textarea
-                              value={optionsField.value.join("\n")}
-                              onChange={(event) =>
-                                optionsField.onChange(
-                                  event.target.value
-                                    .split("\n")
-                                    .map((item) => item.trim())
-                                    .filter(Boolean),
-                                )
-                              }
-                              rows={4}
-                              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-blue-400 dark:focus:bg-slate-700 dark:focus:ring-blue-900"
-                            />
-                          </FormField>
-                        )}
-                      />
+                      <FormField
+                        label="Dropdown Options"
+                        hint="Enter one option per line."
+                        error={getError(`employeeCustomFields.${index}.options`)}
+                      >
+                        <textarea
+                          value={(field.options ?? []).join("\n")}
+                          onChange={(event) => {
+                            const newOptions = event.target.value
+                              .split("\n")
+                              .map((item) => item.trim())
+                              .filter(Boolean);
+                            setFormValues((prev) => {
+                              const updated = [...prev.employeeCustomFields];
+                              updated[index] = {
+                                ...updated[index],
+                                options: newOptions,
+                              };
+                              return { ...prev, employeeCustomFields: updated };
+                            });
+                            setTouched((prev) => ({
+                              ...prev,
+                              [`employeeCustomFields.${index}.options`]: true,
+                            }));
+                          }}
+                          rows={4}
+                          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-blue-400 dark:focus:bg-slate-700 dark:focus:ring-blue-900"
+                        />
+                      </FormField>
                     ) : null}
                   </div>
                 );
@@ -1017,6 +1454,5 @@ export function CompanySetupForm() {
         </form>
       </div>
     </>
-    // </DashboardLayout>
   );
 }
