@@ -21,7 +21,30 @@ export async function GET(request: NextRequest) {
         companyId: payload.companyId,
       },
       include: {
-        company: true,
+        company: {
+          select: {
+            id: true,
+            name: true,
+            status: true,
+            setupCompleted: true,
+          },
+        },
+        employee: {
+          include: {
+            branch: {
+              select: { id: true, name: true, city: true },
+            },
+            department: {
+              select: { id: true, name: true },
+            },
+            designation: {
+              select: { id: true, name: true },
+            },
+          },
+        },
+        branch: {
+          select: { id: true, name: true, city: true },
+        },
       },
     });
 
@@ -30,12 +53,19 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({
+      id: user.id,
       userId: user.id,
       name: user.name,
       email: user.email,
+      phone: user.phone,
       role: user.role,
+      status: user.status,
       companyId: user.companyId,
-      companyName: user.company.name,
+      branchId: user.branchId,
+      employeeId: user.employeeId,
+      company: user.company,
+      branch: user.branch,
+      employee: user.employee,
     });
   } catch (error) {
     console.error("Me error:", error);
