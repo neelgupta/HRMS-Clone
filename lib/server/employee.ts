@@ -89,6 +89,11 @@ export type EmployeeDetail = EmployeeListItem & {
     isExpired: boolean;
     createdAt: Date;
   }>;
+  user: {
+    id: string;
+    email: string;
+    status: string;
+  } | null;
 };
 
 type CreateEmployeeResult = {
@@ -301,17 +306,18 @@ export async function createEmployee(
     newValues: employee,
   });
 
-  const tempPassword = generateTempPassword();
+  const userEmail = input.userEmail || employee.email;
+  const tempPassword = input.userPassword || generateTempPassword();
   const hashedPassword = await hashPassword(tempPassword);
 
   const user = await prisma.user.create({
     data: {
       name: `${employee.firstName} ${employee.lastName}`,
-      email: employee.email,
+      email: userEmail.toLowerCase(),
       phone: employee.phone || "",
       password: hashedPassword,
       role: "EMPLOYEE",
-      status: "INACTIVE",
+      status: "ACTIVE",
       companyId,
       employeeId: employee.id,
     },
@@ -335,7 +341,7 @@ export async function createEmployee(
   return { 
     employee: flattened as unknown as EmployeeDetail,
     loginCredentials: {
-      email: employee.email,
+      email: userEmail,
       tempPassword: tempPassword,
       userId: user.id,
     }
@@ -512,6 +518,9 @@ export async function getEmployeeById(companyId: string, employeeId: string): Pr
       documents: {
         orderBy: { createdAt: "desc" },
       },
+      user: {
+        select: { id: true, email: true, status: true },
+      },
     },
   });
 
@@ -534,6 +543,7 @@ export async function listEmployees(
 
   const where: Prisma.EmployeeWhereInput = {
     companyId,
+    isDeleted: false,
     ...(department && { department: { name: { contains: department, mode: "insensitive" } } }),
     ...(designation && { designation: { name: { contains: designation, mode: "insensitive" } } }),
     ...(employmentType && { employmentType }),
@@ -595,14 +605,28 @@ export async function listEmployees(
 
 export async function deleteEmployee(companyId: string, userId: string, employeeId: string): Promise<void> {
   const existing = await prisma.employee.findFirst({
-    where: { id: employeeId, companyId },
+    where: { id: employeeId, companyId, isDeleted: false },
   });
 
   if (!existing) {
     throw new Error("Employee not found.");
   }
 
-  await prisma.employee.delete({ where: { id: employeeId } });
+  await prisma.employee.update({
+    where: { id: employeeId },
+    data: { isDeleted: true },
+  });
+
+  const linkedUser = await prisma.user.findFirst({
+    where: { employeeId },
+  });
+
+  if (linkedUser) {
+    await prisma.user.update({
+      where: { id: linkedUser.id },
+      data: { status: "INACTIVE" },
+    });
+  }
 
   await createAuditLog({
     companyId,
@@ -884,4 +908,70 @@ export async function getEmployeesByDepartment(companyId: string) {
   });
 
   return flattened;
+}
+
+export async function updateEmployeeCredentials(
+  companyId: string,
+  userId: string,
+  employeeId: string,
+  input: { email?: string; password?: string },
+): Promise<{ email: string; message: string }> {
+  const employee = await prisma.employee.findFirst({
+    where: { id: employeeId, companyId, isDeleted: false },
+    include: { user: true },
+  });
+
+  if (!employee) {
+    throw new Error("Employee not found.");
+  }
+
+  if (!employee.user) {
+    throw new Error("No user account linked to this employee.");
+  }
+
+  const existing = await prisma.user.findUnique({
+    where: { id: employee.user.id },
+    select: { email: true },
+  });
+
+  if (!existing) {
+    throw new Error("User account not found.");
+  }
+
+  const updateData: { email?: string; password?: string } = {};
+
+  if (input.email && input.email !== existing.email) {
+    const emailExists = await prisma.user.findFirst({
+      where: { email: input.email.toLowerCase(), id: { not: employee.user.id } },
+    });
+    if (emailExists) {
+      throw new Error("This email is already in use by another user.");
+    }
+    updateData.email = input.email.toLowerCase();
+  }
+
+  if (input.password) {
+    updateData.password = await hashPassword(input.password);
+  }
+
+  if (Object.keys(updateData).length === 0) {
+    return { email: existing.email, message: "No changes made." };
+  }
+
+  await prisma.user.update({
+    where: { id: employee.user.id },
+    data: updateData,
+  });
+
+  await createAuditLog({
+    companyId,
+    userId,
+    action: "UPDATE",
+    entityType: "UserCredentials",
+    entityId: employee.user.id,
+    oldValues: { email: existing.email },
+    newValues: { email: updateData.email || existing.email, passwordChanged: !!updateData.password },
+  });
+
+  return { email: updateData.email || existing.email, message: "Credentials updated successfully." };
 }

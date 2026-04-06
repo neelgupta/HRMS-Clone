@@ -86,8 +86,8 @@ export async function requireHRAdmin(request: NextRequest) {
     return { response: NextResponse.json({ message: "Unauthorized." }, { status: 401 }) };
   }
 
-  if (user.role !== "HR_ADMIN") {
-    console.log("User role not HR_ADMIN:", user.role);
+  if (user.role !== "HR_ADMIN" && user.role !== "SUPER_ADMIN") {
+    console.log("User role not HR_ADMIN or SUPER_ADMIN:", user.role);
     return { response: NextResponse.json({ message: "Forbidden." }, { status: 403 }) };
   }
 

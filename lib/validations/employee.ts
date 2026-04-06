@@ -96,6 +96,9 @@ export const createEmployeeSchema = z.object({
   pfUAN: z.string().optional(),
   esiNumber: z.string().optional(),
 
+  userEmail: z.string().email("Invalid email address").optional(),
+  userPassword: z.string().min(6, "Password must be at least 6 characters").optional(),
+
   education: z.array(educationSchema).optional(),
   workHistory: z.array(workHistorySchema).optional(),
 

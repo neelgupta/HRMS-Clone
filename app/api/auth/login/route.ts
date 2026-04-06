@@ -40,7 +40,7 @@ export async function POST(request: Request) {
 
     if (user.status === "INACTIVE") {
       return NextResponse.json(
-        { message: "Please set your password first via the email link." },
+        { message: "Your account has been deactivated. Please contact HR." },
         { status: 403 },
       );
     }

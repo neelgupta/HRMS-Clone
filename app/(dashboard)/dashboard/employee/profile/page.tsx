@@ -87,9 +87,9 @@ function ProfileContent() {
             <div className="w-28 h-28 mx-auto rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white text-3xl font-bold shadow-lg shadow-indigo-200 dark:shadow-indigo-900">
               {initials}
             </div>
-            <button className="absolute bottom-0 right-0 w-8 h-8 bg-slate-900 dark:bg-slate-600 rounded-xl flex items-center justify-center text-white hover:bg-slate-800 dark:hover:bg-slate-500 transition-colors">
+            {/* <button className="absolute bottom-0 right-0 w-8 h-8 bg-slate-900 dark:bg-slate-600 rounded-xl flex items-center justify-center text-white hover:bg-slate-800 dark:hover:bg-slate-500 transition-colors">
               <MdCameraAlt className="text-sm" />
-            </button>
+            </button> */}
           </div>
           <h2 className="mt-4 text-xl font-semibold text-slate-900 dark:text-white">{fullName}</h2>
           <p className="text-sm text-slate-500 dark:text-slate-400">{profile?.employee?.designation || "Employee"}</p>

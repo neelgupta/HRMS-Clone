@@ -30,6 +30,7 @@ export async function GET(request: NextRequest) {
     const result = await listEmployees(companyId, params);
     return NextResponse.json(result);
   } catch (error) {
+    console.error("List employees error:", error);
     return getErrorResponse(error, "Failed to fetch employees.");
   }
 }
@@ -48,7 +49,7 @@ export async function POST(request: NextRequest) {
     const parsed = createEmployeeSchema.parse(body);
 
     const existingEmailEmployee = await prisma.employee.findFirst({
-      where: { companyId, email: parsed.email.toLowerCase() },
+      where: { companyId, email: parsed.email.toLowerCase(), isDeleted: false },
     });
 
     if (existingEmailEmployee) {
@@ -59,14 +60,26 @@ export async function POST(request: NextRequest) {
     }
 
     const existingEmailUser = await prisma.user.findFirst({
-      where: { email: parsed.email.toLowerCase() },
+      where: { email: parsed.email.toLowerCase(), status: "ACTIVE" },
     });
 
     if (existingEmailUser) {
       return NextResponse.json(
-        { message: "This email is already registered as a user. Please use a different email." },
+        { message: "This email is already registered as an active user. Please use a different email." },
         { status: 409 }
       );
+    }
+
+    const softDeletedEmployee = await prisma.employee.findFirst({
+      where: { companyId, email: parsed.email.toLowerCase(), isDeleted: true },
+      include: { user: true },
+    });
+
+    if (softDeletedEmployee && softDeletedEmployee.user) {
+      await prisma.user.update({
+        where: { id: softDeletedEmployee.user.id },
+        data: { status: "ACTIVE" },
+      });
     }
 
     const result = await createEmployee(companyId, userId, parsed);
