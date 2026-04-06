@@ -283,31 +283,42 @@ export function EmployeeForm({ employee, companyBranches, departments, designati
         </div>
 
         <div className="mt-6 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-          <div>
-            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
-              First Name <span className="text-rose-500 dark:text-rose-400">*</span>
-            </label>
-            <input
-              type="text"
-              value={formData.firstName}
-              onChange={(e) => updateField("firstName", e.target.value)}
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:focus:border-blue-400 dark:focus:bg-slate-700 dark:focus:ring-blue-900"
-              placeholder="First name"
-            />
-          </div>
+           <div>
+             <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
+               First Name <span className="text-rose-500 dark:text-rose-400">*</span>
+             </label>
+             <input
+               type="text"
+               value={formData.firstName}
+               onChange={(e) => updateField("firstName", e.target.value.trim())}
+               className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:focus:border-blue-400 dark:focus:bg-slate-700 dark:focus:ring-blue-900"
+               placeholder="First name"
+             />
+           </div>
 
-          <div>
-            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
-              Last Name <span className="text-rose-500 dark:text-rose-400">*</span>
-            </label>
-            <input
-              type="text"
-              value={formData.lastName}
-              onChange={(e) => updateField("lastName", e.target.value)}
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:focus:border-blue-400 dark:focus:bg-slate-700 dark:focus:ring-blue-900"
-              placeholder="Last name"
-            />
-          </div>
+           <div>
+             <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
+               Last Name <span className="text-rose-500 dark:text-rose-400">*</span>
+             </label>
+             <input
+               type="text"
+               value={formData.lastName}
+               onChange={(e) => {
+                 const lastName = e.target.value.trim();
+                 updateField("lastName", lastName);
+                 
+                 // Auto-generate email when first or last name changes
+                 if (lastName && formData.firstName.trim()) {
+                   const email = `${formData.firstName.trim().toLowerCase()}.${lastName.toLowerCase()}@Worknest.com`;
+                   updateField("email", email);
+                 } else if (!lastName) {
+                   updateField("email", "");
+                 }
+               }}
+               className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:focus:border-blue-400 dark:focus:bg-slate-700 dark:focus:ring-blue-900"
+               placeholder="Last name"
+             />
+           </div>
 
           <div>
             <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
@@ -403,35 +414,6 @@ export function EmployeeForm({ employee, companyBranches, departments, designati
       </section>
 
     
-
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
-        <h3 className="text-lg font-semibold text-slate-900 dark:text-white">User Credentials</h3>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Login credentials for the employee. Leave blank to auto-generate.</p>
-
-        <div className="mt-6 grid gap-5 md:grid-cols-2">
-          <div>
-            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">User Email</label>
-            <input
-              type="email"
-              value={formData.userEmail || ""}
-              onChange={(e) => updateField("userEmail", e.target.value || undefined)}
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:focus:border-blue-400 dark:focus:bg-slate-700 dark:focus:ring-blue-900"
-              placeholder="employee@company.com"
-            />
-          </div>
-
-          <div>
-            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">User Password</label>
-            <input
-              type="text"
-              value={formData.userPassword || ""}
-              onChange={(e) => updateField("userPassword", e.target.value || undefined)}
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:focus:border-blue-400 dark:focus:bg-slate-700 dark:focus:ring-blue-900"
-              placeholder="Leave blank to auto-generate"
-            />
-          </div>
-        </div>
-      </section>
 
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
         <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Employment Details</h3>
@@ -1147,21 +1129,21 @@ export function EmployeeForm({ employee, companyBranches, departments, designati
             </div>
 
             <div className="mt-6 flex justify-end">
-              <button
-                onClick={() => {
-                  setShowCredentials(false);
-                  setLoginCredentials(null);
-                  if (onSuccess) {
-                    onSuccess();
-                  } else {
-                    router.push(`/dashboard/hr/employees`);
-                  }
-                }}
-                className="rounded-xl bg-blue-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-blue-700 dark:hover:bg-blue-500"
-              >
-                Done
-              </button>
-            </div>
+               <button
+                 onClick={() => {
+                   setShowCredentials(false);
+                   // Keep loginCredentials state so they remain visible
+                   if (onSuccess) {
+                     onSuccess();
+                   } else {
+                     router.push(`/dashboard/hr/employees`);
+                   }
+                 }}
+                 className="rounded-xl bg-blue-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-blue-700 dark:hover:bg-blue-500"
+               >
+                 Done
+               </button>
+             </div>
           </div>
         </div>
       )}
