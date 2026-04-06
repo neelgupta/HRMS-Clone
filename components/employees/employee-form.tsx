@@ -402,6 +402,37 @@ export function EmployeeForm({ employee, companyBranches, departments, designati
         </div>
       </section>
 
+    
+
+      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+        <h3 className="text-lg font-semibold text-slate-900 dark:text-white">User Credentials</h3>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Login credentials for the employee. Leave blank to auto-generate.</p>
+
+        <div className="mt-6 grid gap-5 md:grid-cols-2">
+          <div>
+            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">User Email</label>
+            <input
+              type="email"
+              value={formData.userEmail || ""}
+              onChange={(e) => updateField("userEmail", e.target.value || undefined)}
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:focus:border-blue-400 dark:focus:bg-slate-700 dark:focus:ring-blue-900"
+              placeholder="employee@company.com"
+            />
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">User Password</label>
+            <input
+              type="text"
+              value={formData.userPassword || ""}
+              onChange={(e) => updateField("userPassword", e.target.value || undefined)}
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:focus:border-blue-400 dark:focus:bg-slate-700 dark:focus:ring-blue-900"
+              placeholder="Leave blank to auto-generate"
+            />
+          </div>
+        </div>
+      </section>
+
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
         <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Employment Details</h3>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Job role and employment information.</p>
@@ -1060,21 +1091,26 @@ export function EmployeeForm({ employee, companyBranches, departments, designati
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl dark:bg-slate-800">
             <h3 className="text-xl font-semibold text-slate-900 dark:text-white">Employee Created Successfully!</h3>
             <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-              Share these credentials with the employee. They must set a new password on first login.
+              Share these credentials with the employee. They can use them to log in directly.
             </p>
 
             <div className="mt-6 space-y-4">
               <div className="rounded-xl bg-slate-50 p-4 dark:bg-slate-700">
                 <label className="block text-xs font-medium text-slate-500 dark:text-slate-400">Email</label>
-                <div className="mt-1 flex items-center justify-between">
-                  <span className="font-mono text-sm text-slate-900 dark:text-white">{loginCredentials.email}</span>
+                <div className="mt-1 flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={loginCredentials.email}
+                    onChange={(e) => setLoginCredentials({ ...loginCredentials, email: e.target.value })}
+                    className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-mono text-slate-900 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-600 dark:text-white dark:focus:border-blue-400 dark:focus:ring-blue-900"
+                  />
                   <button
                     onClick={() => {
                       navigator.clipboard.writeText(loginCredentials.email);
                       setCopiedField("email");
                       setTimeout(() => setCopiedField(null), 2000);
                     }}
-                    className="ml-2 text-blue-600 hover:text-blue-700 dark:text-blue-400"
+                    className="flex-shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 transition hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-600 dark:text-slate-300 dark:hover:bg-slate-500"
                   >
                     {copiedField === "email" ? <MdCheck className="text-green-600" /> : <MdContentCopy />}
                   </button>
@@ -1083,24 +1119,29 @@ export function EmployeeForm({ employee, companyBranches, departments, designati
 
               <div className="rounded-xl bg-slate-50 p-4 dark:bg-slate-700">
                 <label className="block text-xs font-medium text-slate-500 dark:text-slate-400">Temporary Password</label>
-                <div className="mt-1 flex items-center justify-between">
-                  <span className="font-mono text-sm text-slate-900 dark:text-white">{loginCredentials.tempPassword}</span>
+                <div className="mt-1 flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={loginCredentials.tempPassword}
+                    onChange={(e) => setLoginCredentials({ ...loginCredentials, tempPassword: e.target.value })}
+                    className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-mono text-slate-900 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-600 dark:text-white dark:focus:border-blue-400 dark:focus:ring-blue-900"
+                  />
                   <button
                     onClick={() => {
                       navigator.clipboard.writeText(loginCredentials.tempPassword);
                       setCopiedField("password");
                       setTimeout(() => setCopiedField(null), 2000);
                     }}
-                    className="ml-2 text-blue-600 hover:text-blue-700 dark:text-blue-400"
+                    className="flex-shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 transition hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-600 dark:text-slate-300 dark:hover:bg-slate-500"
                   >
                     {copiedField === "password" ? <MdCheck className="text-green-600" /> : <MdContentCopy />}
                   </button>
                 </div>
               </div>
 
-              <div className="rounded-xl bg-amber-50 border border-amber-200 p-4 dark:bg-amber-900/20 dark:border-amber-700">
-                <p className="text-xs text-amber-800 dark:text-amber-300">
-                  <strong>Important:</strong> The employee must set a new password after their first login using the &quot;Forgot Password&quot; link.
+              <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-4 dark:bg-emerald-900/20 dark:border-emerald-700">
+                <p className="text-xs text-emerald-800 dark:text-emerald-300">
+                  <strong>Done!</strong> The employee can log in immediately using these credentials.
                 </p>
               </div>
             </div>

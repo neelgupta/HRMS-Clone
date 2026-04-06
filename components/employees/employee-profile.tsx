@@ -3,9 +3,9 @@
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { MdEdit, MdDelete, MdUpload, MdWarning, MdVisibility } from "react-icons/md";
+import { MdEdit, MdDelete, MdUpload, MdWarning, MdVisibility, MdKey, MdCheck, MdContentCopy, MdClose } from "react-icons/md";
 import { dismissToast, showError, showLoading, showSuccess } from "@/lib/toast";
-import { deleteEmployee, uploadEmployeeDocument, deleteEmployeeDocument, type EmployeeDetail } from "@/lib/client/employee";
+import { deleteEmployee, uploadEmployeeDocument, deleteEmployeeDocument, updateEmployeeCredentials, type EmployeeDetail } from "@/lib/client/employee";
 
 type EmployeeProfileProps = {
   employee: EmployeeDetail;
@@ -19,6 +19,12 @@ export function EmployeeProfile({ employee, onUpdate }: EmployeeProfileProps) {
   const [uploadingDoc, setUploadingDoc] = useState(false);
   const [pendingUploads, setPendingUploads] = useState<Array<{ file: File; preview: string }>>([]);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+  const [showCredentialsModal, setShowCredentialsModal] = useState(false);
+  const [credentialEmail, setCredentialEmail] = useState(employee.user?.email || "");
+  const [credentialPassword, setCredentialPassword] = useState("");
+  const [updatingCredentials, setUpdatingCredentials] = useState(false);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const formatDate = (date: string | null) => {
@@ -143,6 +149,52 @@ export function EmployeeProfile({ employee, onUpdate }: EmployeeProfileProps) {
     }
   };
 
+  const handleUpdateCredentials = async () => {
+    if (!credentialEmail && !credentialPassword) {
+      showError("Provide at least email or password to update.");
+      return;
+    }
+
+    if (credentialEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(credentialEmail)) {
+      showError("Invalid email address.");
+      return;
+    }
+
+    if (credentialPassword && credentialPassword.length < 6) {
+      showError("Password must be at least 6 characters.");
+      return;
+    }
+
+    setUpdatingCredentials(true);
+    const toastId = showLoading("Updating credentials...");
+
+    try {
+      const result = await updateEmployeeCredentials(employee.id, {
+        email: credentialEmail || undefined,
+        password: credentialPassword || undefined,
+      });
+
+      if (result.error) {
+        dismissToast(toastId);
+        showError(result.error);
+        return;
+      }
+
+      dismissToast(toastId);
+      showSuccess(result.data?.message || "Credentials updated successfully.");
+      setCredentialPassword("");
+      setShowCredentialsModal(false);
+      if (onUpdate) {
+        onUpdate();
+      }
+    } catch {
+      dismissToast(toastId);
+      showError("Something went wrong. Please try again.");
+    } finally {
+      setUpdatingCredentials(false);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
       PROBATION: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
@@ -208,6 +260,19 @@ export function EmployeeProfile({ employee, onUpdate }: EmployeeProfileProps) {
         </div>
 
         <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              setCredentialEmail(employee.user?.email || "");
+              setCredentialPassword("");
+              setShowCredentialsModal(true);
+            }}
+            className="inline-flex items-center gap-2 rounded-2xl border border-indigo-200 bg-white px-4 py-2.5 text-sm font-medium text-indigo-600 transition hover:bg-indigo-50 dark:border-indigo-700 dark:bg-slate-800 dark:text-indigo-400 dark:hover:bg-indigo-900/20"
+          >
+            <MdKey className="text-lg" />
+            Credentials
+          </button>
+
           <button
             type="button"
             onClick={() => router.push(`/dashboard/hr/employees/${employee.id}/edit`)}
@@ -471,10 +536,10 @@ export function EmployeeProfile({ employee, onUpdate }: EmployeeProfileProps) {
           <div className="mx-4 w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-xl dark:border-slate-700 dark:bg-slate-800">
             <div className="flex items-center gap-3 text-rose-600 dark:text-rose-400">
               <MdWarning className="text-2xl" />
-              <h3 className="text-lg font-semibold dark:text-white">Delete Employee</h3>
+              <h3 className="text-lg font-semibold dark:text-white">Confirm Delete</h3>
             </div>
             <p className="mt-4 text-sm text-slate-600 dark:text-slate-400">
-              Are you sure you want to delete <strong className="dark:text-white">{employee.firstName} {employee.lastName}</strong>? This action cannot be undone and will permanently remove all employee data.
+              Are you sure you want to delete <strong className="dark:text-white">{employee.firstName} {employee.lastName}</strong>? The employee will be deactivated and will no longer be able to access the system.
             </p>
             <div className="mt-6 flex items-center justify-end gap-3">
               <button
@@ -482,7 +547,7 @@ export function EmployeeProfile({ employee, onUpdate }: EmployeeProfileProps) {
                 onClick={() => setShowDeleteConfirm(false)}
                 className="rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
               >
-                Cancel
+                No
               </button>
               <button
                 type="button"
@@ -490,7 +555,7 @@ export function EmployeeProfile({ employee, onUpdate }: EmployeeProfileProps) {
                 disabled={deleting}
                 className="rounded-2xl bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-rose-500"
               >
-                {deleting ? "Deleting..." : "Delete"}
+                {deleting ? "Deleting..." : "Yes, Delete"}
               </button>
             </div>
           </div>
@@ -507,7 +572,7 @@ export function EmployeeProfile({ employee, onUpdate }: EmployeeProfileProps) {
             onClick={() => setLightboxImage(null)}
             className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white transition hover:bg-white/20"
           >
-            <MdDelete className="text-xl" />
+            <MdClose className="text-xl" />
           </button>
           <div className="relative max-h-[90vh] max-w-[90vw]" onClick={(e) => e.stopPropagation()}>
             <Image
@@ -517,6 +582,119 @@ export function EmployeeProfile({ employee, onUpdate }: EmployeeProfileProps) {
               height={800}
               className="max-h-[90vh] w-auto rounded-2xl object-contain"
             />
+          </div>
+        </div>
+      )}
+
+      {showCredentialsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 backdrop-blur-sm dark:bg-slate-950/70">
+          <div className="mx-4 w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-6 shadow-xl dark:border-slate-700 dark:bg-slate-800">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3 text-indigo-600 dark:text-indigo-400">
+                <MdKey className="text-2xl" />
+                <h3 className="text-lg font-semibold dark:text-white">User Credentials</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCredentialsModal(false)}
+                className="rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-700 dark:hover:text-slate-300"
+              >
+                <MdClose className="text-xl" />
+              </button>
+            </div>
+
+            <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">
+              Update the login credentials for <strong className="dark:text-white">{employee.firstName} {employee.lastName}</strong>. Leave password blank to keep the current one.
+            </p>
+
+            <div className="mt-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                  User Email
+                </label>
+                <div className="mt-1 flex items-center gap-2">
+                  <input
+                    type="email"
+                    value={credentialEmail}
+                    onChange={(e) => setCredentialEmail(e.target.value)}
+                    className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none transition focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:focus:border-blue-400 dark:focus:bg-slate-700 dark:focus:ring-blue-900"
+                    placeholder="employee@company.com"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(credentialEmail);
+                      setCopiedField("email");
+                      setTimeout(() => setCopiedField(null), 2000);
+                    }}
+                    className="flex-shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-600 transition hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-600 dark:text-slate-300 dark:hover:bg-slate-500"
+                  >
+                    {copiedField === "email" ? <MdCheck className="text-green-600" /> : <MdContentCopy />}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                  New Password
+                </label>
+                <div className="mt-1 flex items-center gap-2">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={credentialPassword}
+                    onChange={(e) => setCredentialPassword(e.target.value)}
+                    className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none transition focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:focus:border-blue-400 dark:focus:bg-slate-700 dark:focus:ring-blue-900"
+                    placeholder="Leave blank to keep current"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="flex-shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-600 transition hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-600 dark:text-slate-300 dark:hover:bg-slate-500"
+                  >
+                    {showPassword ? "Hide" : "Show"}
+                  </button>
+                  {credentialPassword && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(credentialPassword);
+                        setCopiedField("password");
+                        setTimeout(() => setCopiedField(null), 2000);
+                      }}
+                      className="flex-shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-600 transition hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-600 dark:text-slate-300 dark:hover:bg-slate-500"
+                    >
+                      {copiedField === "password" ? <MdCheck className="text-green-600" /> : <MdContentCopy />}
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {employee.user && (
+                <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-700">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Current Status: <span className="font-medium text-slate-700 dark:text-slate-300">{employee.user.status}</span>
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-6 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setShowCredentialsModal(false)}
+                className="rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleUpdateCredentials}
+                disabled={updatingCredentials}
+                className="rounded-2xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-indigo-500"
+              >
+                {updatingCredentials ? "Updating..." : "Update Credentials"}
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -80,6 +80,11 @@ export type EmployeeDetail = EmployeeListItem & {
     isExpired: boolean;
     createdAt: string;
   }>;
+  user: {
+    id: string;
+    email: string;
+    status: string;
+  } | null;
 };
 
 export type EmployeeStats = {
@@ -293,6 +298,39 @@ export async function exportEmployeesCSV(): Promise<ApiResponse<string>> {
 
     const csv = await response.text();
     return { data: csv };
+  } catch {
+    return { error: "Something went wrong. Please try again." };
+  }
+}
+
+export type UpdateCredentialsInput = {
+  email?: string;
+  password?: string;
+};
+
+export type UpdateCredentialsResponse = {
+  email: string;
+  message: string;
+};
+
+export async function updateEmployeeCredentials(
+  employeeId: string,
+  values: UpdateCredentialsInput,
+): Promise<ApiResponse<UpdateCredentialsResponse>> {
+  try {
+    const response = await fetch(`/api/employees/${employeeId}/credentials`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(values),
+    });
+
+    if (!response.ok) {
+      const data = await parseJson<{ message?: string }>(response);
+      return { error: data.message || "Failed to update credentials." };
+    }
+
+    const data = await parseJson<UpdateCredentialsResponse>(response);
+    return { data };
   } catch {
     return { error: "Something went wrong. Please try again." };
   }
