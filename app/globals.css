@@ -2,6 +2,15 @@
 
 @variant dark (&:where(.dark, .dark *));
 
+html {
+  scroll-behavior: smooth;
+}
+
+html, body {
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+/* Immediate dark mode colors to prevent flash */
 :root {
   --background: #f8fafc;
   --foreground: #0f172a;
@@ -26,7 +35,11 @@
   color-scheme: light;
 }
 
-.dark {
+:root:not(.dark) {
+  background-color: #f8fafc;
+}
+
+:root.dark, .dark {
   --background: #0f172a;
   --foreground: #f8fafc;
   --card: #1e293b;
@@ -47,6 +60,17 @@
   --input: #334155;
   --ring: #818cf8;
   color-scheme: dark;
+  background-color: #0f172a;
+}
+
+/* Anti-flash: Prevent white flash on dark mode */
+:root.dark body, .dark body {
+  background-color: #0f172a;
+}
+
+/* Prevent flash: Set both backgrounds until JS runs */
+html, html body {
+  background-color: #f8fafc;
 }
 
 @theme inline {

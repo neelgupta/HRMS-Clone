@@ -1,0 +1,129 @@
+// Leave Types Enum
+export enum LeaveType {
+  CASUAL = "CASUAL",
+  SICK = "SICK",
+  PRIVILEGE = "PRIVILEGE",
+  MATERNITY = "MATERNITY",
+  PATERNITY = "PATERNITY",
+  BEREAVEMENT = "BEREAVEMENT",
+  UNPAID = "UNPAID",
+  WORK_FROM_HOME = "WORK_FROM_HOME",
+}
+
+// Leave Request Status
+export enum LeaveStatus {
+  PENDING = "PENDING",
+  APPROVED = "APPROVED",
+  REJECTED = "REJECTED",
+  CANCELLED = "CANCELLED",
+}
+
+// Leave Application Schema
+model LeaveApplication {
+  id              String      @id @default(uuid())
+  employeeId      String
+  employee        Employee    @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  companyId       String
+  company         Company     @relation(fields: [companyId], references: [id])
+  
+  leaveType       LeaveType
+  startDate       DateTime    @db.Date
+  endDate         DateTime    @db.Date
+  totalDays       Float       // 0.5 for half day, 1 for full day, etc.
+  reason          String?
+  
+  status          LeaveStatus @default(PENDING)
+  
+  // Approval workflow
+  reviewedBy      String?
+  reviewedAt      DateTime?
+  reviewRemarks   String?
+  
+  // Attachments for medical docs etc
+  attachmentUrl   String?
+  
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@unique([employeeId, startDate])
+  @@index([companyId])
+  @@index([employeeId])
+  @@index([status])
+  @@map("leave_applications")
+}
+
+// Leave Policy - Company-wide leave rules
+model LeavePolicy {
+  id                String      @id @default(uuid())
+  companyId         String      @unique
+  company           Company     @relation(fields: [companyId], references: [id])
+  
+  // Annual quota per leave type
+  casualLeaveDays   Int         @default(10)
+  sickLeaveDays     Int         @default(10)
+  privilegeLeaveDays Int        @default(15) // Earned leave
+  
+  // Carry forward rules
+  maxCarryForward   Int         @default(5)
+  carryForwardExpiry DateTime? // Month when CF lapses
+  
+  // Encashment rules
+  allowEncashment    Boolean     @default(false)
+  maxEncashDays      Int         @default(5)
+  
+  // Approval hierarchy
+  requireManagerApproval Boolean @default(true)
+  managerApprovalDays   Int      @default(2) // Days to respond
+  
+  // Gender-specific
+  maternityLeaveDays    Int      @default(90)
+  paternityLeaveDays   Int      @default(15)
+  
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  @@map("leave_policies")
+}
+
+// Leave Balance - Per employee leave tracking
+model LeaveBalance {
+  id              String    @id @default(uuid())
+  employeeId      String
+  employee        Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  companyId       String
+  
+  year            Int       // Calendar year
+  leaveType       LeaveType
+  
+  totalDays       Float     // Annual allocation
+  usedDays        Float     @default(0)
+  pendingDays     Float     @default(0)
+  availableDays  Float     // Computed: total - used - pending
+  
+  carriedForward  Float     @default(0)
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([employeeId, year, leaveType])
+  @@index([employeeId])
+  @@map("leave_balances")
+}
+
+// Leave Holiday - Company holidays
+model LeaveHoliday {
+  id          String   @id @default(uuid())
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id])
+  
+  name        String
+  date        DateTime @db.Date
+  isOptional  Boolean  @default(false)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([companyId, date])
+  @@index([companyId])
+  @@map("leave_holidays")
+}

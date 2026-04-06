@@ -2,21 +2,60 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { MdSearch, MdNotifications, MdKeyboardArrowDown, MdPerson, MdLogout } from "react-icons/md";
+import { 
+  MdSearch, 
+  MdKeyboardArrowDown, 
+  MdPerson, 
+  MdLogout,
+} from "react-icons/md";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { NotificationBell } from "@/components/ui/notification-bell";
+
+type NotificationItem = {
+  id: string;
+  type: string;
+  title: string;
+  message: string;
+  isRead: boolean;
+  createdAt: string;
+};
 
 type EmployeeTopbarProps = {
   userName: string;
   userInitials: string;
   designation?: string;
   onLogout: () => Promise<void>;
+  notificationCount?: number;
+  notifications?: NotificationItem[];
+  onMarkAsRead?: (id: string) => Promise<void>;
+  onMarkAllAsRead?: () => Promise<void>;
+  onNotificationClick?: () => void;
+  notificationHref?: string;
 };
 
-export function EmployeeTopbar({ userName, userInitials, designation = "Employee", onLogout }: EmployeeTopbarProps) {
+export function EmployeeTopbar({ 
+  userName, 
+  userInitials, 
+  designation = "Employee", 
+  onLogout,
+  notificationCount = 0,
+  notifications = [],
+  onMarkAsRead,
+  onMarkAllAsRead,
+  onNotificationClick,
+  notificationHref
+}: EmployeeTopbarProps) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
-  const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+
+  const handleNotificationClick = () => {
+    if (onNotificationClick) {
+      onNotificationClick();
+    } else if (notificationHref) {
+      router.push(notificationHref);
+    }
+  };
 
   return (
     <>
@@ -38,27 +77,13 @@ export function EmployeeTopbar({ userName, userInitials, designation = "Employee
           <div className="flex items-center gap-2 ml-6">
             <ThemeToggle />
             
-            <div className="relative">
-              <button
-                onClick={() => setShowNotifications(!showNotifications)}
-                className="relative p-2.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-2xl transition-colors"
-              >
-                <MdNotifications className="text-xl text-slate-500 dark:text-slate-400" />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
-              </button>
-              {showNotifications && (
-                <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-                  <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-700">
-                    <h3 className="font-semibold text-slate-900 dark:text-white">Notifications</h3>
-                  </div>
-                  <div className="max-h-64 overflow-y-auto">
-                    <div className="p-6 text-center text-slate-500 dark:text-slate-400 text-sm">
-                      No new notifications
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
+            <NotificationBell
+              notificationCount={notificationCount}
+              notifications={notifications}
+              onMarkAsRead={onMarkAsRead}
+              onMarkAllAsRead={onMarkAllAsRead}
+              href={notificationHref}
+            />
 
             <div className="relative">
               <button
@@ -75,7 +100,7 @@ export function EmployeeTopbar({ userName, userInitials, designation = "Employee
                 <MdKeyboardArrowDown className="text-slate-400 dark:text-slate-500" />
               </button>
               {showUserMenu && (
-                <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden z-50">
                   <button
                     onClick={() => router.push("/dashboard/employee/profile")}
                     className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
@@ -97,13 +122,10 @@ export function EmployeeTopbar({ userName, userInitials, designation = "Employee
         </div>
       </header>
 
-      {(showNotifications || showUserMenu) && (
+      {showUserMenu && (
         <div
           className="fixed inset-0 z-30"
-          onClick={() => {
-            setShowNotifications(false);
-            setShowUserMenu(false);
-          }}
+          onClick={() => setShowUserMenu(false)}
         />
       )}
     </>
