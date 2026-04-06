@@ -250,7 +250,7 @@ async function main() {
     });
 
     if (existing) {
-      createdEmployees.push(existing);
+      createdEmployees.push({ ...existing, designation: emp.designation });
       console.log(`Employee exists: ${emp.firstName} ${emp.lastName}`);
       continue;
     }
@@ -284,7 +284,7 @@ async function main() {
       },
     });
 
-    createdEmployees.push(employee);
+    createdEmployees.push({ ...employee, designation: emp.designation });
     console.log(`Created: ${emp.firstName} ${emp.lastName} (${emp.designation})`);
   }
 

@@ -26,8 +26,6 @@ export type UserWithEmployee = {
     lastName: string;
     email: string;
     phone: string | null;
-    designation: string | null;
-    department: string | null;
     employmentType: string;
     employmentStatus: string;
     dateOfJoining: string | null;

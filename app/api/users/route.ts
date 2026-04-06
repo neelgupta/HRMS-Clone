@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
     return authResult.response;
   }
 
-  const { searchParams } = request.nextUrl();
+  const searchParams = request.nextUrl.searchParams;
   const userId = searchParams.get("userId");
   const unlinked = searchParams.get("unlinked");
 

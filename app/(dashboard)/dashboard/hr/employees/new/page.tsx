@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { EmployeeForm } from "@/components/employees/employee-form";
 import { Spinner } from "@/components/ui/loaders/spinner";
 import { fetchDepartments } from "@/lib/client/department";
@@ -67,27 +66,25 @@ export default function NewEmployeePage() {
 
   if (loading) {
     return (
-      <DashboardLayout title="New Employee" subtitle="Add a new employee to your organization">
-        <div className="flex items-center justify-center py-20">
-          <Spinner className="text-indigo-600" label="Loading" />
-        </div>
-      </DashboardLayout>
+      <div className="flex items-center justify-center py-20">
+        <Spinner className="text-indigo-600" label="Loading" />
+      </div>
     );
   }
 
   return (
-    <DashboardLayout title="New Employee" subtitle="Add a new employee to your organization">
+    <>
       <div className="mb-6">
         <button
           type="button"
           onClick={() => router.push("/dashboard/hr/employees")}
-          className="text-sm text-slate-500 hover:text-slate-700"
+          className="text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
         >
           ← Back to Employees
         </button>
       </div>
 
       <EmployeeForm companyBranches={branches} departments={departments} designations={designations} employees={employees} />
-    </DashboardLayout>
+    </>
   );
 }

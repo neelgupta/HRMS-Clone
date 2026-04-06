@@ -145,13 +145,13 @@ export function EmployeeProfile({ employee, onUpdate }: EmployeeProfileProps) {
 
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
-      PROBATION: "bg-amber-100 text-amber-700",
-      CONFIRMED: "bg-emerald-100 text-emerald-700",
-      TERMINATED: "bg-rose-100 text-rose-700",
-      RESIGNED: "bg-slate-100 text-slate-700",
-      RETIRED: "bg-blue-100 text-blue-700",
+      PROBATION: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+      CONFIRMED: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
+      TERMINATED: "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400",
+      RESIGNED: "bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300",
+      RETIRED: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
     };
-    return styles[status] || "bg-slate-100 text-slate-700";
+    return styles[status] || "bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300";
   };
 
   const documentTypeLabels: Record<string, string> = {
@@ -178,7 +178,7 @@ export function EmployeeProfile({ employee, onUpdate }: EmployeeProfileProps) {
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-xl font-semibold text-white shadow-lg shadow-indigo-200">
+          <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-xl font-semibold text-white shadow-lg shadow-indigo-200 dark:shadow-indigo-900/50">
             {employee.photoUrl ? (
               <Image
                 src={employee.photoUrl}
@@ -194,14 +194,14 @@ export function EmployeeProfile({ employee, onUpdate }: EmployeeProfileProps) {
           </div>
           <div>
             <div className="flex items-center gap-3">
-              <h2 className="text-2xl font-semibold text-slate-900">
+              <h2 className="text-2xl font-semibold text-slate-900 dark:text-white">
                 {employee.firstName} {employee.lastName}
               </h2>
               <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusBadge(employee.employmentStatus)}`}>
                 {employee.employmentStatus}
               </span>
             </div>
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
               {employee.employeeCode} • {employee.designation || "No designation"} • {employee.department || "No department"}
             </p>
           </div>
@@ -211,7 +211,7 @@ export function EmployeeProfile({ employee, onUpdate }: EmployeeProfileProps) {
           <button
             type="button"
             onClick={() => router.push(`/dashboard/hr/employees/${employee.id}/edit`)}
-            className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+            className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
           >
             <MdEdit className="text-lg" />
             Edit
@@ -220,7 +220,7 @@ export function EmployeeProfile({ employee, onUpdate }: EmployeeProfileProps) {
           <button
             type="button"
             onClick={() => setShowDeleteConfirm(true)}
-            className="inline-flex items-center gap-2 rounded-2xl border border-rose-200 bg-white px-4 py-2.5 text-sm font-medium text-rose-600 transition hover:bg-rose-50"
+            className="inline-flex items-center gap-2 rounded-2xl border border-rose-200 bg-white px-4 py-2.5 text-sm font-medium text-rose-600 transition hover:bg-rose-50 dark:border-rose-700 dark:bg-slate-800 dark:text-rose-400 dark:hover:bg-rose-900/20"
           >
             <MdDelete className="text-lg" />
             Delete
@@ -230,8 +230,8 @@ export function EmployeeProfile({ employee, onUpdate }: EmployeeProfileProps) {
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-6">
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h3 className="text-lg font-semibold text-slate-900">Personal Information</h3>
+          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Personal Information</h3>
 
             <div className="mt-6 grid gap-5 md:grid-cols-2">
               <InfoItem label="Email" value={employee.email} />
@@ -244,8 +244,8 @@ export function EmployeeProfile({ employee, onUpdate }: EmployeeProfileProps) {
             </div>
           </section>
 
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h3 className="text-lg font-semibold text-slate-900">Employment Details</h3>
+          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Employment Details</h3>
 
             <div className="mt-6 grid gap-5 md:grid-cols-2">
               <InfoItem label="Department" value={employee.department} />
@@ -256,8 +256,8 @@ export function EmployeeProfile({ employee, onUpdate }: EmployeeProfileProps) {
             </div>
           </section>
 
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h3 className="text-lg font-semibold text-slate-900">Emergency Contact</h3>
+          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Emergency Contact</h3>
 
             <div className="mt-6 grid gap-5 md:grid-cols-3">
               <InfoItem label="Name" value={employee.emergencyContactName} />
@@ -266,8 +266,8 @@ export function EmployeeProfile({ employee, onUpdate }: EmployeeProfileProps) {
             </div>
           </section>
 
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h3 className="text-lg font-semibold text-slate-900">Bank Details</h3>
+          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Bank Details</h3>
 
             <div className="mt-6 grid gap-5 md:grid-cols-2">
               <InfoItem label="Account Holder" value={employee.bankAccountHolderName} />
@@ -278,8 +278,8 @@ export function EmployeeProfile({ employee, onUpdate }: EmployeeProfileProps) {
             </div>
           </section>
 
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h3 className="text-lg font-semibold text-slate-900">Identity & Documents</h3>
+          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Identity & Documents</h3>
 
             <div className="mt-6 grid gap-5 md:grid-cols-2">
               <InfoItem label="PAN Number" value={employee.panNumber} />
@@ -289,22 +289,22 @@ export function EmployeeProfile({ employee, onUpdate }: EmployeeProfileProps) {
               <InfoItem label="ESI Number" value={employee.esiNumber} />
             </div>
 
-            <div className="mt-6 border-t border-slate-100 pt-6">
+            <div className="mt-6 border-t border-slate-100 pt-6 dark:border-slate-700">
               <div className="flex items-center justify-between mb-4">
-                <h4 className="text-sm font-medium text-slate-900">Uploaded Documents</h4>
+                <h4 className="text-sm font-medium text-slate-900 dark:text-white">Uploaded Documents</h4>
                 <div className="flex items-center gap-2">
                   {pendingUploads.length > 0 && (
                     <button
                       type="button"
                       onClick={handleUploadPendingFiles}
                       disabled={uploadingDoc}
-                      className="inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-indigo-500"
                     >
                       <MdUpload className="text-lg" />
                       {uploadingDoc ? "Uploading..." : `Upload ${pendingUploads.length} file(s)`}
                     </button>
                   )}
-                  <label className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 cursor-pointer">
+                  <label className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 cursor-pointer dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">
                     <MdUpload className="text-lg" />
                     Select Files
                     <input
@@ -322,10 +322,10 @@ export function EmployeeProfile({ employee, onUpdate }: EmployeeProfileProps) {
 
               {pendingUploads.length > 0 && (
                 <div className="mb-4">
-                  <p className="mb-2 text-xs font-medium text-slate-500">Pending Upload Preview</p>
+                  <p className="mb-2 text-xs font-medium text-slate-500 dark:text-slate-400">Pending Upload Preview</p>
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
                     {pendingUploads.map((upload, index) => (
-                      <div key={index} className="group relative rounded-xl border border-slate-200 bg-slate-50 overflow-hidden">
+                      <div key={index} className="group relative rounded-xl border border-slate-200 bg-slate-50 overflow-hidden dark:border-slate-600 dark:bg-slate-700">
                         {isImageFile(upload.file.name) ? (
                           <div className="aspect-square relative">
                             <Image
@@ -337,7 +337,7 @@ export function EmployeeProfile({ employee, onUpdate }: EmployeeProfileProps) {
                           </div>
                         ) : (
                           <div className="flex aspect-square items-center justify-center">
-                            <span className="text-4xl font-semibold uppercase text-slate-400">
+                            <span className="text-4xl font-semibold uppercase text-slate-400 dark:text-slate-500">
                               {upload.file.name.split(".").pop()}
                             </span>
                           </div>
@@ -349,7 +349,7 @@ export function EmployeeProfile({ employee, onUpdate }: EmployeeProfileProps) {
                         >
                           <MdDelete className="text-sm" />
                         </button>
-                        <p className="truncate px-2 py-1 text-xs text-slate-600">{upload.file.name}</p>
+                        <p className="truncate px-2 py-1 text-xs text-slate-600 dark:text-slate-300">{upload.file.name}</p>
                       </div>
                     ))}
                   </div>
@@ -357,17 +357,17 @@ export function EmployeeProfile({ employee, onUpdate }: EmployeeProfileProps) {
               )}
 
               {employee.documents.length === 0 && pendingUploads.length === 0 ? (
-                <p className="text-sm text-slate-500">No documents uploaded yet.</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">No documents uploaded yet.</p>
               ) : (
                 <div className="space-y-2">
                   {employee.documents.map((doc) => (
-                    <div key={doc.id} className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
+                    <div key={doc.id} className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-700/50">
                       <div className="flex items-center gap-3">
                         {isImageFile(doc.name) && doc.fileUrl ? (
                           <button
                             type="button"
                             onClick={() => setLightboxImage(doc.fileUrl)}
-                            className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-lg border border-slate-200"
+                            className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-600"
                           >
                             <Image
                               src={doc.fileUrl}
@@ -380,17 +380,17 @@ export function EmployeeProfile({ employee, onUpdate }: EmployeeProfileProps) {
                             </div>
                           </button>
                         ) : (
-                          <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white">
-                            <span className="text-sm font-semibold uppercase text-slate-400">
+                          <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white dark:border-slate-600 dark:bg-slate-800">
+                            <span className="text-sm font-semibold uppercase text-slate-400 dark:text-slate-500">
                               {doc.name.split(".").pop()}
                             </span>
                           </div>
                         )}
                         <div>
-                          <p className="text-sm font-medium text-slate-900">{doc.name}</p>
-                          <p className="text-xs text-slate-500">
+                          <p className="text-sm font-medium text-slate-900 dark:text-white">{doc.name}</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">
                             {documentTypeLabels[doc.type] || doc.type} • {formatDate(doc.expiryDate)}
-                            {doc.isExpired && <span className="ml-2 text-rose-500">Expired</span>}
+                            {doc.isExpired && <span className="ml-2 text-rose-500 dark:text-rose-400">Expired</span>}
                           </p>
                         </div>
                       </div>
@@ -399,7 +399,7 @@ export function EmployeeProfile({ employee, onUpdate }: EmployeeProfileProps) {
                           <button
                             type="button"
                             onClick={() => setLightboxImage(doc.fileUrl)}
-                            className="text-slate-500 hover:text-indigo-600"
+                            className="text-slate-500 hover:text-indigo-600 dark:text-slate-400"
                           >
                             <MdVisibility />
                           </button>
@@ -407,7 +407,7 @@ export function EmployeeProfile({ employee, onUpdate }: EmployeeProfileProps) {
                         <button
                           type="button"
                           onClick={() => handleDocumentDelete(doc.id)}
-                          className="text-sm text-rose-600 hover:text-rose-500"
+                          className="text-sm text-rose-600 hover:text-rose-500 dark:text-rose-400"
                         >
                           <MdDelete />
                         </button>
@@ -421,22 +421,22 @@ export function EmployeeProfile({ employee, onUpdate }: EmployeeProfileProps) {
         </div>
 
         <div className="space-y-6">
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h3 className="text-lg font-semibold text-slate-900">Education</h3>
+          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Education</h3>
 
             {employee.education.length === 0 ? (
-              <p className="mt-4 text-sm text-slate-500">No education records.</p>
+              <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">No education records.</p>
             ) : (
               <div className="mt-4 space-y-4">
                 {employee.education.map((edu) => (
-                  <div key={edu.id} className="border-l-2 border-indigo-200 pl-4">
-                    <p className="text-sm font-medium text-slate-900">{edu.degree}</p>
-                    <p className="text-xs text-slate-500">{edu.institution}</p>
+                  <div key={edu.id} className="border-l-2 border-indigo-200 pl-4 dark:border-indigo-800">
+                    <p className="text-sm font-medium text-slate-900 dark:text-white">{edu.degree}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{edu.institution}</p>
                     {edu.yearOfPassing && (
-                      <p className="mt-1 text-xs text-slate-400">Passed: {edu.yearOfPassing}</p>
+                      <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">Passed: {edu.yearOfPassing}</p>
                     )}
                     {edu.percentage && (
-                      <p className="text-xs text-slate-400">Percentage: {edu.percentage}%</p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500">Percentage: {edu.percentage}%</p>
                     )}
                   </div>
                 ))}
@@ -444,18 +444,18 @@ export function EmployeeProfile({ employee, onUpdate }: EmployeeProfileProps) {
             )}
           </section>
 
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h3 className="text-lg font-semibold text-slate-900">Work History</h3>
+          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Work History</h3>
 
             {employee.workHistory.length === 0 ? (
-              <p className="mt-4 text-sm text-slate-500">No work history records.</p>
+              <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">No work history records.</p>
             ) : (
               <div className="mt-4 space-y-4">
                 {employee.workHistory.map((wh) => (
-                  <div key={wh.id} className="border-l-2 border-indigo-200 pl-4">
-                    <p className="text-sm font-medium text-slate-900">{wh.designation}</p>
-                    <p className="text-xs text-slate-500">{wh.companyName}</p>
-                    <p className="mt-1 text-xs text-slate-400">
+                  <div key={wh.id} className="border-l-2 border-indigo-200 pl-4 dark:border-indigo-800">
+                    <p className="text-sm font-medium text-slate-900 dark:text-white">{wh.designation}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{wh.companyName}</p>
+                    <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
                       {formatDate(wh.startDate)} - {wh.isCurrent ? "Present" : formatDate(wh.endDate)}
                     </p>
                   </div>
@@ -467,20 +467,20 @@ export function EmployeeProfile({ employee, onUpdate }: EmployeeProfileProps) {
       </div>
 
       {showDeleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 backdrop-blur-sm">
-          <div className="mx-4 w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-xl">
-            <div className="flex items-center gap-3 text-rose-600">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 backdrop-blur-sm dark:bg-slate-950/70">
+          <div className="mx-4 w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-xl dark:border-slate-700 dark:bg-slate-800">
+            <div className="flex items-center gap-3 text-rose-600 dark:text-rose-400">
               <MdWarning className="text-2xl" />
-              <h3 className="text-lg font-semibold">Delete Employee</h3>
+              <h3 className="text-lg font-semibold dark:text-white">Delete Employee</h3>
             </div>
-            <p className="mt-4 text-sm text-slate-600">
-              Are you sure you want to delete <strong>{employee.firstName} {employee.lastName}</strong>? This action cannot be undone and will permanently remove all employee data.
+            <p className="mt-4 text-sm text-slate-600 dark:text-slate-400">
+              Are you sure you want to delete <strong className="dark:text-white">{employee.firstName} {employee.lastName}</strong>? This action cannot be undone and will permanently remove all employee data.
             </p>
             <div className="mt-6 flex items-center justify-end gap-3">
               <button
                 type="button"
                 onClick={() => setShowDeleteConfirm(false)}
-                className="rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                className="rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
               >
                 Cancel
               </button>
@@ -488,7 +488,7 @@ export function EmployeeProfile({ employee, onUpdate }: EmployeeProfileProps) {
                 type="button"
                 onClick={handleDelete}
                 disabled={deleting}
-                className="rounded-2xl bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-2xl bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-rose-500"
               >
                 {deleting ? "Deleting..." : "Delete"}
               </button>
@@ -527,8 +527,8 @@ export function EmployeeProfile({ employee, onUpdate }: EmployeeProfileProps) {
 function InfoItem({ label, value }: { label: string; value: string | null | undefined }) {
   return (
     <div>
-      <p className="text-xs font-medium uppercase tracking-wider text-slate-400">{label}</p>
-      <p className="mt-1 text-sm text-slate-900">{value || "—"}</p>
+      <p className="text-xs font-medium uppercase tracking-wider text-slate-400 dark:text-slate-500">{label}</p>
+      <p className="mt-1 text-sm text-slate-900 dark:text-white">{value || "—"}</p>
     </div>
   );
 }

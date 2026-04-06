@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AppToaster } from "@/components/providers/app-toaster";
+import { ThemeProvider } from "@/contexts/theme-context";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -18,23 +19,34 @@ export const metadata: Metadata = {
   description: "Multi-tenant HRMS authentication and onboarding platform",
 };
 
+const themeScript = `
+  (function() {
+    const theme = localStorage.getItem('theme');
+    if (theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  })();
+`;
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-      style={{ backgroundColor: "#f8fafc", colorScheme: "light" }}
-    >
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body
-        className="min-h-full bg-slate-50 font-sans text-slate-900"
-        style={{ backgroundColor: "#f8fafc", color: "#0f172a" }}
+        className={`${geistSans.variable} ${geistMono.variable} min-h-full antialiased`}
       >
-        {children}
-        <AppToaster />
+        <ThemeProvider>
+          {children}
+          <AppToaster />
+        </ThemeProvider>
       </body>
     </html>
   );

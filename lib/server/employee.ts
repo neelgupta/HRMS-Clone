@@ -6,6 +6,7 @@ import type {
   DocumentUploadInput,
 } from "@/lib/validations/employee";
 import { Prisma } from "@prisma/client";
+import { hashPassword } from "@/lib/password";
 
 export type EmployeeListItem = {
   id: string;
@@ -92,6 +93,11 @@ export type EmployeeDetail = EmployeeListItem & {
 
 type CreateEmployeeResult = {
   employee: EmployeeDetail;
+  loginCredentials?: {
+    email: string;
+    tempPassword: string;
+    userId: string;
+  };
 };
 
 type UpdateEmployeeResult = {
@@ -130,6 +136,15 @@ async function generateEmployeeCode(companyId: string): Promise<string> {
   return `${prefix}-${timestamp}-${random}`;
 }
 
+function generateTempPassword(): string {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$";
+  let password = "";
+  for (let i = 0; i < 12; i++) {
+    password += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return password;
+}
+
 async function createAuditLog(params: {
   companyId: string;
   userId: string;
@@ -148,8 +163,8 @@ async function createAuditLog(params: {
       action: params.action,
       entityType: params.entityType,
       entityId: params.entityId,
-      oldValues: params.oldValues as Prisma.JsonValue | undefined,
-      newValues: params.newValues as Prisma.JsonValue | undefined,
+      oldValues: params.oldValues ?? undefined,
+      newValues: params.newValues ?? undefined,
       ipAddress: params.ipAddress,
       userAgent: params.userAgent,
     },
@@ -286,13 +301,45 @@ export async function createEmployee(
     newValues: employee,
   });
 
+  const tempPassword = generateTempPassword();
+  const hashedPassword = await hashPassword(tempPassword);
+
+  const user = await prisma.user.create({
+    data: {
+      name: `${employee.firstName} ${employee.lastName}`,
+      email: employee.email,
+      phone: employee.phone || "",
+      password: hashedPassword,
+      role: "EMPLOYEE",
+      status: "INACTIVE",
+      companyId,
+      employeeId: employee.id,
+    },
+  });
+
+  await createAuditLog({
+    companyId,
+    userId,
+    action: "CREATE",
+    entityType: "User",
+    entityId: user.id,
+    newValues: { role: "EMPLOYEE", email: user.email },
+  });
+
   const flattened = {
     ...employee,
     department: employee.department?.name || null,
     designation: employee.designation?.name || null,
   };
 
-  return { employee: flattened as unknown as EmployeeDetail };
+  return { 
+    employee: flattened as unknown as EmployeeDetail,
+    loginCredentials: {
+      email: employee.email,
+      tempPassword: tempPassword,
+      userId: user.id,
+    }
+  };
   } catch (createError) {
     console.error("Create employee error:", createError);
     throw createError;
@@ -627,8 +674,8 @@ export async function getEmployeeStats(companyId: string) {
   const [total, byDepartment, byStatus, byEmploymentType, expiringDocuments] = await Promise.all([
     prisma.employee.count({ where: { companyId } }),
     prisma.employee.groupBy({
-      by: ["department"],
-      where: { companyId, department: { not: null } },
+      by: ["departmentId"],
+      where: { companyId, departmentId: { not: null } },
       _count: { id: true },
     }),
     prisma.employee.groupBy({
@@ -662,9 +709,16 @@ export async function getEmployeeStats(companyId: string) {
     }),
   ]);
 
+  const departmentIds = byDepartment.map((d) => d.departmentId).filter(Boolean) as string[];
+  const departments = await prisma.department.findMany({
+    where: { id: { in: departmentIds } },
+    select: { id: true, name: true },
+  });
+  const deptMap = new Map(departments.map((d) => [d.id, d.name]));
+
   return {
     total,
-    byDepartment: byDepartment.map((d) => ({ department: d.department, count: d._count.id })),
+    byDepartment: byDepartment.map((d) => ({ department: d.departmentId ? (deptMap.get(d.departmentId) ?? "Unknown") : "Unknown", count: d._count.id })),
     byStatus: byStatus.map((s) => ({ status: s.employmentStatus, count: s._count.id })),
     byEmploymentType: byEmploymentType.map((t) => ({ type: t.employmentType, count: t._count.id })),
     expiringDocuments,
@@ -739,8 +793,7 @@ export async function getOrganizationChart(companyId: string): Promise<OrgChartN
   const employees = await prisma.employee.findMany({
     where: {
       companyId,
-      employmentStatus: { not: "TERMINATED" },
-      employmentStatus: { not: "RESIGNED" },
+      employmentStatus: { notIn: ["TERMINATED", "RESIGNED"] },
     },
     select: {
       id: true,

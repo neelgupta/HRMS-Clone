@@ -7,6 +7,7 @@ export type CurrentUser = {
   email: string;
   role: string;
   companyId: string;
+  companyName?: string;
   company: {
     id: string;
     name: string;
@@ -38,8 +39,8 @@ export async function fetchCurrentUser() {
   const response = await fetch("/api/auth/me");
 
   if (!response.ok) {
-    const data = await parseJson<ApiErrorResponse>(response).catch(() => ({}));
-    throw new Error(data.message || "Unauthorized.");
+    const data = await parseJson<ApiErrorResponse | {}>(response).catch(() => ({}));
+    throw new Error("message" in data ? data.message : "Unauthorized.");
   }
 
   return parseJson<CurrentUser>(response);
@@ -49,8 +50,8 @@ export async function fetchCompanySetup() {
   const response = await fetch("/api/company/me");
 
   if (!response.ok) {
-    const data = await parseJson<ApiErrorResponse>(response).catch(() => ({}));
-    throw new Error(data.message || "Could not load company setup.");
+    const data = await parseJson<ApiErrorResponse | {}>(response).catch(() => ({}));
+    throw new Error("message" in data ? data.message : "Could not load company setup.");
   }
 
   return parseJson<CompanyResponse>(response);
