@@ -261,6 +261,7 @@ model Employee {
   createdAt                DateTime                   @default(now())
   updatedAt                DateTime                   @updatedAt
   isDeleted                Boolean                    @default(false)
+  companyEmail             String?  @unique
   userEmail                String?
   userPassword             String?
   attendances              Attendance[]

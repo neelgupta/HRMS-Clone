@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { MdArrowBack, MdSave, MdCloudUpload, MdContentCopy, MdCheck } from "react-icons/md";
 import { Spinner } from "@/components/ui/loaders/spinner";
 import { dismissToast, showError, showLoading, showSuccess } from "@/lib/toast";
-import { createEmployee, updateEmployee, type EmployeeDetail } from "@/lib/client/employee";
+import { createEmployee, updateEmployee, updateEmployeeCredentials, type EmployeeDetail } from "@/lib/client/employee";
 import type { CreateEmployeeInput } from "@/lib/validations/employee";
 
 type LoginCredentials = {
@@ -102,6 +102,7 @@ const defaultValues: CreateEmployeeInput = {
   pfNumber: "",
   pfUAN: "",
   esiNumber: "",
+  companyEmail: "",
   education: [],
   workHistory: [],
 };
@@ -109,9 +110,32 @@ const defaultValues: CreateEmployeeInput = {
 export function EmployeeForm({ employee, companyBranches, departments, designations, employees, onSuccess }: EmployeeFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [credentialsLoading, setCredentialsLoading] = useState(false);
   const [showCredentials, setShowCredentials] = useState(false);
   const [loginCredentials, setLoginCredentials] = useState<LoginCredentials | null>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (employee?.user) {
+      setLoginCredentials({
+        email: employee.user.email || "",
+        tempPassword: "",
+        userId: employee.id,
+      });
+    }
+  }, [employee]);
+
+  const handleOpenCredentials = useCallback(() => {
+    if (employee?.user) {
+      setLoginCredentials({
+        email: employee.user.email || "",
+        tempPassword: "",
+        userId: employee.id,
+      });
+    }
+    setShowCredentials(true);
+  }, [employee]);
+
   const [formData, setFormData] = useState<CreateEmployeeInput>(
     employee
       ? {
@@ -156,6 +180,7 @@ export function EmployeeForm({ employee, companyBranches, departments, designati
           pfNumber: employee.pfNumber || "",
           pfUAN: employee.pfUAN || "",
           esiNumber: employee.esiNumber || "",
+          companyEmail: employee.companyEmail || "",
           education: employee.education?.map((e) => ({
             id: e.id,
             degree: e.degree,
@@ -306,32 +331,38 @@ export function EmployeeForm({ employee, companyBranches, departments, designati
                onChange={(e) => {
                  const lastName = e.target.value.trim();
                  updateField("lastName", lastName);
-                 
-                 // Auto-generate email when first or last name changes
-                 if (lastName && formData.firstName.trim()) {
-                   const email = `${formData.firstName.trim().toLowerCase()}.${lastName.toLowerCase()}@Worknest.com`;
-                   updateField("email", email);
-                 } else if (!lastName) {
-                   updateField("email", "");
-                 }
+            
                }}
                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:focus:border-blue-400 dark:focus:bg-slate-700 dark:focus:ring-blue-900"
                placeholder="Last name"
              />
            </div>
 
-          <div>
-            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
-              Email <span className="text-rose-500 dark:text-rose-400">*</span>
-            </label>
-            <input
-              type="email"
-              value={formData.email}
-              onChange={(e) => updateField("email", e.target.value)}
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:focus:border-blue-400 dark:focus:bg-slate-700 dark:focus:ring-blue-900"
-              placeholder="work@company.com"
-            />
-          </div>
+           <div>
+             <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
+               Email <span className="text-rose-500 dark:text-rose-400">*</span>
+             </label>
+             <input
+               type="email"
+               value={formData.email}
+               onChange={(e) => updateField("email", e.target.value)}
+               className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:focus:border-blue-400 dark:focus:bg-slate-700 dark:focus:ring-blue-900"
+               placeholder="user@gmail.com"
+             />
+           </div>
+           
+           <div>
+             <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
+               Company Email (for login) <span className="text-rose-500 dark:text-rose-400">*</span>
+             </label>
+             <input
+               type="email"
+               value={formData.companyEmail}
+               onChange={(e) => updateField("companyEmail", e.target.value)}
+               className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:focus:border-blue-400 dark:focus:bg-slate-700 dark:focus:ring-blue-900"
+               placeholder="company@email.com"
+             />
+           </div>
 
           <div>
             <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Phone</label>
@@ -1066,59 +1097,137 @@ export function EmployeeForm({ employee, companyBranches, departments, designati
           {loading ? <Spinner className="text-white" label="Saving" /> : <MdSave className="text-lg" />}
           {loading ? "Saving..." : employee ? "Update Employee" : "Create Employee"}
         </button>
+
+        {employee && employee.user && (
+          <button
+            type="button"
+            onClick={handleOpenCredentials}
+            className="inline-flex items-center gap-2 rounded-2xl border border-indigo-200 bg-indigo-50 px-6 py-3 text-sm font-medium text-indigo-600 transition hover:bg-indigo-100 dark:border-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400 dark:hover:bg-indigo-900/50"
+          >
+            <MdContentCopy className="text-lg" />
+            Update Login Credentials
+          </button>
+        )}
       </div>
 
       {showCredentials && loginCredentials && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 dark:bg-black/70">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl dark:bg-slate-800">
-            <h3 className="text-xl font-semibold text-slate-900 dark:text-white">Employee Created Successfully!</h3>
+            <h3 className="text-xl font-semibold text-slate-900 dark:text-white">
+              {employee ? "Update Login Credentials" : "Employee Created Successfully!"}
+            </h3>
             <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-              Share these credentials with the employee. They can use them to log in directly.
+              {employee 
+                ? "Update the employee's login credentials. They can use these to log in."
+                : "Share these credentials with the employee. They can use them to log in directly."}
             </p>
 
             <div className="mt-6 space-y-4">
               <div className="rounded-xl bg-slate-50 p-4 dark:bg-slate-700">
                 <label className="block text-xs font-medium text-slate-500 dark:text-slate-400">Email</label>
                 <div className="mt-1 flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={loginCredentials.email}
-                    onChange={(e) => setLoginCredentials({ ...loginCredentials, email: e.target.value })}
-                    className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-mono text-slate-900 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-600 dark:text-white dark:focus:border-blue-400 dark:focus:ring-blue-900"
-                  />
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(loginCredentials.email);
-                      setCopiedField("email");
-                      setTimeout(() => setCopiedField(null), 2000);
-                    }}
-                    className="flex-shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 transition hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-600 dark:text-slate-300 dark:hover:bg-slate-500"
-                  >
-                    {copiedField === "email" ? <MdCheck className="text-green-600" /> : <MdContentCopy />}
-                  </button>
+                   <input
+                     type="email"
+                     value={loginCredentials?.email || ""}
+                     onChange={(e) => setLoginCredentials((prev) => prev ? { ...prev, email: e.target.value } : null)}
+                     className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-mono text-slate-900 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-600 dark:text-white dark:focus:border-blue-400 dark:focus:ring-blue-900"
+                   />
+                   <button
+                      type="button"
+                      onClick={async () => {
+                         if (!loginCredentials?.email) {
+                           return;
+                         }
+                         if (!navigator.clipboard) {
+                           const textarea = document.createElement('textarea');
+                           textarea.value = loginCredentials.email;
+                           document.body.appendChild(textarea);
+                           textarea.select();
+                           const successful = document.execCommand('copy');
+                           document.body.removeChild(textarea);
+                           if (successful) {
+                             setCopiedField("email");
+                             setTimeout(() => setCopiedField(null), 2000);
+                           }
+                           return;
+                         }
+                         try {
+                           await navigator.clipboard.writeText(loginCredentials.email);
+                           setCopiedField("email");
+                           setTimeout(() => setCopiedField(null), 2000);
+                         } catch (err) {
+                           const textarea = document.createElement('textarea');
+                           textarea.value = loginCredentials.email;
+                           document.body.appendChild(textarea);
+                           textarea.select();
+                           const successful = document.execCommand('copy');
+                           document.body.removeChild(textarea);
+                           if (successful) {
+                             setCopiedField("email");
+                             setTimeout(() => setCopiedField(null), 2000);
+                           }
+                         }
+                      }}
+                      disabled={!loginCredentials?.email}
+                      className="flex-shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 transition hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-600 dark:text-slate-300 dark:hover:bg-slate-500"
+                    >
+                      {copiedField === "email" ? <MdCheck className="text-green-600" /> : <MdContentCopy />}
+                    </button>
                 </div>
               </div>
 
               <div className="rounded-xl bg-slate-50 p-4 dark:bg-slate-700">
                 <label className="block text-xs font-medium text-slate-500 dark:text-slate-400">Temporary Password</label>
                 <div className="mt-1 flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={loginCredentials.tempPassword}
-                    onChange={(e) => setLoginCredentials({ ...loginCredentials, tempPassword: e.target.value })}
-                    className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-mono text-slate-900 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-600 dark:text-white dark:focus:border-blue-400 dark:focus:ring-blue-900"
-                  />
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(loginCredentials.tempPassword);
-                      setCopiedField("password");
-                      setTimeout(() => setCopiedField(null), 2000);
-                    }}
-                    className="flex-shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 transition hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-600 dark:text-slate-300 dark:hover:bg-slate-500"
-                  >
-                    {copiedField === "password" ? <MdCheck className="text-green-600" /> : <MdContentCopy />}
-                  </button>
+                   <input
+                     type="text"
+                     value={loginCredentials?.tempPassword || ""}
+                     onChange={(e) => setLoginCredentials((prev) => prev ? { ...prev, tempPassword: e.target.value } : null)}
+                     className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-mono text-slate-900 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-600 dark:text-white dark:focus:border-blue-400 dark:focus:ring-blue-900"
+                   />
+                   <button
+                      type="button"
+                      onClick={async () => {
+                         if (!loginCredentials?.tempPassword) {
+                           return;
+                         }
+                         if (!navigator.clipboard) {
+                           const textarea = document.createElement('textarea');
+                           textarea.value = loginCredentials.tempPassword;
+                           document.body.appendChild(textarea);
+                           textarea.select();
+                           const successful = document.execCommand('copy');
+                           document.body.removeChild(textarea);
+                           if (successful) {
+                             setCopiedField("password");
+                             setTimeout(() => setCopiedField(null), 2000);
+                           }
+                           return;
+                         }
+                         try {
+                           await navigator.clipboard.writeText(loginCredentials.tempPassword);
+                           setCopiedField("password");
+                           setTimeout(() => setCopiedField(null), 2000);
+                         } catch (err) {
+                           const textarea = document.createElement('textarea');
+                           textarea.value = loginCredentials.tempPassword;
+                           document.body.appendChild(textarea);
+                           textarea.select();
+                           const successful = document.execCommand('copy');
+                           document.body.removeChild(textarea);
+                           if (successful) {
+                             setCopiedField("password");
+                             setTimeout(() => setCopiedField(null), 2000);
+                           }
+                         }
+                      }}
+                      disabled={!loginCredentials?.tempPassword}
+                      className="flex-shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 transition hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-600 dark:text-slate-300 dark:hover:bg-slate-500"
+                    >
+                      {copiedField === "password" ? <MdCheck className="text-green-600" /> : <MdContentCopy />}
+                    </button>
                 </div>
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Minimum 6 characters</p>
               </div>
 
               <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-4 dark:bg-emerald-900/20 dark:border-emerald-700">
@@ -1128,25 +1237,83 @@ export function EmployeeForm({ employee, companyBranches, departments, designati
               </div>
             </div>
 
-            <div className="mt-6 flex justify-end">
+            <div className="mt-6 flex justify-end gap-3">
                <button
+                 type="button"
                  onClick={() => {
                    setShowCredentials(false);
-                   // Keep loginCredentials state so they remain visible
                    if (onSuccess) {
                      onSuccess();
                    } else {
                      router.push(`/dashboard/hr/employees`);
                    }
                  }}
-                 className="rounded-xl bg-blue-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-blue-700 dark:hover:bg-blue-500"
+                 className="rounded-xl border border-slate-200 bg-white px-6 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
                >
-                 Done
+                 Cancel
                </button>
-             </div>
+               <button
+                 type="button"
+                 disabled={credentialsLoading}
+                 onClick={async () => {
+                   if (!loginCredentials) return;
+
+                   if (!loginCredentials.email || !loginCredentials.tempPassword) {
+                     showError("Email and password are required.");
+                     return;
+                   }
+
+                   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                   if (!emailRegex.test(loginCredentials.email)) {
+                     showError("Please enter a valid email address.");
+                     return;
+                   }
+
+                   if (loginCredentials.tempPassword.length < 6) {
+                     showError("Password must be at least 6 characters.");
+                     return;
+                   }
+
+                    setCredentialsLoading(true);
+                    try {
+                      const employeeId = employee?.id || loginCredentials?.userId;
+                      if (!employeeId) {
+                        showError("Unable to update credentials. Employee ID not found.");
+                        setCredentialsLoading(false);
+                        return;
+                      }
+
+                      const result = await updateEmployeeCredentials(employeeId, {
+                        email: loginCredentials.email,
+                        password: loginCredentials.tempPassword,
+                      });
+
+                      if (result.error) {
+                        showError(result.error);
+                        return;
+                      }
+
+                       showSuccess("Credentials updated successfully.");
+                       setShowCredentials(false);
+                       if (onSuccess) {
+                         onSuccess();
+                       } else {
+                         router.push(`/dashboard/hr/employees/${employeeId}`);
+                       }
+                   } catch {
+                     showError("Failed to update credentials.");
+                   } finally {
+                     setCredentialsLoading(false);
+                   }
+                 }}
+                 className="rounded-xl bg-blue-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 dark:hover:bg-blue-500"
+               >
+                 {credentialsLoading ? <Spinner className="text-white" label="Saving" /> : "Save & Continue"}
+               </button>
+            </div>
           </div>
         </div>
       )}
-    </form>
-  );
-}
+     </form>
+   );
+ }

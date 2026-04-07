@@ -31,6 +31,7 @@ type EmployeeTopbarProps = {
   onMarkAllAsRead?: () => Promise<void>;
   onNotificationClick?: () => void;
   notificationHref?: string;
+  profileHref?: string;
 };
 
 export function EmployeeTopbar({ 
@@ -43,7 +44,8 @@ export function EmployeeTopbar({
   onMarkAsRead,
   onMarkAllAsRead,
   onNotificationClick,
-  notificationHref
+  notificationHref,
+  profileHref = "/dashboard/employee/profile"
 }: EmployeeTopbarProps) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
@@ -102,7 +104,7 @@ export function EmployeeTopbar({
               {showUserMenu && (
                 <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden z-50">
                   <button
-                    onClick={() => router.push("/dashboard/employee/profile")}
+                    onClick={() => router.push(profileHref)}
                     className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
                   >
                     <MdPerson className="text-slate-500 dark:text-slate-400" />

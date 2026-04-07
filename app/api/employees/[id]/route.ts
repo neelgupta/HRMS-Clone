@@ -16,6 +16,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const { id } = await params;
 
   try {
+    console.log("GET /api/employees/[id] called with:", { id, role, companyId, userId });
+    
     if (role === "EMPLOYEE") {
       const user = await prisma.user.findFirst({
         where: { id: userId },
@@ -35,6 +37,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     return NextResponse.json(employee);
   } catch (error) {
+    console.error("Error fetching employee:", error);
     return getErrorResponse(error, "Failed to fetch employee.");
   }
 }

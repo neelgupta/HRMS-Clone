@@ -28,6 +28,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const result = await updateEmployeeCredentials(companyId, userId, id, parsed);
     return NextResponse.json(result);
   } catch (error) {
+    console.error("Update credentials error:", error);
     return getErrorResponse(error, "Failed to update credentials.");
   }
 }

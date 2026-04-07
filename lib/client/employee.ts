@@ -53,6 +53,7 @@ export type EmployeeDetail = EmployeeListItem & {
   pfNumber: string | null;
   pfUAN: string | null;
   esiNumber: string | null;
+  companyEmail: string | null;
   education: Array<{
     id: string;
     degree: string;

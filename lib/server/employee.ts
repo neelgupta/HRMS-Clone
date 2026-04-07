@@ -61,6 +61,8 @@ export type EmployeeDetail = EmployeeListItem & {
   pfNumber: string | null;
   pfUAN: string | null;
   esiNumber: string | null;
+  
+  companyEmail: string | null;
 
   education: Array<{
     id: string;
@@ -306,14 +308,15 @@ export async function createEmployee(
     newValues: employee,
   });
 
-  const userEmail = input.userEmail || employee.email;
+  // Use companyEmail for login if provided, otherwise fallback to userEmail or employee email
+  const loginEmail = input.companyEmail || input.userEmail || employee.email;
   const tempPassword = input.userPassword || generateTempPassword();
   const hashedPassword = await hashPassword(tempPassword);
 
   const user = await prisma.user.create({
     data: {
       name: `${employee.firstName} ${employee.lastName}`,
-      email: userEmail.toLowerCase(),
+      email: loginEmail.toLowerCase(),
       phone: employee.phone || "",
       password: hashedPassword,
       role: "EMPLOYEE",
@@ -338,14 +341,14 @@ export async function createEmployee(
     designation: employee.designation?.name || null,
   };
 
-  return { 
-    employee: flattened as unknown as EmployeeDetail,
-    loginCredentials: {
-      email: userEmail,
-      tempPassword: tempPassword,
-      userId: user.id,
-    }
-  };
+   return { 
+     employee: flattened as unknown as EmployeeDetail,
+     loginCredentials: {
+       email: loginEmail,
+       tempPassword: tempPassword,
+       userId: user.id,
+     }
+   };
   } catch (createError) {
     console.error("Create employee error:", createError);
     throw createError;
@@ -503,6 +506,7 @@ export async function updateEmployee(
 }
 
 export async function getEmployeeById(companyId: string, employeeId: string): Promise<EmployeeDetail | null> {
+  console.log("getEmployeeById called:", { companyId, employeeId });
   const employee = await prisma.employee.findFirst({
     where: { id: employeeId, companyId },
     include: {
@@ -916,10 +920,14 @@ export async function updateEmployeeCredentials(
   employeeId: string,
   input: { email?: string; password?: string },
 ): Promise<{ email: string; message: string }> {
+  console.log("updateEmployeeCredentials called:", { companyId, userId, employeeId, input });
+
   const employee = await prisma.employee.findFirst({
     where: { id: employeeId, companyId, isDeleted: false },
     include: { user: true },
   });
+
+  console.log("Employee found:", employee ? { id: employee.id, hasUser: !!employee.user } : null);
 
   if (!employee) {
     throw new Error("Employee not found.");
@@ -940,6 +948,7 @@ export async function updateEmployeeCredentials(
 
   const updateData: { email?: string; password?: string } = {};
 
+  // Check if we're updating email and it's different from current user email
   if (input.email && input.email !== existing.email) {
     const emailExists = await prisma.user.findFirst({
       where: { email: input.email.toLowerCase(), id: { not: employee.user.id } },
@@ -957,6 +966,8 @@ export async function updateEmployeeCredentials(
   if (Object.keys(updateData).length === 0) {
     return { email: existing.email, message: "No changes made." };
   }
+
+  console.log("Updating user with:", { userId: employee.user.id, updateData });
 
   await prisma.user.update({
     where: { id: employee.user.id },
