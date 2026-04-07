@@ -239,7 +239,7 @@ export function EmployeeForm({ employee, companyBranches, departments, designati
       if (onSuccess) {
         onSuccess();
       } else {
-        router.push(`/dashboard/hr/employees/${result.data?.employee.id}`);
+        router.push(`/dashboard/hr/employees`);
       }
     } catch {
       dismissToast(toastId);
@@ -1298,7 +1298,7 @@ export function EmployeeForm({ employee, companyBranches, departments, designati
                        if (onSuccess) {
                          onSuccess();
                        } else {
-                         router.push(`/dashboard/hr/employees/${employeeId}`);
+                         router.push(`/dashboard/hr/employees`);
                        }
                    } catch {
                      showError("Failed to update credentials.");

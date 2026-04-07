@@ -71,3 +71,39 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ message: "Failed to link user to employee." }, { status: 500 });
   }
 }
+
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const authResult = await requireHRAdmin(request);
+
+  if ("response" in authResult) {
+    return authResult.response;
+  }
+
+  const { id } = await params;
+
+  try {
+    const { prisma } = await import("@/lib/prisma");
+    
+    const user = await prisma.user.findUnique({
+      where: { id },
+    });
+
+    if (!user) {
+      return NextResponse.json({ message: "User not found." }, { status: 404 });
+    }
+
+    if (user.isDeleted) {
+      return NextResponse.json({ message: "User is already deleted." }, { status: 400 });
+    }
+
+    await prisma.user.update({
+      where: { id },
+      data: { isDeleted: true, deletedAt: new Date() },
+    });
+
+    return NextResponse.json({ message: "User deleted successfully." });
+  } catch (error) {
+    console.error("Delete user error:", error);
+    return NextResponse.json({ message: "Failed to delete user." }, { status: 500 });
+  }
+}
