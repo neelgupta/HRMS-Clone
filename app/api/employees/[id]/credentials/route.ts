@@ -12,9 +12,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   }
 
   const { userId, companyId } = authResult;
-  const { id } = await params;
 
   try {
+    console.log("PUT credentials API called with id:", id);
+    
     const body = await request.json();
     const parsed = updateCredentialsSchema.parse(body);
 

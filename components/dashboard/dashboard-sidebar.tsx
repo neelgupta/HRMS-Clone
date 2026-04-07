@@ -199,8 +199,7 @@ export function DashboardSidebar({ mobileOpen, onClose }: DashboardSidebarProps)
 
               <nav className="mt-6 space-y-2">
                 {navItems.map((item) => {
-                  const active =
-                    item.available && (pathname === item.href || pathname.startsWith(`${item.href}/`));
+                  const active = item.available && pathname === item.href;
 
                   return (
                     <NavItem

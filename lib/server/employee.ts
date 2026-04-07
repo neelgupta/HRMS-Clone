@@ -922,10 +922,17 @@ export async function updateEmployeeCredentials(
 ): Promise<{ email: string; message: string }> {
   console.log("updateEmployeeCredentials called:", { companyId, userId, employeeId, input });
 
-  const employee = await prisma.employee.findFirst({
+  let employee = await prisma.employee.findFirst({
     where: { id: employeeId, companyId, isDeleted: false },
     include: { user: true },
   });
+
+  if (!employee) {
+    employee = await prisma.employee.findFirst({
+      where: { user: { id: employeeId }, companyId, isDeleted: false },
+      include: { user: true },
+    });
+  }
 
   console.log("Employee found:", employee ? { id: employee.id, hasUser: !!employee.user } : null);
 
