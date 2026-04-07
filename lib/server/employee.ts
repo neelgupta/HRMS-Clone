@@ -821,6 +821,7 @@ export async function getOrganizationChart(companyId: string): Promise<OrgChartN
   const employees = await prisma.employee.findMany({
     where: {
       companyId,
+      isDeleted: false,
       employmentStatus: { notIn: ["TERMINATED", "RESIGNED"] },
     },
     select: {
@@ -865,7 +866,7 @@ export async function getOrganizationChart(companyId: string): Promise<OrgChartN
 
 export async function getEmployeesByDepartment(companyId: string) {
   const employees = await prisma.employee.findMany({
-    where: { companyId },
+    where: { companyId, isDeleted: false },
     select: {
       id: true,
       firstName: true,
