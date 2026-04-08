@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { MdArrowForward, MdBusiness, MdOutlineBadge, MdOutlineDomainVerification } from "react-icons/md";
 import { Skeleton } from "@/components/ui/loaders/skeleton";
+import { ROUTES } from "@/lib/constants";
 
 type CurrentUser = {
   userId: string;
@@ -32,7 +33,7 @@ export default function HRDashboardPage() {
         const userResponse = await fetch("/api/auth/me");
 
         if (!userResponse.ok) {
-          router.push("/login");
+          router.push(ROUTES.PUBLIC.LOGIN);
           return;
         }
 
@@ -50,7 +51,7 @@ export default function HRDashboardPage() {
 
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
-    router.push("/login");
+    router.push(ROUTES.PUBLIC.LOGIN);
   };
 
   if (loading) {

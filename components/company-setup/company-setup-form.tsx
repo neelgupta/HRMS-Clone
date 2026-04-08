@@ -28,6 +28,7 @@ import {
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { Skeleton } from "@/components/ui/loaders/skeleton";
 import { Spinner } from "@/components/ui/loaders/spinner";
+import { ROUTES } from "@/lib/constants";
 import { FormField } from "@/components/ui/form-field";
 import { SelectInput } from "@/components/ui/select-input";
 import { TextInput } from "@/components/ui/text-input";
@@ -117,7 +118,7 @@ export function CompanySetupForm() {
       } catch (error) {
         if (error instanceof Error && error.message === "Unauthorized.") {
           dismissToast(toastId);
-          router.push("/login");
+          router.push(ROUTES.PUBLIC.LOGIN);
           return;
         }
 

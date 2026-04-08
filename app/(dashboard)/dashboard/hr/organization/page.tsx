@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { MdAccountTree, MdPerson, MdWork, MdExpandMore, MdExpandLess, MdGridView, MdViewList } from "react-icons/md";
 import { Spinner } from "@/components/ui/loaders/spinner";
+import { ROUTES } from "@/lib/constants";
 
 type OrgChartNode = {
   id: string;
@@ -188,7 +189,7 @@ export default function OrganizationPage() {
         <p className="text-slate-600 dark:text-slate-400">{error}</p>
         <button
           type="button"
-          onClick={() => router.push("/dashboard/hr/employees")}
+          onClick={() => router.push(ROUTES.DASHBOARD.HR.EMPLOYEES.LIST)}
           className="mt-4 text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400"
         >
           Back to Employees
@@ -202,7 +203,7 @@ export default function OrganizationPage() {
       <div className="mb-6 flex items-center justify-between">
         <button
           type="button"
-          onClick={() => router.push("/dashboard/hr/employees")}
+          onClick={() => router.push(ROUTES.DASHBOARD.HR.EMPLOYEES.LIST)}
           className="text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
         >
           ← Back to Employees

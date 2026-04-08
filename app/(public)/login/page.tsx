@@ -7,6 +7,7 @@ import { MdArrowForward, MdEmail, MdLock } from "react-icons/md";
 import { Spinner } from "@/components/ui/loaders/spinner";
 import { dismissToast, showError, showLoading, showSuccess } from "@/lib/toast";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { ROUTES } from "@/lib/constants";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -39,7 +40,7 @@ export default function LoginPage() {
 
       dismissToast(toastId);
       showSuccess("Signed in successfully.");
-      router.push(data.redirectTo || "/dashboard/hr");
+      router.push(data.redirectTo || ROUTES.DASHBOARD.HR.DASHBOARD);
     } catch {
       const message = "Something went wrong. Please try again.";
       setError(message);
@@ -151,7 +152,7 @@ export default function LoginPage() {
 
             <p className="mt-8 text-sm text-slate-600 dark:text-slate-400">
               Need an account?{" "}
-              <Link href="/register" className="font-semibold text-indigo-600 transition hover:text-indigo-500 dark:text-indigo-400">
+              <Link href={ROUTES.PUBLIC.REGISTER} className="font-semibold text-indigo-600 transition hover:text-indigo-500 dark:text-indigo-400">
                 Register
               </Link>
             </p>

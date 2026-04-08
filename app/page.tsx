@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { ROUTES } from "@/lib/constants";
 
 export default function HomePage() {
   const features = [
@@ -74,13 +75,13 @@ export default function HomePage() {
           <div className="flex items-center gap-3">
             <ThemeToggle />
             <Link
-              href="/login"
+              href={ROUTES.PUBLIC.LOGIN}
               className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
             >
               Sign In
             </Link>
             <Link
-              href="/register"
+              href={ROUTES.PUBLIC.REGISTER}
               className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-200 dark:shadow-indigo-900 transition hover:-translate-y-0.5 hover:shadow-xl"
             >
               Start Free
@@ -104,13 +105,13 @@ export default function HomePage() {
 
             <div className="mt-10 flex flex-col gap-4 sm:flex-row">
               <Link
-                href="/register"
+                href={ROUTES.PUBLIC.REGISTER}
                 className="inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-500 px-7 py-4 text-base font-semibold text-white shadow-xl shadow-indigo-200 dark:shadow-indigo-900 transition hover:-translate-y-0.5 hover:shadow-2xl"
               >
                 Create Your Workspace
               </Link>
               <Link
-                href="/login"
+                href={ROUTES.PUBLIC.LOGIN}
                 className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-7 py-4 text-base font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
               >
                 Sign In
@@ -281,10 +282,10 @@ export default function HomePage() {
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-6 py-10 text-sm text-slate-500 dark:text-slate-400 md:flex-row md:items-center md:justify-between lg:px-8">
           <p>© 2026 WorkNest. Built for modern HR teams.</p>
           <div className="flex gap-5">
-            <Link href="/register" className="transition hover:text-slate-900 dark:hover:text-white">
+            <Link href={ROUTES.PUBLIC.REGISTER} className="transition hover:text-slate-900 dark:hover:text-white">
               Get Started
             </Link>
-            <Link href="/login" className="transition hover:text-slate-900 dark:hover:text-white">
+            <Link href={ROUTES.PUBLIC.LOGIN} className="transition hover:text-slate-900 dark:hover:text-white">
               Sign In
             </Link>
           </div>

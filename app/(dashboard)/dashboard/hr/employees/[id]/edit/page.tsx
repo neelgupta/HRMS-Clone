@@ -6,6 +6,7 @@ import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { EmployeeForm } from "@/components/employees/employee-form";
 import { Spinner } from "@/components/ui/loaders/spinner";
 import type { EmployeeDetail } from "@/lib/client/employee";
+import { ROUTES } from "@/lib/constants";
 
 type Branch = {
   id: string;
@@ -68,7 +69,7 @@ export default function EditEmployeePage() {
           <p className="text-slate-600 dark:text-slate-400">Employee not found.</p>
           <button
             type="button"
-            onClick={() => router.push("/dashboard/hr/employees")}
+            onClick={() => router.push(ROUTES.DASHBOARD.HR.EMPLOYEES.LIST)}
             className="mt-4 text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400"
           >
             Back to Employees
@@ -83,7 +84,7 @@ export default function EditEmployeePage() {
       <div className="mb-6">
         <button
           type="button"
-          onClick={() => router.push(`/dashboard/hr/employees/${employeeId}`)}
+          onClick={() => router.push(ROUTES.DASHBOARD.HR.EMPLOYEES.DETAIL(employeeId))}
           className="text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
         >
           ← Back to Profile

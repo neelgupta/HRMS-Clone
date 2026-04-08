@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Skeleton } from "@/components/ui/loaders/skeleton";
+import { ROUTES } from "@/lib/constants";
 
 type CurrentUser = {
   userId: string;
@@ -23,7 +24,7 @@ export default function AttendanceReportsPage() {
         const userResponse = await fetch("/api/auth/me");
 
         if (!userResponse.ok) {
-          router.push("/login");
+          router.push(ROUTES.PUBLIC.LOGIN);
           return;
         }
 
@@ -31,11 +32,11 @@ export default function AttendanceReportsPage() {
         setUser(data);
 
         if (data.role !== "HR_ADMIN" && data.role !== "SUPER_ADMIN" && data.role !== "PAYROLL_MANAGER") {
-          router.push("/dashboard/hr");
+          router.push(ROUTES.DASHBOARD.HR.DASHBOARD);
           return;
         }
       } catch {
-        router.push("/login");
+        router.push(ROUTES.PUBLIC.LOGIN);
       } finally {
         setLoading(false);
       }

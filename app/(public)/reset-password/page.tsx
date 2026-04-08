@@ -1,10 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { MdArrowForward, MdLock, MdVisibility, MdVisibilityOff, MdEmail } from "react-icons/md";
 import { Spinner } from "@/components/ui/loaders/spinner";
 import { dismissToast, showError, showLoading, showSuccess } from "@/lib/toast";
+import { ROUTES } from "@/lib/constants";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -93,7 +95,7 @@ export default function ResetPasswordPage() {
 
       dismissToast(toastId);
       showSuccess("Password set successfully! You can now login.");
-      router.push("/login");
+      router.push(ROUTES.PUBLIC.LOGIN);
     } catch {
       dismissToast(toastId);
       setError("Something went wrong. Please try again.");
@@ -231,9 +233,9 @@ export default function ResetPasswordPage() {
 
             <p className="mt-8 text-sm text-slate-600">
               Remember your password?{" "}
-              <a href="/login" className="font-semibold text-indigo-600 transition hover:text-indigo-500">
+              <Link href={ROUTES.PUBLIC.LOGIN} className="font-semibold text-indigo-600 transition hover:text-indigo-500">
                 Sign in
-              </a>
+              </Link>
             </p>
           </div>
         </section>

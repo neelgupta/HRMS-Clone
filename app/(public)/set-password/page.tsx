@@ -6,6 +6,7 @@ import { MdArrowForward, MdLock, MdVisibility, MdVisibilityOff } from "react-ico
 import { PageLoader } from "@/components/ui/loaders/page-loader";
 import { Spinner } from "@/components/ui/loaders/spinner";
 import { dismissToast, showError, showLoading, showSuccess } from "@/lib/toast";
+import { ROUTES } from "@/lib/constants";
 
 export default function SetPasswordPage() {
   const router = useRouter();
@@ -81,7 +82,7 @@ export default function SetPasswordPage() {
       dismissToast(toastId);
       showSuccess(message);
       setTimeout(() => {
-        router.push(data.redirectTo || "/dashboard/hr");
+        router.push(data.redirectTo || ROUTES.DASHBOARD.HR.DASHBOARD);
       }, 900);
     } catch {
       const message = "Something went wrong. Please try again.";

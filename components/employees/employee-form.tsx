@@ -7,6 +7,7 @@ import { Spinner } from "@/components/ui/loaders/spinner";
 import { dismissToast, showError, showLoading, showSuccess } from "@/lib/toast";
 import { createEmployee, updateEmployee, updateEmployeeCredentials, type EmployeeDetail } from "@/lib/client/employee";
 import type { CreateEmployeeInput } from "@/lib/validations/employee";
+import { ROUTES } from "@/lib/constants";
 
 type LoginCredentials = {
   email: string;
@@ -239,7 +240,7 @@ export function EmployeeForm({ employee, companyBranches, departments, designati
       if (onSuccess) {
         onSuccess();
       } else {
-        router.push(`/dashboard/hr/employees`);
+        router.push(ROUTES.DASHBOARD.HR.EMPLOYEES.LIST);
       }
     } catch {
       dismissToast(toastId);
@@ -1245,7 +1246,7 @@ export function EmployeeForm({ employee, companyBranches, departments, designati
                    if (onSuccess) {
                      onSuccess();
                    } else {
-                     router.push(`/dashboard/hr/employees`);
+                     router.push(ROUTES.DASHBOARD.HR.EMPLOYEES.LIST);
                    }
                  }}
                  className="rounded-xl border border-slate-200 bg-white px-6 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
@@ -1298,7 +1299,7 @@ export function EmployeeForm({ employee, companyBranches, departments, designati
                        if (onSuccess) {
                          onSuccess();
                        } else {
-                         router.push(`/dashboard/hr/employees`);
+                         router.push(ROUTES.DASHBOARD.HR.EMPLOYEES.LIST);
                        }
                    } catch {
                      showError("Failed to update credentials.");

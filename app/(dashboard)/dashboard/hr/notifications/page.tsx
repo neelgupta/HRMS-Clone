@@ -19,8 +19,9 @@ import {
   getHRNotifications,
   markHRNotificationAsRead,
   markAllHRNotificationsAsRead,
-  type LeaveNotification,
+  LeaveNotification,
 } from "@/lib/client/leave";
+import { ROUTES } from "@/lib/constants";
 import { useRouter } from "next/navigation";
 
 type NotificationType =
@@ -124,7 +125,7 @@ export default function HRNotificationsPage() {
       handleMarkAsRead(notification.id);
     }
     if (notification.relatedType === "LeaveApplication" && notification.relatedId) {
-      router.push(`/dashboard/hr/leave?highlight=${notification.relatedId}`);
+      router.push(`${ROUTES.DASHBOARD.HR.LEAVE.LIST}?highlight=${notification.relatedId}`);
     }
   }
 

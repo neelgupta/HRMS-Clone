@@ -7,6 +7,7 @@ import { Spinner } from "@/components/ui/loaders/spinner";
 import { fetchDepartments } from "@/lib/client/department";
 import { fetchDesignations } from "@/lib/client/designation";
 import { fetchEmployees } from "@/lib/client/employee";
+import { ROUTES } from "@/lib/constants";
 
 type Branch = {
   id: string;
@@ -77,7 +78,7 @@ export default function NewEmployeePage() {
       <div className="mb-6">
         <button
           type="button"
-          onClick={() => router.push("/dashboard/hr/employees")}
+          onClick={() => router.push(ROUTES.DASHBOARD.HR.EMPLOYEES.LIST)}
           className="text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
         >
           ← Back to Employees

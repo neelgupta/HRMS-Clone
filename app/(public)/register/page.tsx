@@ -6,6 +6,7 @@ import { MdArrowForward, MdBusiness, MdEmail, MdPerson, MdPhone } from "react-ic
 import { Spinner } from "@/components/ui/loaders/spinner";
 import { dismissToast, showError, showLoading, showSuccess } from "@/lib/toast";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { ROUTES } from "@/lib/constants";
 
 type FormState = {
   name: string;
@@ -217,7 +218,7 @@ export default function RegisterPage() {
 
           <p className="mt-8 text-sm text-slate-600 dark:text-slate-400">
             Already have an account?{" "}
-            <Link href="/login" className="font-semibold text-indigo-600 transition hover:text-indigo-500 dark:text-indigo-400">
+            <Link href={ROUTES.PUBLIC.LOGIN} className="font-semibold text-indigo-600 transition hover:text-indigo-500 dark:text-indigo-400">
               Sign in
             </Link>
           </p>

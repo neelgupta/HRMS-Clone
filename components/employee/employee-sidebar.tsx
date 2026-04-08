@@ -14,6 +14,7 @@ import {
   MdHelp,
 } from "react-icons/md";
 import { useTheme } from "@/contexts/theme-context";
+import { ROUTES } from "@/lib/constants";
 
 type NavItem = {
   label: string;
@@ -22,15 +23,15 @@ type NavItem = {
 };
 
 const navItems: NavItem[] = [
-  { label: "Dashboard", href: "/dashboard/employee", icon: MdDashboard },
-  { label: "My Profile", href: "/dashboard/employee/profile", icon: MdPerson },
-  { label: "Inbox", href: "/dashboard/employee/inbox", icon: MdInbox },
-  { label: "Employee", href: "/dashboard/employee/employees", icon: MdPeople },
-  { label: "Attendance", href: "/dashboard/employee/attendance", icon: MdAccessTime },
-  { label: "Leave", href: "/dashboard/employee/leave", icon: MdEventNote },
-  { label: "Overtime", href: "/dashboard/employee/overtime", icon: MdMoreTime },
-  { label: "My Holidays", href: "/dashboard/employee/holidays", icon: MdBeachAccess },
-  { label: "Help Desk", href: "/dashboard/employee/help", icon: MdHelp },
+  { label: "Dashboard", href: ROUTES.DASHBOARD.EMPLOYEE.DASHBOARD, icon: MdDashboard },
+  { label: "My Profile", href: ROUTES.DASHBOARD.EMPLOYEE.PROFILE, icon: MdPerson },
+  { label: "Inbox", href: ROUTES.DASHBOARD.EMPLOYEE.INBOX, icon: MdInbox },
+  { label: "Employee", href: ROUTES.DASHBOARD.EMPLOYEE.EMPLOYEES, icon: MdPeople },
+  { label: "Attendance", href: ROUTES.DASHBOARD.EMPLOYEE.ATTENDANCE, icon: MdAccessTime },
+  { label: "Leave", href: ROUTES.DASHBOARD.EMPLOYEE.LEAVE.BASE, icon: MdEventNote },
+  { label: "Overtime", href: ROUTES.DASHBOARD.EMPLOYEE.OVERTIME, icon: MdMoreTime },
+  { label: "My Holidays", href: ROUTES.DASHBOARD.EMPLOYEE.HOLIDAYS, icon: MdBeachAccess },
+  { label: "Help Desk", href: ROUTES.DASHBOARD.EMPLOYEE.HELP, icon: MdHelp },
 ];
 
 function NavItemComponent({
@@ -183,6 +184,6 @@ export function EmployeeSidebar({ mobileOpen, onClose, userName = "Employee", ac
 export function useEmployeeLogout() {
   return async () => {
     await fetch("/api/auth/logout", { method: "POST" });
-    window.location.href = "/login";
+    window.location.href = ROUTES.PUBLIC.LOGIN;
   };
 }

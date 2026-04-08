@@ -103,7 +103,7 @@ export async function updateLeaveTypeConfig(
 ) {
   return prisma.leaveTypeConfig.update({
     where: { id, companyId },
-    data: input,
+    data: input as any,
   });
 }
 
@@ -364,7 +364,7 @@ export async function approveLeave(
     // Manager approval
     const managerEmployee = await prisma.employee.findFirst({
       where: {
-        userId: approverId,
+        user: { id: approverId },
         companyId,
       },
       select: { id: true },
@@ -447,7 +447,7 @@ export async function approveLeave(
     await createNotification(companyId, application.employeeId, {
       type: "LEAVE_APPROVED",
       title: "Leave Approved",
-      message: `Your ${application.leaveTypeConfig.name} application has been approved`,
+      message: `Your ${application.leaveTypeConfig?.name || "leave"} application has been approved`,
       relatedType: "LeaveApplication",
       relatedId: application.id,
     });
@@ -462,7 +462,7 @@ export async function approveLeave(
         to: employeeUser.email,
         subject: "Leave Application Approved",
         html: `<p>Your leave application has been approved.</p>
-               <p><strong>Type:</strong> ${application.leaveTypeConfig.name}</p>
+               <p><strong>Type:</strong> ${application.leaveTypeConfig?.name || "Leave"}</p>
                <p><strong>Duration:</strong> ${application.totalDays} days</p>
                <p><strong>Dates:</strong> ${application.startDate.toDateString()} - ${application.endDate.toDateString()}</p>`,
       });
@@ -492,7 +492,7 @@ export async function approveLeave(
     await createNotification(companyId, application.employeeId, {
       type: notifType as any,
       title: input.action === "REJECTED" ? "Leave Rejected" : "Modification Requested",
-      message: input.remarks || `Your ${application.leaveTypeConfig.name} application was ${input.action.toLowerCase()}`,
+      message: input.remarks || `Your ${application.leaveTypeConfig?.name || "leave"} application was ${input.action.toLowerCase()}`,
       relatedType: "LeaveApplication",
       relatedId: application.id,
     });
@@ -802,7 +802,7 @@ export async function updateLeavePolicy(
 ) {
   return prisma.leavePolicy.upsert({
     where: { companyId },
-    update: input,
+    update: input as any,
     create: {
       companyId,
       approvalLevel1: (input.approvalLevel1 ?? "MANAGER") as any,

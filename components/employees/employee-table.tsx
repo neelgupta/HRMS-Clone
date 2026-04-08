@@ -6,6 +6,7 @@ import { MdAdd, MdSearch, MdFileDownload, MdRefresh } from "react-icons/md";
 import { Spinner } from "@/components/ui/loaders/spinner";
 import { dismissToast, showError, showLoading, showSuccess } from "@/lib/toast";
 import { fetchEmployees, exportEmployeesCSV, type EmployeeListItem, type EmployeeStats } from "@/lib/client/employee";
+import { ROUTES } from "@/lib/constants";
 
 type EmployeeTableProps = {
   initialData?: {
@@ -157,7 +158,7 @@ export function EmployeeTable({ initialData }: EmployeeTableProps) {
 
           <button
             type="button"
-            onClick={() => router.push("/dashboard/hr/employees/new")}
+            onClick={() => router.push(ROUTES.DASHBOARD.HR.EMPLOYEES.NEW)}
             className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-500 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-200 transition hover:-translate-y-0.5 hover:shadow-xl dark:shadow-indigo-900/50"
           >
             <MdAdd className="text-lg" />
@@ -207,7 +208,7 @@ export function EmployeeTable({ initialData }: EmployeeTableProps) {
                     <p className="text-sm text-slate-500 dark:text-slate-400">No employees found.</p>
                     <button
                       type="button"
-                      onClick={() => router.push("/dashboard/hr/employees/new")}
+onClick={() => router.push(ROUTES.DASHBOARD.HR.EMPLOYEES.NEW)}
                       className="mt-3 text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400"
                     >
                       Add your first employee
@@ -245,7 +246,7 @@ export function EmployeeTable({ initialData }: EmployeeTableProps) {
                     <td className="px-6 py-4 text-right">
                       <button
                         type="button"
-                        onClick={() => router.push(`/dashboard/hr/employees/${employee.id}`)}
+                        onClick={() => router.push(ROUTES.DASHBOARD.HR.EMPLOYEES.DETAIL(employee.id))}
                         className="text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400"
                       >
                         View

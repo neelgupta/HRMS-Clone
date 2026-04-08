@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { MdAccountTree, MdBusiness, MdDashboard, MdPayments, MdPeople, MdSettings, MdAccessTime, MdSchedule, MdPerson, MdAssessment, MdEventNote, MdCalendarMonth, MdPolicy, MdNotifications } from "react-icons/md";
 import { useTheme } from "@/contexts/theme-context";
+import { ROUTES } from "@/lib/constants";
 
 type DashboardSidebarProps = {
   mobileOpen: boolean;
@@ -20,26 +21,26 @@ type NavItem = {
 };
 
 const hrNavItems: NavItem[] = [
-  { label: "Dashboard", href: "/dashboard/hr", icon: MdDashboard, available: true },
-  { label: "Company Setup", href: "/dashboard/hr/company-setup", icon: MdBusiness, available: true },
-  { label: "Employees", href: "/dashboard/hr/employees", icon: MdPeople, available: true },
-  { label: "Attendance", href: "/dashboard/hr/attendance", icon: MdAccessTime, available: true },
-  { label: "Attendance Reports", href: "/dashboard/hr/attendance/reports", icon: MdAssessment, available: true },
-  { label: "Shifts", href: "/dashboard/hr/shifts", icon: MdSchedule, available: true },
-  { label: "Leave Management", href: "/dashboard/hr/leave", icon: MdEventNote, available: true },
-  { label: "Leave Types", href: "/dashboard/hr/leave-types", icon: MdPolicy, available: true },
-  { label: "Leave Policy", href: "/dashboard/hr/leave-policy", icon: MdPolicy, available: true },
-  { label: "Holidays", href: "/dashboard/hr/holidays", icon: MdCalendarMonth, available: true },
-  { label: "Notifications", href: "/dashboard/hr/notifications", icon: MdNotifications, available: true },
-  { label: "Organization", href: "/dashboard/hr/organization", icon: MdAccountTree, available: true },
+  { label: "Dashboard", href: ROUTES.DASHBOARD.HR.DASHBOARD, icon: MdDashboard, available: true },
+  { label: "Company Setup", href: ROUTES.DASHBOARD.HR.COMPANY_SETUP, icon: MdBusiness, available: true },
+  { label: "Employees", href: ROUTES.DASHBOARD.HR.EMPLOYEES.LIST, icon: MdPeople, available: true },
+  { label: "Attendance", href: ROUTES.DASHBOARD.HR.ATTENDANCE.LIST, icon: MdAccessTime, available: true },
+  { label: "Attendance Reports", href: ROUTES.DASHBOARD.HR.ATTENDANCE.REPORTS, icon: MdAssessment, available: true },
+  { label: "Shifts", href: ROUTES.DASHBOARD.HR.SHIFTS, icon: MdSchedule, available: true },
+  { label: "Leave Management", href: ROUTES.DASHBOARD.HR.LEAVE.LIST, icon: MdEventNote, available: true },
+  { label: "Leave Types", href: ROUTES.DASHBOARD.HR.LEAVE.TYPES, icon: MdPolicy, available: true },
+  { label: "Leave Policy", href: ROUTES.DASHBOARD.HR.LEAVE.POLICY, icon: MdPolicy, available: true },
+  { label: "Holidays", href: ROUTES.DASHBOARD.HR.HOLIDAYS, icon: MdCalendarMonth, available: true },
+  { label: "Notifications", href: ROUTES.DASHBOARD.HR.NOTIFICATIONS, icon: MdNotifications, available: true },
+  { label: "Organization", href: ROUTES.DASHBOARD.HR.ORGANIZATION, icon: MdAccountTree, available: true },
   { label: "Payroll", href: "", icon: MdPayments, available: false },
-  { label: "Settings", href: "/dashboard/hr/settings", icon: MdSettings, available: true },
+  { label: "Settings", href: ROUTES.DASHBOARD.HR.SETTINGS, icon: MdSettings, available: true },
 ];
 
 const employeeNavItems: NavItem[] = [
-  { label: "My Dashboard", href: "/dashboard/employee", icon: MdDashboard, available: true },
-  { label: "My Attendance", href: "/dashboard/employee", icon: MdAccessTime, available: true },
-  { label: "My Profile", href: "/dashboard/employee", icon: MdPerson, available: true },
+  { label: "My Dashboard", href: ROUTES.DASHBOARD.EMPLOYEE.DASHBOARD, icon: MdDashboard, available: true },
+  { label: "My Attendance", href: ROUTES.DASHBOARD.EMPLOYEE.DASHBOARD, icon: MdAccessTime, available: true },
+  { label: "My Profile", href: ROUTES.DASHBOARD.EMPLOYEE.DASHBOARD, icon: MdPerson, available: true },
 ];
 
 function NavItem({

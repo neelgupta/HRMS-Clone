@@ -211,6 +211,15 @@ export async function fetchAttendances(
   page: number;
   limit: number;
   totalPages: number;
+  stats?: {
+    present: number;
+    absent: number;
+    late: number;
+    halfDay: number;
+    onLeave: number;
+    weekOff: number;
+    holiday: number;
+  };
 }>> {
   try {
     const searchParams = new URLSearchParams();
@@ -219,7 +228,9 @@ export async function fetchAttendances(
     if (params.department) searchParams.set("department", params.department);
     if (params.dateFrom) searchParams.set("dateFrom", params.dateFrom);
     if (params.dateTo) searchParams.set("dateTo", params.dateTo);
+    if (params.date) searchParams.set("date", params.date);
     if (params.status) searchParams.set("status", params.status);
+    if (params.view) searchParams.set("view", params.view);
     searchParams.set("page", String(params.page));
     searchParams.set("limit", String(params.limit));
 

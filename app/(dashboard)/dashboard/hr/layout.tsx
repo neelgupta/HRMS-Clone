@@ -7,6 +7,7 @@ import { EmployeeTopbar } from "@/components/employee/employee-topbar";
 import { PageLoader } from "@/components/ui/loader";
 import { getHRNotifications } from "@/lib/client/leave";
 import { useTheme } from "@/contexts/theme-context";
+import { ROUTES } from "@/lib/constants";
 
 type HRLayoutProps = {
   children: ReactNode;
@@ -31,13 +32,13 @@ export default function HRDashboardLayout({ children }: HRLayoutProps) {
       try {
         const response = await fetch("/api/auth/me");
         if (!response.ok) {
-          router.push("/login");
+          router.push(ROUTES.PUBLIC.LOGIN);
           return;
         }
         const data = await response.json();
         setUser(data);
       } catch {
-        router.push("/login");
+        router.push(ROUTES.PUBLIC.LOGIN);
       } finally {
         setLoading(false);
       }
@@ -69,7 +70,7 @@ export default function HRDashboardLayout({ children }: HRLayoutProps) {
 
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
-    router.push("/login");
+    router.push(ROUTES.PUBLIC.LOGIN);
   };
 
   if (!mounted || loading) {
@@ -119,8 +120,8 @@ export default function HRDashboardLayout({ children }: HRLayoutProps) {
               setNotificationCount(0);
             }
           }}
-          notificationHref="/dashboard/hr/notifications"
-          profileHref="/dashboard/hr/profile"
+          notificationHref={ROUTES.DASHBOARD.HR.NOTIFICATIONS}
+          profileHref={ROUTES.DASHBOARD.HR.PROFILE}
         />
 
         <main className="px-4 py-6 md:px-6 lg:px-8">

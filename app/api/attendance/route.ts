@@ -21,7 +21,9 @@ export async function GET(request: NextRequest) {
       department: searchParams.get("department") || undefined,
       dateFrom: searchParams.get("dateFrom") || undefined,
       dateTo: searchParams.get("dateTo") || undefined,
+      date: searchParams.get("date") || undefined,
       status: searchParams.get("status") || undefined,
+      view: searchParams.get("view") || undefined,
       page: searchParams.get("page") || 1,
       limit: searchParams.get("limit") || 20,
     });

@@ -755,7 +755,11 @@ export async function getEmployeeStats(companyId: string) {
 
 export async function exportEmployeesToCSV(companyId: string): Promise<string> {
   const employees = await prisma.employee.findMany({
-    where: { companyId },
+    where: { 
+      companyId,
+      isDeleted: false,
+      employmentStatus: { in: ["PROBATION", "CONFIRMED"] }
+    },
     select: {
       employeeCode: true,
       firstName: true,

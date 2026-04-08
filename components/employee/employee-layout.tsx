@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { EmployeeSidebar, EmployeeTopbar, useEmployeeLogout } from "@/components/employee";
 import { PageLoader } from "@/components/ui/loader";
 import { useTheme } from "@/contexts/theme-context";
+import { ROUTES } from "@/lib/constants";
 
 type EmployeeLayoutProps = {
   children: ReactNode;
@@ -191,7 +192,7 @@ export function EmployeeLayout({ children, title, subtitle }: EmployeeLayoutProp
           notifications={recentNotifications}
           onMarkAsRead={markNotificationAsRead}
           onMarkAllAsRead={markAllNotificationsAsRead}
-          notificationHref="/dashboard/employee/notifications"
+          notificationHref={ROUTES.DASHBOARD.EMPLOYEE.NOTIFICATIONS}
         />
 
         <main className="px-6 py-6">

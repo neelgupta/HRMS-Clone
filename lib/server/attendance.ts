@@ -36,6 +36,7 @@ export type AttendanceListItem = {
   employeeId: string;
   employeeName: string;
   employeeCode: string;
+  department: string | null;
   date: Date;
   clockIn: Date | null;
   clockOut: Date | null;
@@ -83,6 +84,15 @@ type ListAttendancesResult = {
   page: number;
   limit: number;
   totalPages: number;
+  stats?: {
+    present: number;
+    absent: number;
+    late: number;
+    halfDay: number;
+    onLeave: number;
+    weekOff: number;
+    holiday: number;
+  };
 };
 
 type AttendanceSummary = {
@@ -390,6 +400,7 @@ export async function clockIn(
           firstName: true,
           lastName: true,
           employeeCode: true,
+          department: { select: { name: true } },
         },
       },
       shift: true,
@@ -403,6 +414,7 @@ export async function clockIn(
       employeeId: attendance.employeeId,
       employeeName: `${attendance.employee.firstName} ${attendance.employee.lastName}`,
       employeeCode: attendance.employee.employeeCode,
+      department: attendance.employee.department?.name || null,
       date: attendance.date,
       clockIn: attendance.clockIn,
       clockOut: attendance.clockOut,
@@ -484,6 +496,7 @@ export async function clockOut(
           firstName: true,
           lastName: true,
           employeeCode: true,
+          department: { select: { name: true } },
         },
       },
       shift: true,
@@ -497,6 +510,7 @@ export async function clockOut(
       employeeId: attendance.employeeId,
       employeeName: `${attendance.employee.firstName} ${attendance.employee.lastName}`,
       employeeCode: attendance.employee.employeeCode,
+      department: attendance.employee.department?.name || null,
       date: attendance.date,
       clockIn: attendance.clockIn,
       clockOut: attendance.clockOut,
@@ -555,6 +569,7 @@ export async function breakStart(
           firstName: true,
           lastName: true,
           employeeCode: true,
+          department: { select: { name: true } },
         },
       },
       shift: true,
@@ -568,6 +583,7 @@ export async function breakStart(
       employeeId: attendance.employeeId,
       employeeName: `${attendance.employee.firstName} ${attendance.employee.lastName}`,
       employeeCode: attendance.employee.employeeCode,
+      department: attendance.employee.department?.name || null,
       date: attendance.date,
       clockIn: attendance.clockIn,
       clockOut: attendance.clockOut,
@@ -630,6 +646,7 @@ export async function breakEnd(
           firstName: true,
           lastName: true,
           employeeCode: true,
+          department: { select: { name: true } },
         },
       },
       shift: true,
@@ -643,6 +660,7 @@ export async function breakEnd(
       employeeId: attendance.employeeId,
       employeeName: `${attendance.employee.firstName} ${attendance.employee.lastName}`,
       employeeCode: attendance.employee.employeeCode,
+      department: attendance.employee.department?.name || null,
       date: attendance.date,
       clockIn: attendance.clockIn,
       clockOut: attendance.clockOut,
@@ -679,6 +697,7 @@ export async function getTodayAttendance(
           firstName: true,
           lastName: true,
           employeeCode: true,
+          department: { select: { name: true } },
         },
       },
       shift: true,
@@ -695,6 +714,7 @@ export async function getTodayAttendance(
     employeeId: attendance.employeeId,
     employeeName: `${attendance.employee.firstName} ${attendance.employee.lastName}`,
     employeeCode: attendance.employee.employeeCode,
+    department: attendance.employee.department?.name || null,
     date: attendance.date,
     clockIn: attendance.clockIn,
     clockOut: attendance.clockOut,
@@ -720,11 +740,265 @@ export async function listAttendances(
   companyId: string,
   input: AttendanceSearchInput
 ): Promise<ListAttendancesResult> {
+  const dateFilter = input.date 
+    ? new Date(input.date + "T00:00:00")
+    : input.dateFrom 
+      ? new Date(input.dateFrom) 
+      : undefined;
+
+  const dayStart = dateFilter ? new Date(dateFilter) : undefined;
+  const dayEnd = dateFilter ? new Date(dateFilter.getTime() + 24 * 60 * 60 * 1000) : undefined;
+
+  if (input.view === "day") {
+    const targetDate = dayStart || new Date();
+    const targetDateStr = targetDate.toISOString().split("T")[0];
+
+    const employees = await prisma.employee.findMany({
+      where: {
+        companyId,
+        isDeleted: false,
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        employeeCode: true,
+        department: {
+          select: { name: true },
+        },
+        shiftAssignments: {
+          where: {
+            effectiveFrom: { lte: targetDate },
+            OR: [
+              { effectiveTo: null },
+              { effectiveTo: { gte: targetDate } },
+            ],
+          },
+          include: {
+            shift: {
+              select: {
+                id: true,
+                name: true,
+                startTime: true,
+                endTime: true,
+              },
+            },
+          },
+          orderBy: { effectiveFrom: "desc" },
+          take: 1,
+        },
+      },
+      orderBy: { firstName: "asc" },
+    });
+
+    const attendanceRecords = await prisma.attendance.findMany({
+      where: {
+        companyId,
+        ...(dayStart && dayEnd && { date: { gte: dayStart, lt: dayEnd } }),
+      },
+      select: {
+        id: true,
+        employeeId: true,
+        date: true,
+        clockIn: true,
+        clockOut: true,
+        totalHours: true,
+        overtimeHours: true,
+        status: true,
+        shift: {
+          select: {
+            id: true,
+            name: true,
+            startTime: true,
+            endTime: true,
+          },
+        },
+      },
+    });
+
+    const attendanceMap = new Map(attendanceRecords.map(a => [a.employeeId, a]));
+
+    const attendances = employees.map(emp => {
+      const record = attendanceMap.get(emp.id);
+      const shift = emp.shiftAssignments[0]?.shift || record?.shift || null;
+      const dayOfWeek = new Date(targetDate).getDay();
+      const isWeekOff = dayOfWeek === 0 || dayOfWeek === 6;
+      
+      return {
+        id: record?.id || `temp-${emp.id}`,
+        employeeId: emp.id,
+        employeeName: `${emp.firstName} ${emp.lastName}`,
+        employeeCode: emp.employeeCode,
+        department: emp.department?.name || null,
+        date: targetDate,
+        clockIn: record?.clockIn || null,
+        clockOut: record?.clockOut || null,
+        totalHours: record?.totalHours || null,
+        overtimeHours: record?.overtimeHours || null,
+        status: record ? record.status : (isWeekOff ? "WEEK_OFF" : "ABSENT"),
+        shift: shift,
+      };
+    });
+
+    const stats = {
+      present: attendances.filter(a => a.status === "PRESENT").length,
+      absent: attendances.filter(a => a.status === "ABSENT").length,
+      late: attendances.filter(a => a.status === "LATE").length,
+      halfDay: attendances.filter(a => a.status === "HALF_DAY").length,
+      onLeave: attendances.filter(a => a.status === "ON_LEAVE").length,
+      weekOff: attendances.filter(a => a.status === "WEEK_OFF").length,
+      holiday: attendances.filter(a => a.status === "HOLIDAY").length,
+    };
+
+    return {
+      attendances,
+      total: employees.length,
+      page: 1,
+      limit: employees.length,
+      totalPages: 1,
+      stats,
+    };
+  }
+
+  if (input.view === "list") {
+    const startDate = input.dateFrom ? new Date(input.dateFrom + "T00:00:00") : new Date("2020-01-01T00:00:00");
+    const endDate = input.dateTo ? new Date(input.dateTo + "T23:59:59") : new Date();
+
+    const employees = await prisma.employee.findMany({
+      where: {
+        companyId,
+        isDeleted: false,
+        ...(input.search && {
+          OR: [
+            { firstName: { contains: input.search, mode: "insensitive" } },
+            { lastName: { contains: input.search, mode: "insensitive" } },
+            { employeeCode: { contains: input.search, mode: "insensitive" } },
+          ],
+        }),
+        ...(input.department && {
+          department: { name: { contains: input.department, mode: "insensitive" } },
+        }),
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        employeeCode: true,
+        department: {
+          select: { name: true },
+        },
+      },
+    });
+
+    const attendanceRecords = await prisma.attendance.findMany({
+      where: {
+        companyId,
+        date: { gte: startDate, lte: endDate },
+        ...(input.status && { status: input.status as AttendanceStatus }),
+        ...(input.employeeId && { employeeId: input.employeeId }),
+      },
+      select: {
+        id: true,
+        employeeId: true,
+        date: true,
+        clockIn: true,
+        clockOut: true,
+        totalHours: true,
+        overtimeHours: true,
+        status: true,
+        shift: {
+          select: {
+            id: true,
+            name: true,
+            startTime: true,
+            endTime: true,
+          },
+        },
+      },
+    });
+
+    const attendanceMap = new Map<string, typeof attendanceRecords[0]>();
+    attendanceRecords.forEach(record => {
+      const key = `${record.employeeId}-${record.date.toISOString().split('T')[0]}`;
+      attendanceMap.set(key, record);
+    });
+
+    const daysInRange: Date[] = [];
+    const current = new Date(startDate);
+    while (current <= endDate) {
+      daysInRange.push(new Date(current));
+      current.setDate(current.getDate() + 1);
+    }
+
+    let allAttendances: AttendanceListItem[] = [];
+    
+    employees.forEach(emp => {
+      daysInRange.forEach(day => {
+        const dayStr = day.toISOString().split('T')[0];
+        const key = `${emp.id}-${dayStr}`;
+        const record = attendanceMap.get(key);
+        const dayOfWeek = day.getDay();
+        const isWeekOff = dayOfWeek === 0 || dayOfWeek === 6;
+
+        if (record) {
+          allAttendances.push({
+            id: record.id,
+            employeeId: emp.id,
+            employeeName: `${emp.firstName} ${emp.lastName}`,
+            employeeCode: emp.employeeCode,
+            department: emp.department?.name || null,
+            date: day,
+            clockIn: record.clockIn,
+            clockOut: record.clockOut,
+            totalHours: record.totalHours,
+            overtimeHours: record.overtimeHours,
+            status: record.status,
+            shift: record.shift,
+          });
+        } else {
+          allAttendances.push({
+            id: `temp-${emp.id}-${dayStr}`,
+            employeeId: emp.id,
+            employeeName: `${emp.firstName} ${emp.lastName}`,
+            employeeCode: emp.employeeCode,
+            department: emp.department?.name || null,
+            date: day,
+            clockIn: null,
+            clockOut: null,
+            totalHours: null,
+            overtimeHours: null,
+            status: isWeekOff ? "WEEK_OFF" : "ABSENT",
+            shift: null,
+          });
+        }
+      });
+    });
+
+    allAttendances.sort((a, b) => {
+      const dateCompare = new Date(b.date).getTime() - new Date(a.date).getTime();
+      if (dateCompare !== 0) return dateCompare;
+      return a.employeeName.localeCompare(b.employeeName);
+    });
+
+    const total = allAttendances.length;
+    const start = (input.page - 1) * input.limit;
+    const pagedAttendances = allAttendances.slice(start, start + input.limit);
+
+    return {
+      attendances: pagedAttendances,
+      total,
+      page: input.page,
+      limit: input.limit,
+      totalPages: Math.ceil(total / input.limit),
+    };
+  }
+
+  // Fallback to original query for list view without dates
   const where: Prisma.AttendanceWhereInput = {
     companyId,
     ...(input.employeeId && { employeeId: input.employeeId }),
-    ...(input.dateFrom && { date: { gte: new Date(input.dateFrom) } }),
-    ...(input.dateTo && { date: { lte: new Date(input.dateTo) } }),
+    ...(input.dateFrom && !input.date && { date: { gte: new Date(input.dateFrom) } }),
+    ...(input.dateTo && !input.date && { date: { lte: new Date(input.dateTo + "T23:59:59") } }),
     ...(input.status && { status: input.status as AttendanceStatus }),
     ...(input.department && {
       employee: { department: { name: { contains: input.department, mode: "insensitive" } } },
@@ -749,6 +1023,11 @@ export async function listAttendances(
             firstName: true,
             lastName: true,
             employeeCode: true,
+            department: {
+              select: {
+                name: true,
+              },
+            },
           },
         },
         shift: {
@@ -773,6 +1052,7 @@ export async function listAttendances(
       employeeId: a.employeeId,
       employeeName: `${a.employee.firstName} ${a.employee.lastName}`,
       employeeCode: a.employee.employeeCode,
+      department: a.employee.department?.name || null,
       date: a.date,
       clockIn: a.clockIn,
       clockOut: a.clockOut,
@@ -800,6 +1080,7 @@ export async function getAttendance(
           firstName: true,
           lastName: true,
           employeeCode: true,
+          department: { select: { name: true } },
         },
       },
       shift: true,
@@ -816,6 +1097,7 @@ export async function getAttendance(
     employeeId: attendance.employeeId,
     employeeName: `${attendance.employee.firstName} ${attendance.employee.lastName}`,
     employeeCode: attendance.employee.employeeCode,
+    department: attendance.employee.department?.name || null,
     date: attendance.date,
     clockIn: attendance.clockIn,
     clockOut: attendance.clockOut,
@@ -844,6 +1126,7 @@ export async function manualAttendance(
 ): Promise<{ attendance: AttendanceDetail }> {
   const employee = await prisma.employee.findFirst({
     where: { id: input.employeeId, companyId },
+    include: { department: true },
   });
 
   if (!employee) {
@@ -897,6 +1180,7 @@ export async function manualAttendance(
       employeeId: attendance.employeeId,
       employeeName: `${employee.firstName} ${employee.lastName}`,
       employeeCode: employee.employeeCode,
+      department: employee.department?.name || null,
       date: attendance.date,
       clockIn: attendance.clockIn,
       clockOut: attendance.clockOut,

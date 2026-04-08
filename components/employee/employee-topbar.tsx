@@ -10,6 +10,7 @@ import {
 } from "react-icons/md";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { NotificationBell } from "@/components/ui/notification-bell";
+import { ROUTES } from "@/lib/constants";
 
 type NotificationItem = {
   id: string;
@@ -45,7 +46,7 @@ export function EmployeeTopbar({
   onMarkAllAsRead,
   onNotificationClick,
   notificationHref,
-  profileHref = "/dashboard/employee/profile"
+  profileHref = ROUTES.DASHBOARD.EMPLOYEE.PROFILE
 }: EmployeeTopbarProps) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");

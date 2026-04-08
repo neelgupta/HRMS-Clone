@@ -23,6 +23,7 @@ import {
   MdEventNote,
 } from "react-icons/md";
 import { EmployeeLayout } from "@/components/employee";
+import { ROUTES } from "@/lib/constants";
 import { DashboardLoader } from "@/components/ui/loader";
 import { breakStart, breakEnd, fetchTodayAttendance } from "@/lib/client/attendance";
 
@@ -518,28 +519,28 @@ function DashboardContent() {
           <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm hover:shadow-md transition-shadow">
             <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-4">Quick Links</h3>
             <div className="grid grid-cols-2 gap-3">
-              <button onClick={() => router.push("/dashboard/employee/leave")}
+              <button onClick={() => router.push(ROUTES.DASHBOARD.EMPLOYEE.LEAVE.BASE)}
                 className="flex items-center gap-2 p-3 bg-gradient-to-r from-indigo-50 to-transparent dark:from-indigo-900/20 dark:to-transparent rounded-xl hover:from-indigo-100 dark:hover:from-indigo-900/40 transition-all group">
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow">
                   <MdEventNote className="text-lg text-white" />
                 </div>
                 <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Apply Leave</span>
               </button>
-              <button onClick={() => router.push("/dashboard/employee/holidays")}
+              <button onClick={() => router.push(ROUTES.DASHBOARD.EMPLOYEE.HOLIDAYS)}
                 className="flex items-center gap-2 p-3 bg-gradient-to-r from-purple-50 to-transparent dark:from-purple-900/20 dark:to-transparent rounded-xl hover:from-purple-100 dark:hover:from-purple-900/40 transition-all group">
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow">
                   <MdBeachAccess className="text-lg text-white" />
                 </div>
                 <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Holidays</span>
               </button>
-              <button onClick={() => router.push("/dashboard/employee/overtime")}
+              <button onClick={() => router.push(ROUTES.DASHBOARD.EMPLOYEE.OVERTIME)}
                 className="flex items-center gap-2 p-3 bg-gradient-to-r from-amber-50 to-transparent dark:from-amber-900/20 dark:to-transparent rounded-xl hover:from-amber-100 dark:hover:from-amber-900/40 transition-all group">
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow">
                   <MdMoreTime className="text-lg text-white" />
                 </div>
                 <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Overtime</span>
               </button>
-              <button onClick={() => router.push("/dashboard/employee/help")}
+              <button onClick={() => router.push(ROUTES.DASHBOARD.EMPLOYEE.HELP)}
                 className="flex items-center gap-2 p-3 bg-gradient-to-r from-blue-50 to-transparent dark:from-blue-900/20 dark:to-transparent rounded-xl hover:from-blue-100 dark:hover:from-blue-900/40 transition-all group">
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow">
                   <MdHelp className="text-lg text-white" />
