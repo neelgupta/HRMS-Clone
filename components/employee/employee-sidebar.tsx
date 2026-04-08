@@ -23,15 +23,15 @@ type NavItem = {
 };
 
 const navItems: NavItem[] = [
-  { label: "Dashboard", href: ROUTES.DASHBOARD.EMPLOYEE.DASHBOARD, icon: MdDashboard },
-  { label: "My Profile", href: ROUTES.DASHBOARD.EMPLOYEE.PROFILE, icon: MdPerson },
-  { label: "Inbox", href: ROUTES.DASHBOARD.EMPLOYEE.INBOX, icon: MdInbox },
-  { label: "Employee", href: ROUTES.DASHBOARD.EMPLOYEE.EMPLOYEES, icon: MdPeople },
-  { label: "Attendance", href: ROUTES.DASHBOARD.EMPLOYEE.ATTENDANCE, icon: MdAccessTime },
-  { label: "Leave", href: ROUTES.DASHBOARD.EMPLOYEE.LEAVE.BASE, icon: MdEventNote },
-  { label: "Overtime", href: ROUTES.DASHBOARD.EMPLOYEE.OVERTIME, icon: MdMoreTime },
-  { label: "My Holidays", href: ROUTES.DASHBOARD.EMPLOYEE.HOLIDAYS, icon: MdBeachAccess },
-  { label: "Help Desk", href: ROUTES.DASHBOARD.EMPLOYEE.HELP, icon: MdHelp },
+  { label: "Dashboard", href: ROUTES.EMPLOYEE.DASHBOARD, icon: MdDashboard },
+  { label: "My Profile", href: ROUTES.EMPLOYEE.PROFILE, icon: MdPerson },
+  { label: "Inbox", href: ROUTES.EMPLOYEE.INBOX, icon: MdInbox },
+  { label: "Employee", href: ROUTES.EMPLOYEE.EMPLOYEES, icon: MdPeople },
+  { label: "Attendance", href: ROUTES.EMPLOYEE.ATTENDANCE, icon: MdAccessTime },
+  { label: "Leave", href: ROUTES.EMPLOYEE.LEAVE.BASE, icon: MdEventNote },
+  { label: "Overtime", href: ROUTES.EMPLOYEE.OVERTIME, icon: MdMoreTime },
+  { label: "My Holidays", href: ROUTES.EMPLOYEE.HOLIDAYS, icon: MdBeachAccess },
+  { label: "Help Desk", href: ROUTES.EMPLOYEE.HELP, icon: MdHelp },
 ];
 
 function NavItemComponent({
@@ -47,7 +47,7 @@ function NavItemComponent({
   const { theme, mounted } = useTheme();
   const isDark = mounted && theme === "dark";
   
-  const isRoot = item.href === "/dashboard/employee";
+  const isRoot = item.href === ROUTES.EMPLOYEE.DASHBOARD;
   const active = isRoot ? isActive : isActive;
 
   return (
@@ -93,7 +93,7 @@ export function EmployeeSidebar({ mobileOpen, onClose, userName = "Employee", ac
   const { theme, mounted } = useTheme();
 
   const isActive = (itemHref: string) => {
-    if (itemHref === "/dashboard/employee") {
+    if (itemHref === ROUTES.EMPLOYEE.DASHBOARD) {
       return pathname === itemHref;
     }
     return pathname.startsWith(itemHref);

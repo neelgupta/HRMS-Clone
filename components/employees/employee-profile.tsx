@@ -52,7 +52,7 @@ export function EmployeeProfile({ employee, onUpdate }: EmployeeProfileProps) {
 
       dismissToast(toastId);
       showSuccess("Employee deleted successfully.");
-      router.push(ROUTES.DASHBOARD.HR.EMPLOYEES.LIST);
+      router.push(ROUTES.HR.EMPLOYEES.LIST);
     } catch {
       dismissToast(toastId);
       showError("Something went wrong. Please try again.");
@@ -276,7 +276,7 @@ export function EmployeeProfile({ employee, onUpdate }: EmployeeProfileProps) {
 
           <button
             type="button"
-            onClick={() => router.push(ROUTES.DASHBOARD.HR.EMPLOYEES.EDIT(employee.id))}
+            onClick={() => router.push(ROUTES.HR.EMPLOYEES.EDIT(employee.id))}
             className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
           >
             <MdEdit className="text-lg" />

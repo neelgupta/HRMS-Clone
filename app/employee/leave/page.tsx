@@ -1,20 +1,17 @@
 "use client";
 
-import { useState, useEffect, Suspense, useRef } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "react-hot-toast";
-import { MdEventNote, MdCalendarToday, MdInfo } from "react-icons/md";
+import { MdEventNote, MdCalendarToday, MdInfo, MdChevronLeft, MdChevronRight } from "react-icons/md";
 import { EmployeeLayout } from "@/components/employee";
-import { Modal } from "@/components/ui/modal";
 import { Skeleton } from "@/components/ui/loaders/skeleton";
 import {
   type LeaveTypeConfig,
   type LeaveBalance,
   type Holiday,
-  type SessionType,
   leaveCategoryLabels,
-  sessionTypeLabels,
   getLeaveTypes,
   getLeaveBalances,
   getHolidays,
@@ -26,6 +23,14 @@ import {
   type CreateLeaveApplicationInput,
 } from "@/lib/validations/leave-full";
 
+function getLeaveCategory(type: string): string {
+  const paidTypes = ["CASUAL", "SICK", "PRIVILEGE", "MATERNITY", "PATERNITY", "BEREAVEMENT", "COMP_OFF"];
+  const unplannedTypes = ["UNPAID"];
+  if (unplannedTypes.includes(type)) return "UNPLANNED";
+  if (paidTypes.includes(type)) return "PAID";
+  return "UNPAID";
+}
+
 function LeaveContent() {
   const [activeTab, setActiveTab] = useState<"my" | "apply">("my");
   const [leaveTypes, setLeaveTypes] = useState<LeaveTypeConfig[]>([]);
@@ -35,15 +40,33 @@ function LeaveContent() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [selectedType, setSelectedType] = useState<LeaveTypeConfig | null>(null);
-  const [confirmModal, setConfirmModal] = useState(false);
-  const [selectedDates, setSelectedDates] = useState<{ start: string; end: string }>({ start: "", end: "" });
   const [previewDays, setPreviewDays] = useState(0);
   const [previewBalance, setPreviewBalance] = useState<number | null>(null);
-  const [attachment, setAttachment] = useState<File | null>(null);
-  const [showSession, setShowSession] = useState(false);
-  const [attachmentError, setAttachmentError] = useState<string>("");
   const [showEndDate, setShowEndDate] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [calMonth, setCalMonth] = useState(new Date());
+  const [isHalfDay, setIsHalfDay] = useState(false);
+
+  const activeLeaveTypes = leaveTypes.filter((lt) => lt.isActive);
+
+  const calDays = (() => {
+    const year = calMonth.getFullYear();
+    const month = calMonth.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const days: Date[] = [];
+    const startDay = firstDay.getDay();
+    for (let i = startDay - 1; i >= 0; i--) {
+      days.push(new Date(year, month, -i));
+    }
+    for (let i = 1; i <= lastDay.getDate(); i++) {
+      days.push(new Date(year, month, i));
+    }
+    const remaining = 42 - days.length;
+    for (let i = 1; i <= remaining; i++) {
+      days.push(new Date(year, month + 1, i));
+    }
+    return days;
+  })();
 
   const {
     register,
@@ -55,16 +78,10 @@ function LeaveContent() {
     trigger,
   } = useForm<CreateLeaveApplicationInput>({
     resolver: zodResolver(createLeaveApplicationFullSchema),
-    defaultValues: {
-      startSession: "FULL_DAY",
-      endSession: "FULL_DAY",
-    },
   });
 
   const watchStartDate = watch("startDate");
   const watchEndDate = watch("endDate");
-  const watchStartSession = watch("startSession");
-  const watchEndSession = watch("endSession");
   const watchLeaveTypeId = watch("leaveTypeId");
 
   useEffect(() => {
@@ -80,9 +97,22 @@ function LeaveContent() {
 
   useEffect(() => {
     if (watchStartDate && watchEndDate) {
-      const days = calculateLeaveDays(watchStartDate, watchEndDate, watchStartSession, watchEndSession);
-      setPreviewDays(days);
+      const days = calculateLeaveDays(watchStartDate, watchEndDate, holidays);
+      const halfDayAdjustment = isHalfDay ? 0.5 : 0;
+      setPreviewDays(Math.max(0.5, days - halfDayAdjustment));
 
+      if (watchLeaveTypeId) {
+        const balance = balances.find((b) => b.leaveTypeId === watchLeaveTypeId);
+        setPreviewBalance(balance?.availableDays ?? null);
+      }
+    } else if (watchStartDate && isHalfDay) {
+      setPreviewDays(0.5);
+      if (watchLeaveTypeId) {
+        const balance = balances.find((b) => b.leaveTypeId === watchLeaveTypeId);
+        setPreviewBalance(balance?.availableDays ?? null);
+      }
+    } else if (watchStartDate && isHalfDay) {
+      setPreviewDays(0.5);
       if (watchLeaveTypeId) {
         const balance = balances.find((b) => b.leaveTypeId === watchLeaveTypeId);
         setPreviewBalance(balance?.availableDays ?? null);
@@ -91,7 +121,7 @@ function LeaveContent() {
       setPreviewDays(0);
       setPreviewBalance(null);
     }
-  }, [watchStartDate, watchEndDate, watchStartSession, watchEndSession, watchLeaveTypeId, balances]);
+  }, [watchStartDate, watchEndDate, watchLeaveTypeId, balances, isHalfDay]);
 
   async function fetchData() {
     setLoading(true);
@@ -130,8 +160,6 @@ function LeaveContent() {
   function calculateLeaveDays(
     start: string,
     end: string,
-    startSession: SessionType,
-    endSession: SessionType,
     holidaysList: Holiday[] = holidays
   ): number {
     const startDate = new Date(start);
@@ -145,15 +173,7 @@ function LeaveContent() {
       const dateStr = current.toISOString().split("T")[0];
 
       if (dayOfWeek !== 0 && dayOfWeek !== 6 && !holidayDates.has(dateStr)) {
-        if (current.getTime() === startDate.getTime() && current.getTime() === endDate.getTime()) {
-          days += startSession === "FULL_DAY" ? 1 : 0.5;
-        } else if (current.getTime() === startDate.getTime()) {
-          days += startSession === "FULL_DAY" ? 1 : 0.5;
-        } else if (current.getTime() === endDate.getTime()) {
-          days += endSession === "FULL_DAY" ? 1 : 0.5;
-        } else {
-          days += 1;
-        }
+        days += 1;
       }
       current.setDate(current.getDate() + 1);
     }
@@ -195,54 +215,15 @@ function LeaveContent() {
     });
   }
 
-  async function handleAttachmentUpload(file: File): Promise<string | null> {
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      
-      const response = await fetch("/api/leave/attachment", {
-        method: "POST",
-        body: formData,
-        credentials: "include",
-      });
-      
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || "Failed to upload attachment");
-      }
-      
-      const result = await response.json();
-      return result.url;
-    } catch (error: any) {
-      setAttachmentError(error.message || "Failed to upload file");
-      return null;
-    }
-  }
-
   async function onSubmit(data: CreateLeaveApplicationInput) {
     setSubmitting(true);
-    setAttachmentError("");
     try {
-      let attachmentUrl: string | undefined;
-      
-      if (attachment) {
-        const url = await handleAttachmentUpload(attachment);
-        if (url) {
-          attachmentUrl = url;
-        } else if (attachmentError) {
-          setSubmitting(false);
-          return;
-        }
-      }
-      
       const result = await createLeaveApplication({
         leaveTypeId: data.leaveTypeId,
         startDate: data.startDate,
-        endDate: data.endDate,
-        startSession: data.startSession,
-        endSession: data.endSession,
+        endDate: data.endDate || data.startDate,
         reason: data.reason,
-        attachmentUrl,
+        isHalfDay,
       });
 
       const application = (result as any).application || (result as any).data?.application;
@@ -258,8 +239,9 @@ function LeaveContent() {
         setApplications(prev => [appWithType, ...prev]);
         
         reset();
+        setIsHalfDay(false);
+        setShowEndDate(false);
         setActiveTab("my");
-        setAttachment(null);
         fetchData();
       } else {
         toast.error((result as any).error || (result as any).message || "Failed to submit leave application");
@@ -271,60 +253,7 @@ function LeaveContent() {
     }
   }
 
-  function handleAttachmentClick() {
-    fileInputRef.current?.click();
-  }
-
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (file) {
-      const maxSize = 5 * 1024 * 1024;
-      if (file.size > maxSize) {
-        setAttachmentError("File size must be less than 5MB");
-        return;
-      }
-      const allowedTypes = ["image/jpeg", "image/png", "image/gif", "application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
-      if (!allowedTypes.includes(file.type)) {
-        setAttachmentError("Invalid file type. Allowed: JPG, PNG, GIF, PDF, DOC");
-        return;
-      }
-      setAttachment(file);
-      setAttachmentError("");
-    }
-  }
-
-  function removeAttachment() {
-    setAttachment(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-  }
-
-  function handlePreview() {
-    setSelectedDates({ start: watchStartDate || "", end: watchEndDate || "" });
-    setConfirmModal(true);
-  }
-
-  const activeLeaveTypes = leaveTypes.filter((lt) => lt.isActive);
-
-  function getLeaveCategory(type: string): "PAID" | "UNPAID" | "UNPLANNED" {
-    const paidTypes = ["CASUAL", "SICK", "PRIVILEGE", "MATERNITY", "PATERNITY", "BEREAVEMENT"];
-    const unpaidTypes = ["UNPAID"];
-    if (paidTypes.includes(type)) return "PAID";
-    if (unpaidTypes.includes(type)) return "UNPAID";
-    return "UNPLANNED";
-  }
-
-  function getCategoryColor(category: string) {
-    switch (category) {
-      case "PAID": return "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400";
-      case "UNPAID": return "bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400";
-      case "UNPLANNED": return "bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400";
-      default: return "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400";
-    }
-  }
-
-return (
+  return (
     <>
       <div className="mb-6 flex items-center justify-between">
         <button
@@ -351,163 +280,190 @@ return (
 
       {activeTab === "my" && (
         <>
-          {/* Leave Balance Card */}
-          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 mb-6">
-            <div className="flex items-center gap-3 mb-6">
-              <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Leave Balance</h2>
+          {/* Leave Balance Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            {/* Total Available */}
+            <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-5">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
+                  <MdEventNote className="text-xl text-indigo-600 dark:text-indigo-400" />
+                </div>
+                <div>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Total Available</p>
+                  <p className="text-2xl font-bold text-slate-900 dark:text-white">
+                    {balances.reduce((sum, b) => sum + (b.availableDays > 0 ? b.availableDays : 0), 0)}
+                  </p>
+                </div>
+              </div>
             </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Unpaid Category */}
-              <div className="flex flex-col">
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="w-8 h-8 rounded-full bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400 flex items-center justify-center">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                  </span>
-                  <span className="text-sm font-medium text-slate-600 dark:text-slate-300">Unpaid</span>
+
+            {/* Used */}
+            <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-5">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                  <svg className="text-xl text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                 </div>
-                <div className="space-y-2 pl-10">
-                  {balances.filter(b => getLeaveCategory(leaveTypes.find(lt => lt.id === b.leaveTypeId)?.type || "") === "UNPAID").map(balance => {
-                    const type = leaveTypes.find(lt => lt.id === balance.leaveTypeId);
-                    const isUnlimited = balance.availableDays === -1;
-                    return (
-                      <div key={balance.id} className="flex items-center justify-between">
-                        <span className="text-sm text-slate-500 dark:text-slate-400">{type?.name || "Leave"}</span>
-                        <span className={`text-sm font-semibold ${isUnlimited ? "text-red-600 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"}`}>
-                          {isUnlimited ? "Unlimited" : balance.availableDays}
-                        </span>
-                      </div>
-                    );
-                  })}
-                  {balances.filter(b => getLeaveCategory(leaveTypes.find(lt => lt.id === b.leaveTypeId)?.type || "") === "UNPAID").length === 0 && (
-                    <span className="text-xs text-slate-400 dark:text-slate-500">No unpaid leaves configured</span>
-                  )}
+                <div>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Used</p>
+                  <p className="text-2xl font-bold text-slate-900 dark:text-white">
+                    {balances.reduce((sum, b) => sum + b.usedDays, 0)}
+                  </p>
                 </div>
               </div>
+            </div>
 
-              {/* Vertical Separator */}
-              <div className="hidden md:block w-px bg-slate-200 dark:bg-slate-700"></div>
-
-              {/* Paid Category */}
-              <div className="flex flex-col">
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400 flex items-center justify-center">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                  </span>
-                  <span className="text-sm font-medium text-slate-600 dark:text-slate-300">Paid</span>
+            {/* Pending */}
+            <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-5">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
+                  <svg className="text-xl text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                 </div>
-                <div className="space-y-2 pl-10">
-                  {balances.filter(b => getLeaveCategory(leaveTypes.find(lt => lt.id === b.leaveTypeId)?.type || "") === "PAID").map(balance => {
-                    const type = leaveTypes.find(lt => lt.id === balance.leaveTypeId);
-                    const isUnlimited = balance.availableDays === -1;
-                    return (
-                      <div key={balance.id} className="flex items-center justify-between">
-                        <span className="text-sm text-slate-500 dark:text-slate-400">{type?.name || "Leave"}</span>
-                        <span className={`text-sm font-semibold ${isUnlimited ? "text-red-600 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"}`}>
-                          {isUnlimited ? "Unlimited" : balance.availableDays}
-                        </span>
-                      </div>
-                    );
-                  })}
-                  {balances.filter(b => getLeaveCategory(leaveTypes.find(lt => lt.id === b.leaveTypeId)?.type || "") === "PAID").length === 0 && (
-                    <span className="text-xs text-slate-400 dark:text-slate-500">No paid leaves configured</span>
-                  )}
+                <div>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Pending</p>
+                  <p className="text-2xl font-bold text-slate-900 dark:text-white">
+                    {balances.reduce((sum, b) => sum + b.pendingDays, 0)}
+                  </p>
                 </div>
               </div>
+            </div>
 
-              {/* Vertical Separator */}
-              <div className="hidden md:block w-px bg-slate-200 dark:bg-slate-700"></div>
-
-              {/* Unplanned Category */}
-              <div className="flex flex-col">
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="w-8 h-8 rounded-full bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400 flex items-center justify-center">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                  </span>
-                  <span className="text-sm font-medium text-slate-600 dark:text-slate-300">Unplanned</span>
+            {/* Total Allocated */}
+            <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-5">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                  <svg className="text-xl text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
                 </div>
-                <div className="space-y-2 pl-10">
-                  {balances.filter(b => getLeaveCategory(leaveTypes.find(lt => lt.id === b.leaveTypeId)?.type || "") === "UNPLANNED").map(balance => {
-                    const type = leaveTypes.find(lt => lt.id === balance.leaveTypeId);
-                    const isUnlimited = balance.availableDays === -1;
-                    return (
-                      <div key={balance.id} className="flex items-center justify-between">
-                        <span className="text-sm text-slate-500 dark:text-slate-400">{type?.name || "Leave"}</span>
-                        <span className={`text-sm font-semibold ${isUnlimited ? "text-red-600 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"}`}>
-                          {isUnlimited ? "Unlimited" : balance.availableDays}
-                        </span>
-                      </div>
-                    );
-                  })}
-                  {balances.filter(b => getLeaveCategory(leaveTypes.find(lt => lt.id === b.leaveTypeId)?.type || "") === "UNPLANNED").length === 0 && (
-                    <span className="text-xs text-slate-400 dark:text-slate-500">No unplanned leaves configured</span>
-                  )}
+                <div>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Total Allocated</p>
+                  <p className="text-2xl font-bold text-slate-900 dark:text-white">
+                    {balances.reduce((sum, b) => sum + b.allocatedDays, 0)}
+                  </p>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Leave Balance Cards - Additional Info */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
-            {loading ? (
-              Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={i} className="h-24 w-full" />
-              ))
-            ) : balances.length === 0 ? (
-              <div className="col-span-full p-8 text-center text-slate-500 dark:text-slate-400">
-                No leave balances configured
-              </div>
-            ) : (
-              balances.map((balance) => {
-                const type = leaveTypes.find((lt) => lt.id === balance.leaveTypeId);
-                const usedPercentage = balance.allocatedDays > 0 
-                  ? (balance.usedDays / balance.allocatedDays) * 100 
-                  : 0;
-                const isUnlimited = balance.availableDays === -1;
-                
-                return (
-                  <div
-                    key={balance.id}
-                    className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4"
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                        {type?.name || "Leave"}
-                      </p>
-                      {balance.pendingDays > 0 && (
-                        <span className="px-2 py-0.5 text-xs rounded-full bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">
-                          {balance.pendingDays} pending
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-2xl font-bold text-slate-900 dark:text-white">
-                      {isUnlimited ? <span className="text-red-600 dark:text-red-400">Unlimited</span> : (
-                        <>
-                          {balance.availableDays}
-                          <span className="text-sm font-normal text-slate-400 ml-1">/ {balance.allocatedDays}</span>
-                        </>
-                      )}
-                    </p>
-                    {!isUnlimited && (
-                      <>
-                        <div className="mt-2 h-1.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-                          <div
-                            className="h-full rounded-full transition-all"
-                            style={{
-                              width: `${Math.min(usedPercentage, 100)}%`,
-                              backgroundColor: usedPercentage > 80 ? "#ef4444" : usedPercentage > 50 ? "#f59e0b" : "#22c55e",
-                            }}
-                          />
+          {/* Leave Balance by Category */}
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 mb-6">
+            <div className="flex items-center gap-3 mb-6">
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Leave Balance by Type</h2>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Unpaid Category */}
+              <div className="flex flex-col">
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="w-8 h-8 rounded-full bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400 flex items-center justify-center">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  </span>
+                  <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Unpaid</span>
+                </div>
+                <div className="space-y-3">
+                  {balances.filter(b => getLeaveCategory(leaveTypes.find(lt => lt.id === b.leaveTypeId)?.type || "") === "UNPAID").map(balance => {
+                    const type = leaveTypes.find(lt => lt.id === balance.leaveTypeId);
+                    const isUnlimited = balance.availableDays === -1;
+                    const usedPct = balance.allocatedDays > 0 ? (balance.usedDays / balance.allocatedDays) * 100 : 0;
+                    return (
+                      <div key={balance.id} className="p-3 rounded-xl bg-slate-50 dark:bg-slate-700/50">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{type?.name || "Leave"}</span>
+                          <span className={`text-sm font-bold ${isUnlimited ? "text-rose-600" : "text-emerald-600 dark:text-emerald-400"}`}>
+                            {isUnlimited ? "Unlimited" : balance.availableDays}
+                          </span>
                         </div>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                          {balance.usedDays} used
-                        </p>
-                      </>
-                    )}
-                  </div>
-                );
-              })
-            )}
+                        {!isUnlimited && (
+                          <>
+                            <div className="h-1.5 bg-slate-200 dark:bg-slate-600 rounded-full overflow-hidden">
+                              <div className="h-full bg-rose-500 rounded-full" style={{ width: `${Math.min(usedPct, 100)}%` }} />
+                            </div>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{balance.usedDays} used / {balance.allocatedDays}</p>
+                          </>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {balances.filter(b => getLeaveCategory(leaveTypes.find(lt => lt.id === b.leaveTypeId)?.type || "") === "UNPAID").length === 0 && (
+                    <p className="text-sm text-slate-400 dark:text-slate-500">No unpaid leaves</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Paid Category */}
+              <div className="flex flex-col">
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400 flex items-center justify-center">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  </span>
+                  <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Paid</span>
+                </div>
+                <div className="space-y-3">
+                  {balances.filter(b => getLeaveCategory(leaveTypes.find(lt => lt.id === b.leaveTypeId)?.type || "") === "PAID").map(balance => {
+                    const type = leaveTypes.find(lt => lt.id === balance.leaveTypeId);
+                    const isUnlimited = balance.availableDays === -1;
+                    const usedPct = balance.allocatedDays > 0 ? (balance.usedDays / balance.allocatedDays) * 100 : 0;
+                    return (
+                      <div key={balance.id} className="p-3 rounded-xl bg-slate-50 dark:bg-slate-700/50">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{type?.name || "Leave"}</span>
+                          <span className={`text-sm font-bold ${isUnlimited ? "text-rose-600" : "text-emerald-600 dark:text-emerald-400"}`}>
+                            {isUnlimited ? "Unlimited" : balance.availableDays}
+                          </span>
+                        </div>
+                        {!isUnlimited && (
+                          <>
+                            <div className="h-1.5 bg-slate-200 dark:bg-slate-600 rounded-full overflow-hidden">
+                              <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${Math.min(usedPct, 100)}%` }} />
+                            </div>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{balance.usedDays} used / {balance.allocatedDays}</p>
+                          </>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {balances.filter(b => getLeaveCategory(leaveTypes.find(lt => lt.id === b.leaveTypeId)?.type || "") === "PAID").length === 0 && (
+                    <p className="text-sm text-slate-400 dark:text-slate-500">No paid leaves</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Unplanned Category */}
+              <div className="flex flex-col">
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="w-8 h-8 rounded-full bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400 flex items-center justify-center">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                  </span>
+                  <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Unplanned</span>
+                </div>
+                <div className="space-y-3">
+                  {balances.filter(b => getLeaveCategory(leaveTypes.find(lt => lt.id === b.leaveTypeId)?.type || "") === "UNPLANNED").map(balance => {
+                    const type = leaveTypes.find(lt => lt.id === balance.leaveTypeId);
+                    const isUnlimited = balance.availableDays === -1;
+                    const usedPct = balance.allocatedDays > 0 ? (balance.usedDays / balance.allocatedDays) * 100 : 0;
+                    return (
+                      <div key={balance.id} className="p-3 rounded-xl bg-slate-50 dark:bg-slate-700/50">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{type?.name || "Leave"}</span>
+                          <span className={`text-sm font-bold ${isUnlimited ? "text-rose-600" : "text-emerald-600 dark:text-emerald-400"}`}>
+                            {isUnlimited ? "Unlimited" : balance.availableDays}
+                          </span>
+                        </div>
+                        {!isUnlimited && (
+                          <>
+                            <div className="h-1.5 bg-slate-200 dark:bg-slate-600 rounded-full overflow-hidden">
+                              <div className="h-full bg-amber-500 rounded-full" style={{ width: `${Math.min(usedPct, 100)}%` }} />
+                            </div>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{balance.usedDays} used / {balance.allocatedDays}</p>
+                          </>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {balances.filter(b => getLeaveCategory(leaveTypes.find(lt => lt.id === b.leaveTypeId)?.type || "") === "UNPLANNED").length === 0 && (
+                    <p className="text-sm text-slate-400 dark:text-slate-500">No unplanned leaves</p>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Leave History */}
@@ -564,6 +520,75 @@ return (
               </div>
             )}
           </div>
+
+          {/* Leave Calendar */}
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 mt-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-semibold text-slate-900 dark:text-white">Leave Calendar</h2>
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => { setCalMonth(m => new Date(m.getFullYear(), m.getMonth() - 1)); }}
+                  className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
+                >
+                  <MdChevronLeft className="text-xl" />
+                </button>
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                  {calMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                </span>
+                <button 
+                  onClick={() => { setCalMonth(m => new Date(m.getFullYear(), m.getMonth() + 1)); }}
+                  className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
+                >
+                  <MdChevronRight className="text-xl" />
+                </button>
+              </div>
+            </div>
+            <div className="grid grid-cols-7 gap-1">
+              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
+                <div key={d} className="text-center text-xs font-medium text-slate-500 dark:text-slate-400 py-2">{d}</div>
+              ))}
+              {calDays.map((day, i) => {
+                const dateStr = day.toISOString().split('T')[0];
+                const leaveApps = applications.filter(a => {
+                  const start = new Date(a.startDate).toISOString().split('T')[0];
+                  const end = new Date(a.endDate).toISOString().split('T')[0];
+                  return dateStr >= start && dateStr <= end;
+                });
+                const isToday = dateStr === new Date().toISOString().split('T')[0];
+                const isHoliday = holidays.some(h => h.date.split('T')[0] === dateStr);
+                
+                return (
+                  <div 
+                    key={i} 
+                    className={`min-h-[60px] p-1 rounded-lg border ${
+                      day.getMonth() !== calMonth.getMonth() 
+                        ? 'bg-slate-50 dark:bg-slate-800/50 text-slate-300 dark:text-slate-600' 
+                        : 'bg-white dark:bg-slate-800'
+                    } ${isToday ? 'ring-2 ring-indigo-500' : 'border-slate-100 dark:border-slate-700'}`}
+                  >
+                    <div className={`text-xs font-medium ${isToday ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400'}`}>
+                      {day.getDate()}
+                    </div>
+                    {isHoliday && (
+                      <div className="text-[10px] text-red-500 bg-red-50 dark:bg-red-900/20 rounded px-1 mt-0.5">Holiday</div>
+                    )}
+                    {leaveApps.slice(0, 2).map(app => (
+                      <div key={app.id} className={`text-[10px] px-1 rounded mt-0.5 truncate ${
+                        app.status === 'APPROVED' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                        app.status === 'PENDING' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                        'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                      }`}>
+                        {app.leaveTypeConfig?.name || 'Leave'}
+                      </div>
+                    ))}
+                    {leaveApps.length > 2 && (
+                      <div className="text-[10px] text-slate-500 mt-0.5">+{leaveApps.length - 2} more</div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </>
       )}
 
@@ -591,7 +616,7 @@ return (
                 className="peer w-full px-4 pt-6 pb-2 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white outline-none transition focus:border-indigo-500 dark:focus:border-indigo-500 appearance-none"
               >
                 <option value=""></option>
-                {activeLeaveTypes.map((type) => {
+                {leaveTypes.filter(t => t.isActive).map((type) => {
                   const balance = balances.find((b) => b.leaveTypeId === type.id);
                   return (
                     <option key={type.id} value={type.id}>
@@ -676,32 +701,16 @@ return (
               </div>
             )}
 
-            {/* Session Selection */}
-            <div className="relative">
-              <select
-                {...register("startSession")}
-                className="peer w-full px-4 pt-6 pb-2 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white outline-none transition focus:border-indigo-500 dark:focus:border-indigo-500 appearance-none"
-              >
-                <option value="FULL_DAY">Full Day</option>
-                <option value="FIRST_HALF">First Half</option>
-                <option value="SECOND_HALF">Second Half</option>
-              </select>
-              <label className="absolute left-4 top-4 text-sm text-slate-400 peer-focus:top-2 peer-focus:text-xs peer-focus:text-indigo-600 dark:peer-focus:text-indigo-400 transition-all pointer-events-none">
-                Start Session
-              </label>
-            </div>
-
-            <div className="relative">
-              <select
-                {...register("endSession")}
-                className="peer w-full px-4 pt-6 pb-2 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white outline-none transition focus:border-indigo-500 dark:focus:border-indigo-500 appearance-none"
-              >
-                <option value="FULL_DAY">Full Day</option>
-                <option value="FIRST_HALF">First Half</option>
-                <option value="SECOND_HALF">Second Half</option>
-              </select>
-              <label className="absolute left-4 top-4 text-sm text-slate-400 peer-focus:top-2 peer-focus:text-xs peer-focus:text-indigo-600 dark:peer-focus:text-indigo-400 transition-all pointer-events-none">
-                End Session
+            {/* Half Day Toggle */}
+            <div className="col-span-1 md:col-span-2">
+              <label className="flex items-center gap-3 cursor-pointer">
+                <div 
+                  onClick={() => setIsHalfDay(!isHalfDay)}
+                  className={`relative w-12 h-6 rounded-full transition-colors ${isHalfDay ? "bg-indigo-600" : "bg-slate-300 dark:bg-slate-600"}`}
+                >
+                  <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${isHalfDay ? "left-7" : "left-1"}`}></div>
+                </div>
+                <span className="text-sm text-slate-700 dark:text-slate-200">Half Day Leave</span>
               </label>
             </div>
 
@@ -796,18 +805,6 @@ return (
               <label className="absolute left-4 top-4 text-sm text-slate-400 peer-focus:top-2 peer-focus:text-xs peer-focus:text-indigo-600 dark:peer-focus:text-indigo-400 transition-all pointer-events-none">
                 Reason
               </label>
-            </div>
-
-            {/* Add Attachment - Dashed Box */}
-            <div className="col-span-1 md:col-span-2 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-2xl p-6 text-center hover:border-indigo-400 dark:hover:border-indigo-500 transition-colors cursor-pointer">
-              <div className="flex flex-col items-center justify-center">
-                <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center mb-2">
-                  <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                  </svg>
-                </div>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Add Attachment</p>
-              </div>
             </div>
 
             {/* Submit */}

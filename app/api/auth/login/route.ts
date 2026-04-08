@@ -2,20 +2,21 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { comparePassword } from "@/lib/password";
 import { signJWT } from "@/lib/jwt";
+import { ROUTES } from "@/lib/constants";
 
 function getRedirectPath(role: string): string {
   switch (role) {
     case "HR_ADMIN":
     case "SUPER_ADMIN":
-      return "/dashboard/hr";
+      return ROUTES.HR.DASHBOARD;
     case "PAYROLL_MANAGER":
-      return "/dashboard/hr";
+      return ROUTES.HR.DASHBOARD;
     case "DEPT_MANAGER":
-      return "/dashboard/hr";
+      return ROUTES.HR.DASHBOARD;
     case "EMPLOYEE":
-      return "/dashboard/employee";
+      return ROUTES.EMPLOYEE.DASHBOARD;
     default:
-      return "/dashboard/hr";
+      return ROUTES.HR.DASHBOARD;
   }
 }
 

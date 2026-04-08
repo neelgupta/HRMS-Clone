@@ -120,8 +120,8 @@ export default function HRDashboardLayout({ children }: HRLayoutProps) {
               setNotificationCount(0);
             }
           }}
-          notificationHref={ROUTES.DASHBOARD.HR.NOTIFICATIONS}
-          profileHref={ROUTES.DASHBOARD.HR.PROFILE}
+          notificationHref={ROUTES.HR.NOTIFICATIONS}
+          profileHref={ROUTES.HR.PROFILE}
         />
 
         <main className="px-4 py-6 md:px-6 lg:px-8">

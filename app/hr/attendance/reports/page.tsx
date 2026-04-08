@@ -32,7 +32,7 @@ export default function AttendanceReportsPage() {
         setUser(data);
 
         if (data.role !== "HR_ADMIN" && data.role !== "SUPER_ADMIN" && data.role !== "PAYROLL_MANAGER") {
-          router.push(ROUTES.DASHBOARD.HR.DASHBOARD);
+          router.push(ROUTES.HR.DASHBOARD);
           return;
         }
       } catch {

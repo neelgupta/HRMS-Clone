@@ -185,9 +185,38 @@ export async function createEmployee(
 ): Promise<CreateEmployeeResult> {
   const employeeCode = await generateEmployeeCode(companyId);
 
+  // Validate branch exists if branchId is provided
+  if (input.branchId) {
+    const branch = await prisma.branch.findFirst({
+      where: {
+        id: input.branchId,
+        companyId,
+      },
+    });
+    
+    if (!branch) {
+      throw new Error(`Branch with ID ${input.branchId} does not exist in this company`);
+    }
+  }
+
   let departmentId: string | undefined;
   let designationId: string | undefined;
   let reportingManagerId: string | undefined;
+
+  // Validate reporting manager exists if reportingManagerId is provided
+  if (input.reportingManagerId) {
+    const manager = await prisma.employee.findFirst({
+      where: {
+        id: input.reportingManagerId,
+        companyId,
+      },
+    });
+    
+    if (!manager) {
+      throw new Error(`Reporting manager with ID ${input.reportingManagerId} does not exist in this company`);
+    }
+    reportingManagerId = input.reportingManagerId;
+  }
 
   if (input.department && input.department.trim()) {
     try {
@@ -215,10 +244,7 @@ export async function createEmployee(
     }
   }
 
-  if (input.reportingManagerId) {
-    reportingManagerId = input.reportingManagerId;
-  }
-
+  
   try {
     const employee = await prisma.employee.create({
       data: {

@@ -46,7 +46,7 @@ export function EmployeeTopbar({
   onMarkAllAsRead,
   onNotificationClick,
   notificationHref,
-  profileHref = ROUTES.DASHBOARD.EMPLOYEE.PROFILE
+  profileHref = ROUTES.EMPLOYEE.PROFILE
 }: EmployeeTopbarProps) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");

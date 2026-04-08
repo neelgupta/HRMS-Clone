@@ -3,73 +3,67 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
-import { EmployeeForm } from "@/components/employees/employee-form";
+import { EmployeeProfile } from "@/components/employees/employee-profile";
 import { Spinner } from "@/components/ui/loaders/spinner";
+
 import type { EmployeeDetail } from "@/lib/client/employee";
 import { ROUTES } from "@/lib/constants";
 
-type Branch = {
-  id: string;
-  name: string;
-};
-
-export default function EditEmployeePage() {
+export default function EmployeeDetailPage() {
   const params = useParams();
   const router = useRouter();
   const [employee, setEmployee] = useState<EmployeeDetail | null>(null);
-  const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const employeeId = params.id as string;
 
-  const fetchData = useCallback(async () => {
+  const fetchEmployee = useCallback(async () => {
     setLoading(true);
     try {
-      const [empResponse, companyResponse] = await Promise.all([
-        fetch(`/api/employees/${employeeId}`),
-        fetch("/api/company/me"),
-      ]);
+      const response = await fetch(`/api/employees/${employeeId}`);
 
-      if (empResponse.ok) {
-        const empData = await empResponse.json();
-        setEmployee(empData);
-      }
-
-      if (companyResponse.ok) {
-        const companyData = await companyResponse.json();
-        if (companyData.company?.values?.branches) {
-          setBranches(companyData.company.values.branches);
+      if (!response.ok) {
+        if (response.status === 404) {
+          setError("Employee not found.");
+        } else {
+          setError("Failed to load employee.");
         }
+        return;
       }
+
+      const data = await response.json();
+      setEmployee(data);
     } catch {
-      // Silently fail
+      setError("Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
   }, [employeeId]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    fetchEmployee();
+  }, [fetchEmployee]);
 
   if (loading) {
     return (
-      <DashboardLayout title="Edit Employee" subtitle="Update employee information">
+      <>
+      
         <div className="flex items-center justify-center py-20">
           <Spinner className="text-indigo-600" label="Loading" />
         </div>
-      </DashboardLayout>
+      </>
     );
   }
 
-  if (!employee) {
+  if (error || !employee) {
     return (
-      <DashboardLayout title="Edit Employee" subtitle="Update employee information">
+      <DashboardLayout title="Employee Profile" subtitle="View employee details">
         <div className="flex flex-col items-center justify-center py-20">
-          <p className="text-slate-600 dark:text-slate-400">Employee not found.</p>
+          <p className="text-slate-600 dark:text-slate-400">{error || "Employee not found."}</p>
           <button
             type="button"
-            onClick={() => router.push(ROUTES.DASHBOARD.HR.EMPLOYEES.LIST)}
+            onClick={() => router.push(ROUTES.HR.EMPLOYEES.LIST)}
             className="mt-4 text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400"
           >
             Back to Employees
@@ -80,18 +74,18 @@ export default function EditEmployeePage() {
   }
 
   return (
-    <DashboardLayout title="Edit Employee" subtitle={`${employee.firstName} ${employee.lastName}`}>
+    <>
       <div className="mb-6">
         <button
           type="button"
-          onClick={() => router.push(ROUTES.DASHBOARD.HR.EMPLOYEES.DETAIL(employeeId))}
+          onClick={() => router.push(ROUTES.HR.EMPLOYEES.LIST)}
           className="text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
         >
-          ← Back to Profile
+          ← Back to Employees
         </button>
       </div>
 
-      <EmployeeForm employee={employee} companyBranches={branches} />
-    </DashboardLayout>
+      <EmployeeProfile employee={employee} onUpdate={fetchEmployee} />
+    </>
   );
 }

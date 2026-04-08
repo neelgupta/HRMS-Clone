@@ -81,11 +81,9 @@ export interface LeaveApplication {
 export interface LeaveApplicationInput {
   leaveTypeId: string;
   startDate: string;
-  endDate: string;
-  startSession?: SessionType;
-  endSession?: SessionType;
+  endDate?: string;
   reason?: string;
-  attachmentUrl?: string;
+  isHalfDay?: boolean;
 }
 
 export interface LeaveBalance {

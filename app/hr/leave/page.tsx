@@ -14,6 +14,7 @@ import {
   HiOutlineChevronLeft,
   HiOutlineChevronRight,
 } from "react-icons/hi";
+import { MdChevronLeft, MdChevronRight } from "react-icons/md";
 import { TextInput } from "@/components/ui/text-input";
 import { SelectInput } from "@/components/ui/select-input";
 import { FormField } from "@/components/ui/form-field";
@@ -26,9 +27,10 @@ type FilterStatus = "all" | "PENDING" | "APPROVED" | "REJECTED";
 
 export default function HRLeaveManagementPage() {
   const [applications, setApplications] = useState<LeaveApplication[]>([]);
+  const [leaveStats, setLeaveStats] = useState({ total: 0, pending: 0, approved: 0, rejected: 0 });
   const [leaveTypes, setLeaveTypes] = useState<LeaveTypeConfig[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filterStatus, setFilterStatus] = useState<FilterStatus>("PENDING");
+  const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
   const [filterLeaveType, setFilterLeaveType] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedApp, setSelectedApp] = useState<LeaveApplication | null>(null);
@@ -40,6 +42,8 @@ export default function HRLeaveManagementPage() {
   const [submitting, setSubmitting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
+  const [calMonth, setCalMonth] = useState(new Date());
+  const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
 
   useEffect(() => {
     fetchData();
@@ -53,7 +57,7 @@ export default function HRLeaveManagementPage() {
     setLoading(true);
     try {
       const [appsRes, typesRes] = await Promise.all([
-        fetch(`/api/leave?status=${filterStatus}`, { credentials: "include" }),
+        fetch("/api/leave", { credentials: "include" }),
         fetch("/api/leave/types", { credentials: "include" }),
       ]);
 
@@ -62,6 +66,9 @@ export default function HRLeaveManagementPage() {
 
       if (appsRes.ok) {
         setApplications(appsData.applications || []);
+        if (appsData.stats) {
+          setLeaveStats(appsData.stats);
+        }
       }
       if (typesRes.ok) {
         setLeaveTypes(typesData.leaveTypes || []);
@@ -180,13 +187,6 @@ export default function HRLeaveManagementPage() {
     currentPage * itemsPerPage
   );
 
-  const stats = {
-    total: applications.length,
-    pending: applications.filter((a) => a.status === "PENDING").length,
-    approved: applications.filter((a) => a.status === "APPROVED").length,
-    rejected: applications.filter((a) => a.status === "REJECTED").length,
-  };
-
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
@@ -213,7 +213,7 @@ export default function HRLeaveManagementPage() {
               <HiOutlineDocumentText className="text-lg text-slate-500" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-slate-900 dark:text-white">{stats.total}</p>
+              <p className="text-2xl font-bold text-slate-900 dark:text-white">{leaveStats.total}</p>
               <p className="text-xs text-slate-500 dark:text-slate-400">Total</p>
             </div>
           </div>
@@ -232,7 +232,7 @@ export default function HRLeaveManagementPage() {
               <HiOutlineClock className="text-lg text-yellow-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-slate-900 dark:text-white">{stats.pending}</p>
+              <p className="text-2xl font-bold text-slate-900 dark:text-white">{leaveStats.pending}</p>
               <p className="text-xs text-slate-500 dark:text-slate-400">Pending</p>
             </div>
           </div>
@@ -251,7 +251,7 @@ export default function HRLeaveManagementPage() {
               <HiOutlineCheck className="text-lg text-green-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-slate-900 dark:text-white">{stats.approved}</p>
+              <p className="text-2xl font-bold text-slate-900 dark:text-white">{leaveStats.approved}</p>
               <p className="text-xs text-slate-500 dark:text-slate-400">Approved</p>
             </div>
           </div>
@@ -270,7 +270,7 @@ export default function HRLeaveManagementPage() {
               <HiOutlineX className="text-lg text-red-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-slate-900 dark:text-white">{stats.rejected}</p>
+              <p className="text-2xl font-bold text-slate-900 dark:text-white">{leaveStats.rejected}</p>
               <p className="text-xs text-slate-500 dark:text-slate-400">Rejected</p>
             </div>
           </div>
@@ -308,6 +308,35 @@ export default function HRLeaveManagementPage() {
               </SelectInput>
             </FormField>
           </div>
+        </div>
+      </div>
+
+      {/* View Toggle */}
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
+          {viewMode === "calendar" ? "Department Leave Calendar" : "Leave Applications"}
+        </h2>
+        <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-700 rounded-xl p-1">
+          <button
+            onClick={() => setViewMode("list")}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              viewMode === "list" 
+                ? "bg-white dark:bg-slate-600 text-slate-900 dark:text-white shadow-sm" 
+                : "text-slate-600 dark:text-slate-300"
+            }`}
+          >
+            List View
+          </button>
+          <button
+            onClick={() => setViewMode("calendar")}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              viewMode === "calendar" 
+                ? "bg-white dark:bg-slate-600 text-slate-900 dark:text-white shadow-sm" 
+                : "text-slate-600 dark:text-slate-300"
+            }`}
+          >
+            Calendar View
+          </button>
         </div>
       </div>
 
@@ -505,6 +534,97 @@ export default function HRLeaveManagementPage() {
           </>
         )}
       </div>
+
+      {/* Calendar View */}
+      {viewMode === "calendar" && (
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => setCalMonth(m => new Date(m.getFullYear(), m.getMonth() - 1))}
+                className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
+              >
+                <MdChevronLeft className="text-xl" />
+              </button>
+              <span className="text-lg font-semibold text-slate-900 dark:text-white min-w-[180px] text-center">
+                {calMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+              </span>
+              <button 
+                onClick={() => setCalMonth(m => new Date(m.getFullYear(), m.getMonth() + 1))}
+                className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
+              >
+                <MdChevronRight className="text-xl" />
+              </button>
+            </div>
+            <button 
+              onClick={() => setCalMonth(new Date())}
+              className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline"
+            >
+              Today
+            </button>
+          </div>
+          <div className="grid grid-cols-7 gap-1 mb-2">
+            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
+              <div key={d} className="text-center text-sm font-medium text-slate-500 dark:text-slate-400 py-2">{d}</div>
+            ))}
+          </div>
+          <div className="grid grid-cols-7 gap-1">
+            {(() => {
+              const year = calMonth.getFullYear();
+              const month = calMonth.getMonth();
+              const firstDay = new Date(year, month, 1);
+              const lastDay = new Date(year, month + 1, 0);
+              const days: Date[] = [];
+              const startDay = firstDay.getDay();
+              for (let i = startDay - 1; i >= 0; i--) days.push(new Date(year, month, -i));
+              for (let i = 1; i <= lastDay.getDate(); i++) days.push(new Date(year, month, i));
+              const remaining = 42 - days.length;
+              for (let i = 1; i <= remaining; i++) days.push(new Date(year, month + 1, i));
+              
+              return days.map((day, i) => {
+                const dateStr = day.toISOString().split('T')[0];
+                const dayApps = applications.filter(a => {
+                  const start = new Date(a.startDate).toISOString().split('T')[0];
+                  const end = new Date(a.endDate).toISOString().split('T')[0];
+                  return dateStr >= start && dateStr <= end && a.status === 'APPROVED';
+                });
+                const isToday = dateStr === new Date().toISOString().split('T')[0];
+                
+                return (
+                  <div key={i} className={`min-h-[80px] p-2 rounded-lg border ${
+                    day.getMonth() !== month ? 'bg-slate-50 dark:bg-slate-800/50' : 'bg-white dark:bg-slate-800'
+                  } ${isToday ? 'ring-2 ring-indigo-500' : 'border-slate-200 dark:border-slate-700'}`}>
+                    <div className={`text-sm font-medium mb-1 ${isToday ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400'}`}>
+                      {day.getDate()}
+                    </div>
+                    {dayApps.slice(0, 3).map(app => (
+                      <div key={app.id} className="text-xs bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 px-1.5 py-0.5 rounded mb-0.5 truncate">
+                        {app.employee.firstName} {app.employee.lastName}
+                      </div>
+                    ))}
+                    {dayApps.length > 3 && (
+                      <div className="text-xs text-slate-500">+{dayApps.length - 3} more</div>
+                    )}
+                  </div>
+                );
+              });
+            })()}
+          </div>
+          
+          {/* Legend */}
+          <div className="flex items-center gap-4 mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+            <span className="text-sm text-slate-500 dark:text-slate-400">Legend:</span>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-indigo-500"></div>
+              <span className="text-xs text-slate-600 dark:text-slate-300">Approved Leave</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+              <span className="text-xs text-slate-600 dark:text-slate-300">Pending</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Action Modal */}
       <Modal

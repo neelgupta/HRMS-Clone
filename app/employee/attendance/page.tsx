@@ -93,6 +93,8 @@ function AttendanceContent() {
     }
     if (result.data?.shift) {
       setShift(result.data.shift);
+    } else {
+      setShift(null);
     }
   };
 
@@ -364,9 +366,16 @@ function AttendanceContent() {
           <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Quick Actions</h2>
           <div className="space-y-3">
             {!isClockedIn ? (
-              <button onClick={() => openModal("clockIn")}
+              <button 
+                onClick={() => {
+                  if (!shift) {
+                    alert("Your shift has not been assigned by HR. Please contact HR to get your shift assigned before clocking in.");
+                    return;
+                  }
+                  openModal("clockIn");
+                }}
                 className="w-full py-3 px-4 rounded-xl font-medium bg-emerald-600 hover:bg-emerald-700 text-white transition-all flex items-center justify-center gap-2">
-                <MdCheckCircle className="text-lg" /> Clock In
+                <MdCheckCircle className="text-lg" /> {!shift ? "Shift Not Assigned" : "Clock In"}
               </button>
             ) : (
               <>

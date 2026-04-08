@@ -74,6 +74,7 @@ function DashboardContent() {
   const [modalType, setModalType] = useState<ModalType>("clockOut");
   const [remarks, setRemarks] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
+  const [shiftAssigned, setShiftAssigned] = useState<boolean | null>(null);
 
   useEffect(() => {
     const loadData = async () => {
@@ -140,6 +141,12 @@ function DashboardContent() {
             });
           }
           setAttendanceActivities(activities);
+        }
+        
+        if (attendanceResult.data?.shift) {
+          setShiftAssigned(true);
+        } else {
+          setShiftAssigned(false);
         }
       } catch {
         console.error("Failed to load data");
@@ -316,9 +323,17 @@ function DashboardContent() {
             </div>
             <div className="flex gap-2">
               {!isClockedIn ? (
-                <button onClick={handleClockIn}
-                  className="flex-1 py-2.5 px-3 rounded-xl text-sm font-semibold bg-white text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-100 transition-all flex items-center justify-center gap-1.5 shadow-lg">
-                  <MdCheckCircle className="text-base" /> Clock In
+                <button 
+                  onClick={() => {
+                    if (shiftAssigned === false) {
+                      alert("Your shift has not been assigned by HR. Please contact HR to get your shift assigned before clocking in.");
+                      return;
+                    }
+                    handleClockIn();
+                  }}
+                  disabled={shiftAssigned === null}
+                  className="flex-1 py-2.5 px-3 rounded-xl text-sm font-semibold bg-white text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-100 transition-all flex items-center justify-center gap-1.5 shadow-lg disabled:opacity-50">
+                  <MdCheckCircle className="text-base" /> {shiftAssigned === null ? "Loading..." : shiftAssigned === false ? "Shift Not Assigned" : "Clock In"}
                 </button>
               ) : (
                 <>
@@ -519,28 +534,28 @@ function DashboardContent() {
           <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm hover:shadow-md transition-shadow">
             <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-4">Quick Links</h3>
             <div className="grid grid-cols-2 gap-3">
-              <button onClick={() => router.push(ROUTES.DASHBOARD.EMPLOYEE.LEAVE.BASE)}
+              <button onClick={() => router.push(ROUTES.EMPLOYEE.LEAVE.BASE)}
                 className="flex items-center gap-2 p-3 bg-gradient-to-r from-indigo-50 to-transparent dark:from-indigo-900/20 dark:to-transparent rounded-xl hover:from-indigo-100 dark:hover:from-indigo-900/40 transition-all group">
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow">
                   <MdEventNote className="text-lg text-white" />
                 </div>
                 <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Apply Leave</span>
               </button>
-              <button onClick={() => router.push(ROUTES.DASHBOARD.EMPLOYEE.HOLIDAYS)}
+              <button onClick={() => router.push(ROUTES.EMPLOYEE.HOLIDAYS)}
                 className="flex items-center gap-2 p-3 bg-gradient-to-r from-purple-50 to-transparent dark:from-purple-900/20 dark:to-transparent rounded-xl hover:from-purple-100 dark:hover:from-purple-900/40 transition-all group">
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow">
                   <MdBeachAccess className="text-lg text-white" />
                 </div>
                 <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Holidays</span>
               </button>
-              <button onClick={() => router.push(ROUTES.DASHBOARD.EMPLOYEE.OVERTIME)}
+              <button onClick={() => router.push(ROUTES.EMPLOYEE.OVERTIME)}
                 className="flex items-center gap-2 p-3 bg-gradient-to-r from-amber-50 to-transparent dark:from-amber-900/20 dark:to-transparent rounded-xl hover:from-amber-100 dark:hover:from-amber-900/40 transition-all group">
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow">
                   <MdMoreTime className="text-lg text-white" />
                 </div>
                 <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Overtime</span>
               </button>
-              <button onClick={() => router.push(ROUTES.DASHBOARD.EMPLOYEE.HELP)}
+              <button onClick={() => router.push(ROUTES.EMPLOYEE.HELP)}
                 className="flex items-center gap-2 p-3 bg-gradient-to-r from-blue-50 to-transparent dark:from-blue-900/20 dark:to-transparent rounded-xl hover:from-blue-100 dark:hover:from-blue-900/40 transition-all group">
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow">
                   <MdHelp className="text-lg text-white" />

@@ -84,11 +84,9 @@ export const updateLeaveTypeConfigSchema = leaveTypeConfigSchema.partial().exten
 export const createLeaveApplicationFullSchema = z.object({
   leaveTypeId: z.string().uuid("Invalid leave type ID"),
   startDate: z.string().min(1, "Start date is required"),
-  endDate: z.string().min(1, "End date is required"),
-  startSession: sessionTypeEnum,
-  endSession: sessionTypeEnum,
+  endDate: z.string().optional(),
   reason: z.string().optional(),
-  attachmentUrl: z.string().url().optional(),
+  isHalfDay: z.boolean().optional(),
 });
 
 export const approveLeaveSchema = z.object({

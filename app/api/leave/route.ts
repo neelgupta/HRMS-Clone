@@ -34,11 +34,9 @@ export async function POST(request: NextRequest) {
     const application = await createLeaveApplication(companyId, user.employeeId, {
       leaveTypeId: parsed.leaveTypeId,
       startDate: new Date(parsed.startDate),
-      endDate: new Date(parsed.endDate),
-      startSession: parsed.startSession,
-      endSession: parsed.endSession,
+      endDate: parsed.endDate ? new Date(parsed.endDate) : new Date(parsed.startDate),
       reason: parsed.reason,
-      attachmentUrl: parsed.attachmentUrl,
+      isHalfDay: parsed.isHalfDay,
     });
 
     return NextResponse.json({ application }, { status: 201 });
@@ -76,18 +74,40 @@ export async function GET(request: NextRequest) {
       approverId = userId;
     }
 
+    const statusParam = searchParams.get("status");
+    const leaveTypeId = searchParams.get("leaveTypeId") || undefined;
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "20");
+
     const filters = {
       employeeId,
       approverId,
-      status: searchParams.get("status") as any || undefined,
-      leaveTypeId: searchParams.get("leaveTypeId") || undefined,
-      startDate: searchParams.get("startDate") ? new Date(searchParams.get("startDate")!) : undefined,
-      endDate: searchParams.get("endDate") ? new Date(searchParams.get("endDate")!) : undefined,
-      page: parseInt(searchParams.get("page") || "1"),
-      limit: parseInt(searchParams.get("limit") || "20"),
+      leaveTypeId,
+      page,
+      limit,
     };
 
-    const result = await listLeaveApplications(companyId, filters);
+    const result = await listLeaveApplications(companyId, filters, statusParam || undefined);
+
+    // If status is not specified or is "all", also get counts
+    if (!statusParam || statusParam === "all") {
+      const [pendingCount, approvedCount, rejectedCount] = await Promise.all([
+        prisma.leaveApplication.count({ where: { companyId, status: "PENDING" } }),
+        prisma.leaveApplication.count({ where: { companyId, status: "APPROVED" } }),
+        prisma.leaveApplication.count({ where: { companyId, status: "REJECTED" } }),
+      ]);
+
+      return NextResponse.json({
+        ...result,
+        stats: {
+          total: pendingCount + approvedCount + rejectedCount,
+          pending: pendingCount,
+          approved: approvedCount,
+          rejected: rejectedCount,
+        },
+      });
+    }
+
     return NextResponse.json(result);
   } catch (error) {
     return getErrorResponse(error, "Failed to fetch leave applications.");

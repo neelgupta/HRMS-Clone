@@ -40,7 +40,7 @@ export default function LoginPage() {
 
       dismissToast(toastId);
       showSuccess("Signed in successfully.");
-      router.push(data.redirectTo || ROUTES.DASHBOARD.HR.DASHBOARD);
+      router.push(data.redirectTo || ROUTES.HR.DASHBOARD);
     } catch {
       const message = "Something went wrong. Please try again.";
       setError(message);

@@ -300,8 +300,6 @@ export async function processMonthlyAccrual(companyId: string, month: number, ye
 function calculateLeaveDays(
   startDate: Date,
   endDate: Date,
-  startSession: SessionType,
-  endSession: SessionType,
   companyId: string
 ): number {
   let businessDays = 0;
@@ -316,15 +314,7 @@ function calculateLeaveDays(
     current.setDate(current.getDate() + 1);
   }
 
-  if (startDate.getTime() === endDate.getTime()) {
-    if (startSession === "FULL_DAY") return businessDays;
-    return 0.5;
-  }
-
-  if (startSession === "FIRST_HALF") businessDays -= 0.5;
-  if (endSession === "SECOND_HALF") businessDays -= 0.5;
-
-  return Math.max(0.5, businessDays);
+  return businessDays;
 }
 
 export async function createLeaveApplication(
@@ -334,17 +324,13 @@ export async function createLeaveApplication(
     leaveTypeId: string;
     startDate: Date;
     endDate: Date;
-    startSession?: SessionType;
-    endSession?: SessionType;
     reason?: string;
-    attachmentUrl?: string;
+    isHalfDay?: boolean;
   }
 ) {
-  const totalDays = calculateLeaveDays(
+  const totalDays = data.isHalfDay ? 0.5 : calculateLeaveDays(
     data.startDate,
     data.endDate,
-    data.startSession ?? "FULL_DAY",
-    data.endSession ?? "FULL_DAY",
     companyId
   );
 
@@ -386,11 +372,8 @@ export async function createLeaveApplication(
       leaveTypeId: data.leaveTypeId,
       startDate: data.startDate,
       endDate: data.endDate,
-      startSession: data.startSession ?? "FULL_DAY",
-      endSession: data.endSession ?? "FULL_DAY",
       totalDays,
       reason: data.reason,
-      attachmentUrl: data.attachmentUrl,
       status: "PENDING",
       level1Status: "PENDING",
       currentApproverLevel: 1,
@@ -459,20 +442,20 @@ export async function listLeaveApplications(
   companyId: string,
   filters: {
     employeeId?: string;
-    status?: LeaveStatus;
     leaveTypeId?: string;
     startDate?: Date;
     endDate?: Date;
     approverId?: string;
     page?: number;
     limit?: number;
-  }
+  },
+  status?: string
 ) {
-  const { employeeId, status, leaveTypeId, startDate, endDate, approverId, page = 1, limit = 20 } = filters;
+  const { employeeId, leaveTypeId, startDate, endDate, approverId, page = 1, limit = 20 } = filters;
 
   const where: any = { companyId };
   if (employeeId) where.employeeId = employeeId;
-  if (status) where.status = status;
+  if (status && status !== "all") where.status = status;
   if (leaveTypeId) where.leaveTypeId = leaveTypeId;
   if (startDate && endDate) {
     where.startDate = { gte: startDate };

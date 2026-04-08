@@ -192,7 +192,7 @@ export function EmployeeLayout({ children, title, subtitle }: EmployeeLayoutProp
           notifications={recentNotifications}
           onMarkAsRead={markNotificationAsRead}
           onMarkAllAsRead={markAllNotificationsAsRead}
-          notificationHref={ROUTES.DASHBOARD.EMPLOYEE.NOTIFICATIONS}
+          notificationHref={ROUTES.EMPLOYEE.NOTIFICATIONS}
         />
 
         <main className="px-6 py-6">

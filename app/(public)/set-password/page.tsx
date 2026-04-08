@@ -82,7 +82,7 @@ export default function SetPasswordPage() {
       dismissToast(toastId);
       showSuccess(message);
       setTimeout(() => {
-        router.push(data.redirectTo || ROUTES.DASHBOARD.HR.DASHBOARD);
+        router.push(data.redirectTo || ROUTES.HR.DASHBOARD);
       }, 900);
     } catch {
       const message = "Something went wrong. Please try again.";

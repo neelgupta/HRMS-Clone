@@ -125,7 +125,7 @@ export default function HRNotificationsPage() {
       handleMarkAsRead(notification.id);
     }
     if (notification.relatedType === "LeaveApplication" && notification.relatedId) {
-      router.push(`${ROUTES.DASHBOARD.HR.LEAVE.LIST}?highlight=${notification.relatedId}`);
+      router.push(`${ROUTES.HR.LEAVE.LIST}?highlight=${notification.relatedId}`);
     }
   }
 

@@ -110,6 +110,7 @@ export function serializeCompany(company: CompanyRecord | null) {
             }))
           : defaults.addresses,
       branches: company.branches.map((branch) => ({
+        id: branch.id,
         name: branch.name,
         contactEmail: branch.contactEmail ?? "",
         contactPhone: branch.contactPhone ?? "",
