@@ -930,3 +930,447 @@ enum NotificationType {
   COMP_OFF_APPROVED
   COMP_OFF_REJECTED
 }
+
+// ============================================ PAYROLL MODULE ============================================
+
+// Salary Components
+model SalaryComponent {
+  id          String           @id @default(uuid())
+  companyId   String
+  name        String
+  type        SalaryComponentType
+  category    ComponentCategory
+  description String?
+  isTaxable   Boolean          @default(false)
+  isFixed     Boolean          @default(true)
+  calculateOn CalculateOn      @default(CTC)
+  sortOrder   Int              @default(0)
+  isActive    Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  company     Company          @relation(fields: [companyId], references: [id])
+  structures  SalaryStructureItem[]
+  
+  @@unique([companyId, name])
+  @@index([companyId])
+  @@map("salary_components")
+}
+
+enum SalaryComponentType {
+  EARNING
+  DEDUCTION
+}
+
+enum ComponentCategory {
+  BASIC
+  HRA
+  CONVEYANCE
+  SPECIAL_ALLOWANCE
+  BONUS
+  PF
+  ESI
+  TDS
+  PROFESSIONAL_TAX
+  LOAN
+  OTHER
+}
+
+enum CalculateOn {
+  CTC
+  BASIC
+  GROSS
+}
+
+// Salary Structure
+model SalaryStructure {
+  id                String                 @id @default(uuid())
+  companyId         String
+  employeeId        String
+  name              String
+  effectiveFrom    DateTime
+  isActive          Boolean                @default(true)
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+  createdBy         String
+  company           Company                @relation(fields: [companyId], references: [id])
+  employee          Employee               @relation(fields: [employeeId], references: [id])
+  items             SalaryStructureItem[]
+  revisions          SalaryStructureRevision[]
+  
+  @@unique([employeeId, effectiveFrom])
+  @@index([companyId])
+  @@index([employeeId])
+  @@map("salary_structures")
+}
+
+model SalaryStructureItem {
+  id              String          @id @default(uuid())
+  structureId    String
+  componentId    String
+  amount          Decimal         @db.Decimal(12, 2)
+  percentage      Decimal?        @db.Decimal(5, 2)
+  createdAt      DateTime        @default(now())
+  structure      SalaryStructure @relation(fields: [structureId], references: [id], onDelete: Cascade)
+  component       SalaryComponent @relation(fields: [componentId], references: [id])
+  
+  @@index([structureId])
+  @@index([componentId])
+  @@map("salary_structure_items")
+}
+
+model SalaryStructureRevision {
+  id                String          @id @default(uuid())
+  structureId       String
+  revisionDate     DateTime
+  changes           Json
+  createdAt        DateTime        @default(now())
+  createdBy        String
+  structure        SalaryStructure @relation(fields: [structureId], references: [id], onDelete: Cascade)
+  
+  @@index([structureId])
+  @@map("salary_structure_revisions")
+}
+
+// Tax Declarations
+model TaxDeclaration {
+  id              String              @id @default(uuid())
+  companyId       String
+  employeeId      String
+  financialYear   Int
+  section         String
+  declarationType DeclarationType
+  amount          Decimal             @db.Decimal(12, 2)
+  documents       String[]
+  status          TaxDeclarationStatus @default(PENDING)
+  approvedBy      String?
+  approvedAt      DateTime?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  company         Company             @relation(fields: [companyId], references: [id])
+  employee        Employee            @relation(fields: [employeeId], references: [id])
+  
+  @@unique([companyId, employeeId, financialYear, section])
+  @@index([companyId])
+  @@index([employeeId])
+  @@map("tax_declarations")
+}
+
+enum DeclarationType {
+  INVESTMENT
+  EXPENSE
+  RENT
+  HOME_LOAN
+  OTHER
+}
+
+enum TaxDeclarationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// Payroll Run
+model PayrollRun {
+  id                String           @id @default(uuid())
+  companyId         String
+  month             Int
+  year              Int
+  status            PayrollRunStatus @default(DRAFT)
+  totalEmployees   Int
+  totalEarnings    Decimal           @db.Decimal(15, 2)
+  totalDeductions  Decimal           @db.Decimal(15, 2)
+  totalNetPay      Decimal           @db.Decimal(15, 2)
+  processedBy      String
+  processedAt      DateTime?
+  lockedAt         DateTime?
+  lockedBy         String?
+  remarks          String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  company          Company           @relation(fields: [companyId], references: [id])
+  items             PayrollItem[]
+  
+  @@unique([companyId, month, year])
+  @@index([companyId])
+  @@map("payroll_runs")
+}
+
+enum PayrollRunStatus {
+  DRAFT
+  PROCESSED
+  LOCKED
+  CANCELLED
+}
+
+// Payroll Items (per employee)
+model PayrollItem {
+  id                String           @id @default(uuid())
+  payrollRunId      String
+  employeeId        String
+  workingDays      Int
+  daysWorked       Int
+  lopDays          Decimal          @db.Decimal(5, 2)
+  overtimeHours    Decimal          @db.Decimal(5, 2)
+  basicEarnings     Decimal          @db.Decimal(12, 2)
+  hraEarnings       Decimal          @db.Decimal(12, 2)
+  conveyanceEarnings Decimal          @db.Decimal(12, 2)
+  specialAllowance Decimal          @db.Decimal(12, 2)
+  bonusEarnings     Decimal          @db.Decimal(12, 2)
+  otherEarnings    Decimal           @db.Decimal(12, 2)
+  totalEarnings    Decimal           @db.Decimal(12, 2)
+  pfDeduction      Decimal           @db.Decimal(12, 2)
+  esiDeduction     Decimal           @db.Decimal(12, 2)
+  tdsDeduction     Decimal           @db.Decimal(12, 2)
+  professionalTax  Decimal           @db.Decimal(12, 2)
+  loanDeduction   Decimal           @db.Decimal(12, 2)
+  otherDeductions  Decimal           @db.Decimal(12, 2)
+  totalDeductions  Decimal           @db.Decimal(12, 2)
+  netPay           Decimal           @db.Decimal(12, 2)
+  arrears          Decimal           @db.Decimal(12, 2)
+  reimbursements  Decimal           @db.Decimal(12, 2)
+  status            PayrollItemStatus @default(CALCULATED)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  payrollRun        PayrollRun        @relation(fields: [payrollRunId], references: [id], onDelete: Cascade)
+  employee          Employee          @relation(fields: [employeeId], references: [id])
+  adjustments       PayrollAdjustment[]
+  pfRecord          PFRecord?
+  esiRecord         ESIRecord?
+  tdsRecord         TDSRecord?
+  payslip           Payslip?
+  
+  @@unique([payrollRunId, employeeId])
+  @@index([payrollRunId])
+  @@index([employeeId])
+  @@map("payroll_items")
+}
+
+enum PayrollItemStatus {
+  CALCULATED
+  APPROVED
+  PAID
+  HOLD
+}
+
+// Payroll Adjustments
+model PayrollAdjustment {
+  id            String        @id @default(uuid())
+  payrollItemId String
+  type          AdjustmentType
+  description   String
+  amount        Decimal       @db.Decimal(12, 2)
+  createdAt    DateTime      @default(now())
+  createdBy    String
+  payrollItem  PayrollItem  @relation(fields: [payrollItemId], references: [id], onDelete: Cascade)
+  
+  @@index([payrollItemId])
+  @@map("payroll_adjustments")
+}
+
+enum AdjustmentType {
+  ARREARS
+  BONUS
+  REIMBURSEMENT
+  LOP_ADJUSTMENT
+  OTHER
+}
+
+// Payslip
+model Payslip {
+  id            String    @id @default(uuid())
+  payrollItemId String    @unique
+  generatedAt   DateTime  @default(now())
+  sentViaEmail  Boolean   @default(false)
+  sentAt        DateTime?
+  payrollItem   PayrollItem @relation(fields: [payrollItemId], references: [id], onDelete: Cascade)
+  
+  @@map("payslips")
+}
+
+// PF Records
+model PFRecord {
+  id                String         @id @default(uuid())
+  payrollItemId     String         @unique
+  employeeId       String
+  uanNumber         String?
+  pfNumber          String?
+  employeeContrib   Decimal        @db.Decimal(12, 2)
+  employerContrib   Decimal        @db.Decimal(12, 2)
+  totalContrib      Decimal        @db.Decimal(12, 2)
+  pensionContrib   Decimal        @db.Decimal(12, 2)
+  createdAt        DateTime       @default(now())
+  payrollItem      PayrollItem    @relation(fields: [payrollItemId], references: [id], onDelete: Cascade)
+  employee          Employee       @relation(fields: [employeeId], references: [id])
+  
+  @@index([employeeId])
+  @@map("pf_records")
+}
+
+// ESI Records
+model ESIRecord {
+  id                String         @id @default(uuid())
+  payrollItemId     String         @unique
+  employeeId        String
+  esiNumber         String?
+  employeeContrib   Decimal        @db.Decimal(12, 2)
+  employerContrib   Decimal        @db.Decimal(12, 2)
+  totalContrib      Decimal        @db.Decimal(12, 2)
+  createdAt         DateTime       @default(now())
+  payrollItem       PayrollItem    @relation(fields: [payrollItemId], references: [id], onDelete: Cascade)
+  employee          Employee       @relation(fields: [employeeId], references: [id])
+  
+  @@index([employeeId])
+  @@map("esi_records")
+}
+
+// TDS Records
+model TDSRecord {
+  id                String         @id @default(uuid())
+  payrollItemId     String         @unique
+  employeeId       String
+  taxFromSalary    Decimal        @db.Decimal(12, 2)
+  taxFromOther     Decimal        @db.Decimal(12, 2)
+  totalTax         Decimal        @db.Decimal(12, 2)
+  cess             Decimal        @db.Decimal(12, 2)
+  totalTds         Decimal        @db.Decimal(12, 2)
+  createdAt        DateTime       @default(now())
+  payrollItem      PayrollItem    @relation(fields: [payrollItemId], references: [id], onDelete: Cascade)
+  employee         Employee       @relation(fields: [employeeId], references: [id])
+  
+  @@index([employeeId])
+  @@map("tds_records")
+}
+
+// Loans
+model Loan {
+  id                String         @id @default(uuid())
+  companyId         String
+  employeeId        String
+  loanType          LoanType
+  principalAmount   Decimal        @db.Decimal(12, 2)
+  interestRate      Decimal        @db.Decimal(5, 2)
+  tenureMonths      Int
+  emiAmount         Decimal        @db.Decimal(12, 2)
+  totalInterest     Decimal        @db.Decimal(12, 2)
+  totalAmount       Decimal        @db.Decimal(12, 2)
+  disbursedAmount   Decimal        @db.Decimal(12, 2)
+  outstandingAmount Decimal        @db.Decimal(12, 2)
+  status            LoanStatus     @default(PENDING)
+  approvedBy        String?
+  approvedAt       DateTime?
+  startDate         DateTime
+  endDate           DateTime?
+  remarks           String?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  company           Company        @relation(fields: [companyId], references: [id])
+  employee          Employee       @relation(fields: [employeeId], references: [id])
+  repayments        LoanRepayment[]
+  
+  @@index([companyId])
+  @@index([employeeId])
+  @@map("loans")
+}
+
+enum LoanType {
+  PERSONAL
+  HOME
+  CAR
+  EDUCATION
+  OTHER
+}
+
+enum LoanStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  ACTIVE
+  CLOSED
+  CANCELLED
+}
+
+// Loan Repayments
+model LoanRepayment {
+  id          String    @id @default(uuid())
+  loanId      String
+  month       Int
+  year        Int
+  amount      Decimal   @db.Decimal(12, 2)
+  principal   Decimal   @db.Decimal(12, 2)
+  interest    Decimal   @db.Decimal(12, 2)
+  balance     Decimal   @db.Decimal(12, 2)
+  status      RepaymentStatus @default(PENDING)
+  processedAt DateTime?
+  createdAt   DateTime  @default(now())
+  loan        Loan      @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  
+  @@unique([loanId, month, year])
+  @@index([loanId])
+  @@map("loan_repayments")
+}
+
+enum RepaymentStatus {
+  PENDING
+  DEDUCTED
+  SKIPPED
+}
+
+// Reimbursements
+model Reimbursement {
+  id              String              @id @default(uuid())
+  companyId       String
+  employeeId      String
+  type            ReimbursementType
+  amount          Decimal             @db.Decimal(12, 2)
+  description     String
+  receiptUrl     String?
+  status          ReimbursementStatus @default(PENDING)
+  approvedBy      String?
+  approvedAt     DateTime?
+  addedToPayroll  Boolean             @default(false)
+  payrollItemId   String?
+  remarks         String?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  company         Company             @relation(fields: [companyId], references: [id])
+  employee        Employee            @relation(fields: [employeeId], references: [id])
+  
+  @@index([companyId])
+  @@index([employeeId])
+  @@map("reimbursements")
+}
+
+enum ReimbursementType {
+  TRAVEL
+  MEDICAL
+  FOOD
+  COMMUNICATION
+  EQUIPMENT
+  OTHER
+}
+
+enum ReimbursementStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  PAID
+}
+
+// Payroll Settings
+model PayrollSetting {
+  id                    String   @id @default(uuid())
+  companyId             String   @unique
+  pfRate                Decimal  @db.Decimal(5, 2) @default(12)
+  pfWageCeiling         Decimal  @db.Decimal(10, 2) @default(15000)
+  esiRate               Decimal  @db.Decimal(5, 2) @default(0.75)
+  esiEmployerRate       Decimal  @db.Decimal(5, 2) @default(3.25)
+  esiWageCeiling        Decimal  @db.Decimal(10, 2) @default(21000)
+  professionalTax      Decimal  @db.Decimal(10, 2) @default(200)
+  defaultBasicPercent  Decimal  @db.Decimal(5, 2) @default(40)
+  defaultHraPercent    Decimal  @db.Decimal(5, 2) @default(10)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  company              Company  @relation(fields: [companyId], references: [id])
+  
+  @@map("payroll_settings")
+}

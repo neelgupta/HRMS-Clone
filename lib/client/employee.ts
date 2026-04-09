@@ -129,7 +129,7 @@ export async function fetchEmployees(params: EmployeeSearchInput): Promise<ApiRe
     searchParams.set("page", String(params.page));
     searchParams.set("limit", String(params.limit));
 
-    const response = await fetch(`/api/employees?${searchParams.toString()}`);
+    const response = await fetch(`/api/employees/directory?${searchParams.toString()}`, { credentials: "include" });
 
     if (!response.ok) {
       const data = await parseJson<{ message?: string }>(response);

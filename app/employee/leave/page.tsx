@@ -316,8 +316,7 @@ function LeaveContent() {
 
           {/* Leave History - Top */}
           <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden mb-6">
-            <div className="bg-gradient-to-r from-purple-500 to-pink-600 p-6 text-white">
-              <div className="flex items-center justify-between">
+<div className="bg-gradient-to-r from-[#1f2b40] to-[#2c3e50]">              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
                     <MdHistory className="text-white text-lg" />
@@ -446,8 +445,7 @@ function LeaveContent() {
             <div className="lg:col-span-2">
               <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden">
                 {/* Calendar Header */}
-                <div className="bg-gradient-to-r from-indigo-500 to-purple-600 p-6 text-white">
-                  <div className="flex items-center justify-between">
+<div className="bg-gradient-to-r from-[#1f2b40] to-[#2c3e50]">                  <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
                         <MdCalendarToday className="text-white text-lg" />

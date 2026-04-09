@@ -99,3 +99,49 @@ export async function requireHRAdmin(request: NextRequest) {
     name: user.name,
   };
 }
+
+export async function requireAuthenticatedUser(request: NextRequest) {
+  const authToken = request.cookies.get("auth_token")?.value;
+  console.log("Auth token from cookie:", !!authToken);
+
+  if (!authToken) {
+    console.log("No auth token found");
+    return { response: NextResponse.json({ message: "Unauthorized." }, { status: 401 }) };
+  }
+
+  const payload = await verifyJWT(authToken);
+  console.log("JWT payload:", payload);
+  if (!payload) {
+    console.log("JWT verification failed");
+    return { response: NextResponse.json({ message: "Unauthorized." }, { status: 401 }) };
+  }
+
+  const user = await prisma.user.findFirst({
+    where: {
+      id: payload.userId,
+      companyId: payload.companyId,
+    },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      companyId: true,
+    },
+  });
+
+  console.log("User found:", user);
+
+  if (!user) {
+    console.log("User not found in database");
+    return { response: NextResponse.json({ message: "Unauthorized." }, { status: 401 }) };
+  }
+
+  return {
+    userId: user.id,
+    companyId: user.companyId,
+    email: user.email,
+    role: user.role,
+    name: user.name,
+  };
+}

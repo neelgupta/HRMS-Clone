@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, Suspense, ReactNode, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   BarChart,
@@ -64,6 +64,8 @@ function DashboardContent() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [isOnBreak, setIsOnBreak] = useState(false);
   const [isClockedIn, setIsClockedIn] = useState(false);
+  const [workingHours, setWorkingHours] = useState(0); // in seconds
+  const [breakTime, setBreakTime] = useState(0); // in seconds
   const [attendanceActivities, setAttendanceActivities] = useState<AttendanceActivity[]>([]);
   const [breakLoading, setBreakLoading] = useState(false);
   const [profile, setProfile] = useState<{
@@ -75,6 +77,122 @@ function DashboardContent() {
   const [remarks, setRemarks] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
   const [shiftAssigned, setShiftAssigned] = useState<boolean | null>(null);
+
+  // Calculate working hours
+  const calculateWorkingHours = useCallback(() => {
+    let totalWorkingSeconds = 0;
+    let clockInTime: Date | null = null;
+    let breakStartTime: Date | null = null;
+    let totalBreakTime = 0;
+
+    // Sort activities by time to process in chronological order
+    const sortedActivities = [...attendanceActivities].sort((a, b) => 
+      new Date(a.time as string).getTime() - new Date(b.time as string).getTime()
+    );
+
+    for (const activity of sortedActivities) {
+      const activityTime = new Date(activity.time);
+      
+      switch (activity.type) {
+        case "CLOCK_IN":
+          clockInTime = activityTime;
+          break;
+        case "BREAK_START":
+          if (clockInTime) {
+            totalWorkingSeconds += (activityTime.getTime() - clockInTime.getTime()) / 1000;
+            clockInTime = null; // Pause working time during break
+          }
+          breakStartTime = activityTime;
+          break;
+        case "BREAK_END":
+          if (breakStartTime) {
+            totalBreakTime += (activityTime.getTime() - breakStartTime.getTime()) / 1000;
+            breakStartTime = null;
+          }
+          clockInTime = activityTime; // Resume working time after break
+          break;
+        case "CLOCK_OUT":
+          if (clockInTime) {
+            totalWorkingSeconds += (activityTime.getTime() - clockInTime.getTime()) / 1000;
+            clockInTime = null;
+          }
+          break;
+      }
+    }
+
+    // If currently clocked in and not on break, add time from last clock in to now
+    if (isClockedIn && !isOnBreak) {
+      if (clockInTime) {
+        totalWorkingSeconds += (new Date().getTime() - clockInTime.getTime()) / 1000;
+      } else {
+        // Find the most recent clock in time if not tracked in the loop
+        const lastClockIn = sortedActivities
+          .filter(a => a.type === "CLOCK_IN")
+          .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())[0];
+        
+        if (lastClockIn) {
+          const lastClockInTime = new Date(lastClockIn.time);
+          // Check if there's a break after this clock in
+          const hasBreakAfter = sortedActivities.some(a => 
+            (a.type === "BREAK_START" || a.type === "BREAK_END") && 
+            new Date(a.time).getTime() > lastClockInTime.getTime()
+          );
+          
+          if (!hasBreakAfter) {
+            totalWorkingSeconds += (new Date().getTime() - lastClockInTime.getTime()) / 1000;
+          }
+        }
+      }
+    }
+
+    return totalWorkingSeconds;
+  }, [attendanceActivities, isClockedIn, isOnBreak]);
+
+  // Update working hours and break time whenever attendance activities or clock status changes
+  useEffect(() => {
+    const hours = calculateWorkingHours();
+    setWorkingHours(hours);
+    
+    // Calculate break time
+    let totalBreakSeconds = 0;
+    let breakStartTime: Date | null = null;
+    
+    const sortedActivities = [...attendanceActivities].sort((a, b) => 
+      new Date(a.time).getTime() - new Date(b.time).getTime()
+    );
+
+    sortedActivities.forEach((activity) => {
+      const activityTime = new Date(activity.time);
+      
+      switch (activity.type) {
+        case "BREAK_START":
+          breakStartTime = activityTime;
+          break;
+        case "BREAK_END":
+          if (breakStartTime) {
+            totalBreakSeconds += (activityTime.getTime() - breakStartTime.getTime()) / 1000;
+            breakStartTime = null;
+          }
+          break;
+      }
+    });
+
+    // If currently on break, add time from break start to now
+    if (isOnBreak && breakStartTime) {
+      totalBreakSeconds += (new Date().getTime() - breakStartTime.getTime()) / 1000;
+    }
+    
+    setBreakTime(totalBreakSeconds);
+  }, [attendanceActivities, isOnBreak]);
+
+  // Format working hours from seconds to HH:MM:SS
+  const formatWorkingHours = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+    
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
 
   useEffect(() => {
     const loadData = async () => {
@@ -156,9 +274,16 @@ function DashboardContent() {
   }, []);
 
   useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+      // Update working hours every second when clocked in
+      if (isClockedIn) {
+        const hours = calculateWorkingHours();
+        setWorkingHours(hours);
+      }
+    }, 1000);
     return () => clearInterval(timer);
-  }, []);
+  }, [isClockedIn, calculateWorkingHours]);
 
   const fullName = profile?.employee
     ? `${profile.employee.firstName} ${profile.employee.lastName}`
@@ -314,12 +439,54 @@ function DashboardContent() {
           <div className="bg-gradient-to-br from-indigo-600 to-purple-600 dark:from-indigo-700 dark:to-purple-700 rounded-2xl p-6 h-full shadow-lg shadow-indigo-200 dark:shadow-indigo-900 text-white">
             <h3 className="text-sm font-medium text-indigo-100 dark:text-indigo-200 mb-3">My Timing</h3>
             <div className="text-center mb-4">
-              <div className="text-4xl font-bold">
-                {currentTime.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true })}
-              </div>
-              <div className="text-xs text-indigo-200 dark:text-indigo-300 mt-1">
-                {currentTime.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
-              </div>
+              {!isClockedIn ? (
+                <div className="space-y-2">
+                  <div className="text-2xl font-bold text-indigo-200">
+                    Clock In Time
+                  </div>
+                  <div className="text-lg font-semibold">
+                    {currentTime.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true })}
+                  </div>
+                  <div className="text-xs text-indigo-300">
+                    Click "Clock In" to start your day
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {/* Current Time Card */}
+                  <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm">
+                    <div className="text-center">
+                      <div className="text-lg font-bold text-slate-900 dark:text-white mb-2">
+                        Current Time
+                      </div>
+                      <div className="text-3xl font-bold text-indigo-600 dark:text-indigo-400">
+                        {currentTime.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true })}
+                      </div>
+                      <div className="text-sm text-slate-600 dark:text-slate-400">
+                        Working hours today
+                      </div>
+                      <div className="text-2xl font-bold text-green-600 dark:text-green-400 mt-2">
+                        {formatWorkingHours(workingHours)}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Break Time Card */}
+                  <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm">
+                    <div className="text-center">
+                      <div className="text-lg font-bold text-slate-900 dark:text-white mb-2">
+                        Break Time
+                      </div>
+                      <div className="text-3xl font-bold text-orange-600 dark:text-orange-400">
+                        {formatWorkingHours(breakTime)}
+                      </div>
+                      <div className="text-sm text-slate-600 dark:text-slate-400">
+                        Break duration today
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
             <div className="flex gap-2">
               {!isClockedIn ? (
