@@ -230,7 +230,7 @@ export async function updateLeaveBalance(
   const newUsedDays = balance.usedDays + (data.usedDays ?? 0);
   const newPendingDays = balance.pendingDays + (data.pendingDays ?? 0);
   const newAccruedDays = balance.accruedDays + (data.accruedDays ?? 0);
-  const newAvailableDays = balance.allocatedDays + newAccruedDays + balance.carriedForward - newUsedDays - newPendingDays;
+  const newAvailableDays = Math.max(0, balance.allocatedDays + newAccruedDays + balance.carriedForward - newUsedDays - newPendingDays);
 
   return prisma.leaveBalance.update({
     where: { id: balance.id },

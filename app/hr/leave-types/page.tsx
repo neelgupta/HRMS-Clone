@@ -15,9 +15,7 @@ import {
   HiOutlineClock,
   HiOutlineFilter,
   HiOutlineChevronDown,
-  HiOutlineChevronUp,
-  HiOutlineSparkles,
-  HiOutlineViewList
+  HiOutlineChevronUp
 } from "react-icons/hi";
 import { TextInput } from "@/components/ui/text-input";
 import { SelectInput } from "@/components/ui/select-input";
@@ -27,89 +25,6 @@ import { Skeleton } from "@/components/ui/loaders/skeleton";
 import { Modal } from "@/components/ui/modal";
 import type { LeaveTypeConfig, LeaveCategory } from "@/lib/client/leave";
 import { leaveCategoryLabels } from "@/lib/client/leave";
-
-const STANDARD_LEAVE_TYPES = [
-  {
-    name: "Casual Leave",
-    code: "CL",
-    type: "CASUAL" as LeaveCategory,
-    annualDays: 12,
-    description: "Short absences for personal reasons",
-    emoji: "☀️",
-    color: { bg: "bg-blue-100 dark:bg-blue-900/30", text: "text-blue-600 dark:text-blue-400" }
-  },
-  {
-    name: "Sick Leave",
-    code: "SL",
-    type: "SICK" as LeaveCategory,
-    annualDays: 10,
-    description: "Medical leave for illness or medical appointments",
-    emoji: "🏥",
-    color: { bg: "bg-red-100 dark:bg-red-900/30", text: "text-red-600 dark:text-red-400" }
-  },
-  {
-    name: "Earned Leave",
-    code: "EL",
-    type: "PRIVILEGE" as LeaveCategory,
-    annualDays: 15,
-    description: "Vacation/privilege leave earned over time",
-    emoji: "⭐",
-    color: { bg: "bg-purple-100 dark:bg-purple-900/30", text: "text-purple-600 dark:text-purple-400" },
-    allowCarryForward: true,
-    maxCarryForward: 5,
-    allowEncashment: true,
-    maxEncashDays: 10
-  },
-  {
-    name: "Maternity Leave",
-    code: "ML",
-    type: "MATERNITY" as LeaveCategory,
-    annualDays: 180,
-    description: "Leave for childbirth and newborn care",
-    emoji: "👶",
-    color: { bg: "bg-pink-100 dark:bg-pink-900/30", text: "text-pink-600 dark:text-pink-400" },
-    genderSpecific: "FEMALE" as const,
-    canApplyHalfDay: false
-  },
-  {
-    name: "Paternity Leave",
-    code: "PL",
-    type: "PATERNITY" as LeaveCategory,
-    annualDays: 15,
-    description: "Leave for new fathers",
-    emoji: "👔",
-    color: { bg: "bg-indigo-100 dark:bg-indigo-900/30", text: "text-indigo-600 dark:text-indigo-400" },
-    genderSpecific: "MALE" as const
-  },
-  {
-    name: "Bereavement Leave",
-    code: "BL",
-    type: "BEREAVEMENT" as LeaveCategory,
-    annualDays: 5,
-    description: "Leave for family loss/funeral attendance",
-    emoji: "🕯️",
-    color: { bg: "bg-slate-100 dark:bg-slate-700", text: "text-slate-600 dark:text-slate-400" }
-  },
-  {
-    name: "Unpaid Leave",
-    code: "UL",
-    type: "UNPAID" as LeaveCategory,
-    annualDays: 30,
-    description: "Leave without pay for extended absences",
-    emoji: "📋",
-    color: { bg: "bg-amber-100 dark:bg-amber-900/30", text: "text-amber-600 dark:text-amber-400" },
-    allowCarryForward: false
-  },
-  {
-    name: "Compensatory Off",
-    code: "CO",
-    type: "COMP_OFF" as LeaveCategory,
-    annualDays: 0,
-    description: "Time off in lieu of working on holidays/weekends",
-    emoji: "🔄",
-    color: { bg: "bg-green-100 dark:bg-green-900/30", text: "text-green-600 dark:text-green-400" }
-  }
-];
 
 interface LeaveTypeFormData {
   name: string;
@@ -192,10 +107,7 @@ export default function LeaveTypesPage() {
   const [formData, setFormData] = useState<LeaveTypeFormData>(defaultFormData);
   const [submitting, setSubmitting] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
-  const [quickSetupOpen, setQuickSetupOpen] = useState(false);
-  const [selectedStandardTypes, setSelectedStandardTypes] = useState<number[]>([0, 1, 2, 7]);
-  const [setupSubmitting, setSetupSubmitting] = useState(false);
-  const [expandedSections, setExpandedSections] = useState({
+    const [expandedSections, setExpandedSections] = useState({
     basic: true,
     accrual: false,
     restrictions: false,
@@ -328,66 +240,6 @@ export default function LeaveTypesPage() {
     setExpandedSections((prev) => ({ ...prev, [section]: !prev[section] }));
   }
 
-  function toggleStandardType(index: number) {
-    setSelectedStandardTypes((prev) =>
-      prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]
-    );
-  }
-
-  async function handleQuickSetup() {
-    setSetupSubmitting(true);
-    let successCount = 0;
-    let errorCount = 0;
-
-    for (const index of selectedStandardTypes) {
-      const template = STANDARD_LEAVE_TYPES[index];
-      try {
-        const res = await fetch("/api/leave/types", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name: template.name,
-            code: template.code,
-            type: template.type,
-            annualDays: template.annualDays,
-            accrualType: "YEARLY",
-            accrualRate: 0,
-            maxConsecutive: template.annualDays > 30 ? template.annualDays : 10,
-            minNoticeDays: 3,
-            canApplyHalfDay: template.canApplyHalfDay !== false,
-            maxHalfDaysPerYear: 6,
-            genderSpecific: template.genderSpecific || null,
-            allowCarryForward: template.allowCarryForward || false,
-            maxCarryForward: template.maxCarryForward || 0,
-            allowEncashment: template.allowEncashment || false,
-            maxEncashDays: template.maxEncashDays || 0,
-            expiryDays: 0,
-            sortOrder: index,
-          }),
-          credentials: "include",
-        });
-
-        if (res.ok) {
-          successCount++;
-        } else {
-          errorCount++;
-        }
-      } catch {
-        errorCount++;
-      }
-    }
-
-    if (successCount > 0) {
-      toast.success(`Created ${successCount} leave type${successCount > 1 ? "s" : ""}`);
-      setQuickSetupOpen(false);
-      fetchLeaveTypes();
-    }
-    if (errorCount > 0) {
-      toast.error(`Failed to create ${errorCount} leave type${errorCount > 1 ? "s" : ""}`);
-    }
-    setSetupSubmitting(false);
-  }
-
   const activeTypes = leaveTypes.filter((lt) => lt.isActive);
   const inactiveTypes = leaveTypes.filter((lt) => !lt.isActive);
 
@@ -406,13 +258,6 @@ export default function LeaveTypesPage() {
             Configure and manage leave types for your organization
           </p>
         </div>
-        <button
-          onClick={() => setQuickSetupOpen(true)}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-600 text-slate-700 dark:text-slate-200 rounded-xl text-sm font-medium transition-all"
-        >
-          <HiOutlineSparkles className="text-lg text-amber-500" />
-          Quick Setup
-        </button>
         <button
           onClick={openCreateModal}
           className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl text-sm font-semibold transition-all shadow-lg shadow-indigo-200 dark:shadow-indigo-900/30"
@@ -939,134 +784,7 @@ export default function LeaveTypesPage() {
         </form>
       </Modal>
 
-      {/* Quick Setup Modal */}
-      <Modal open={quickSetupOpen} onClose={() => setQuickSetupOpen(false)} title="Quick Setup - Standard Leave Types" size="lg">
-        <div className="p-6">
-          <div className="flex items-start gap-4 p-4 mb-6 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border border-amber-200 dark:border-amber-800">
-            <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center flex-shrink-0">
-              <HiOutlineSparkles className="text-xl text-amber-600 dark:text-amber-400" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-slate-900 dark:text-white">Recommended Leave Types</h3>
-              <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-                Select the leave types you want to create. All types come with sensible defaults that you can customize later.
-              </p>
-            </div>
-          </div>
-
-          <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
-            {STANDARD_LEAVE_TYPES.map((template, index) => {
-              const isSelected = selectedStandardTypes.includes(index);
-              const exists = leaveTypes.some(lt => lt.code === template.code);
-              
-              return (
-                <button
-                  key={index}
-                  type="button"
-                  onClick={() => !exists && toggleStandardType(index)}
-                  disabled={exists}
-                  className={`w-full flex items-center gap-4 p-4 rounded-xl border-2 transition-all text-left ${
-                    exists
-                      ? "border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 opacity-60 cursor-default"
-                      : isSelected
-                      ? "border-indigo-300 dark:border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20"
-                      : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600"
-                  }`}
-                >
-                  <div className={`w-12 h-12 rounded-xl ${template.color.bg} flex items-center justify-center text-xl flex-shrink-0`}>
-                    {template.emoji}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-semibold text-slate-900 dark:text-white">{template.name}</h4>
-                      <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400">
-                        {template.code}
-                      </span>
-                      {exists && (
-                        <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">
-                          Already exists
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{template.description}</p>
-                    <div className="flex items-center gap-4 mt-2 text-xs text-slate-400">
-                      <span>{template.annualDays} days/year</span>
-                      {template.genderSpecific && (
-                        <span className="px-1.5 py-0.5 rounded bg-pink-100 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400">
-                          {template.genderSpecific === "FEMALE" ? "Female only" : "Male only"}
-                        </span>
-                      )}
-                      {template.allowCarryForward && (
-                        <span className="flex items-center gap-1 text-purple-600 dark:text-purple-400">
-                          <HiOutlineRefresh className="text-xs" />
-                          Carry Forward
-                        </span>
-                      )}
-                      {template.allowEncashment && (
-                        <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
-                          <HiOutlineCurrencyRupee className="text-xs" />
-                          Encashment
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  {exists ? (
-                    <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
-                      <HiOutlineCheck className="text-sm text-white" />
-                    </div>
-                  ) : (
-                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
-                      isSelected
-                        ? "border-indigo-500 bg-indigo-500"
-                        : "border-slate-300 dark:border-slate-600"
-                    }`}>
-                      {isSelected && <HiOutlineCheck className="text-sm text-white" />}
-                    </div>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="flex items-center justify-between mt-6 pt-4 border-t border-slate-200 dark:border-slate-700">
-            <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-              <HiOutlineViewList className="text-lg" />
-              <span>{selectedStandardTypes.length} type{selectedStandardTypes.length !== 1 ? "s" : ""} selected</span>
-            </div>
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => setQuickSetupOpen(false)}
-                className="px-4 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleQuickSetup}
-                disabled={setupSubmitting || selectedStandardTypes.length === 0}
-                className="px-6 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl text-sm font-semibold transition-all flex items-center gap-2"
-              >
-                {setupSubmitting ? (
-                  <>
-                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                    </svg>
-                    Creating...
-                  </>
-                ) : (
-                  <>
-                    <HiOutlineSparkles className="text-lg" />
-                    Create {selectedStandardTypes.length} Type{selectedStandardTypes.length !== 1 ? "s" : ""}
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      </Modal>
-
+      
       {/* Delete Confirmation Modal */}
       <Modal open={!!deleteConfirm} onClose={() => setDeleteConfirm(null)} title="Delete Leave Type" size="sm">
         <div className="p-6">

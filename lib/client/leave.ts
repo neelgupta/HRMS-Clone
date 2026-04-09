@@ -294,6 +294,14 @@ export async function getLeaveApplication(id: string): Promise<ApiResponse<{ app
   return res.json();
 }
 
+export async function cancelLeaveApplication(id: string): Promise<ApiResponse<{ application: LeaveApplication }>> {
+  const res = await fetch(`/api/leave/${id}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  return res.json();
+}
+
 export async function approveLeaveApplication(
   id: string,
   action: "APPROVED" | "REJECTED" | "MODIFICATION_REQUESTED",

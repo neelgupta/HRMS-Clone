@@ -87,6 +87,8 @@ export const createLeaveApplicationFullSchema = z.object({
   endDate: z.string().optional(),
   reason: z.string().optional(),
   isHalfDay: z.boolean().optional(),
+  startSession: z.enum(["FIRST_HALF", "SECOND_HALF"]).optional(),
+  endSession: z.enum(["FIRST_HALF", "SECOND_HALF"]).optional(),
 });
 
 export const approveLeaveSchema = z.object({
