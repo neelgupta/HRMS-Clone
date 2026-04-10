@@ -2,6 +2,9 @@ import { NextResponse, type NextRequest } from "next/server";
 import { requireAuth } from "@/lib/rbac";
 import { getErrorResponse } from "@/lib/api-response";
 
+const PrismaClient = require("@prisma/client").PrismaClient;
+const prisma = new PrismaClient();
+
 // GET /api/payroll/loan - Get loans
 export async function GET(request: NextRequest) {
   const authResult = await requireAuth(request);
@@ -10,14 +13,13 @@ export async function GET(request: NextRequest) {
     return authResult.response;
   }
 
-  const { companyId, role } = authResult.user;
+  const { companyId, role, userId } = authResult.user;
   const { searchParams } = request.nextUrl;
   const employeeId = searchParams.get("employeeId");
 
   if (role === "EMPLOYEE") {
-    const { prisma } = await import("@/lib/prisma");
     const user = await prisma.user.findUnique({
-      where: { id: authResult.user.userId },
+      where: { id: userId },
       select: { employeeId: true },
     });
     const loans = await prisma.loan.findMany({
@@ -28,7 +30,6 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const { prisma } = await import("@/lib/prisma");
     const where: any = { companyId };
     if (employeeId) where.employeeId = employeeId;
 
@@ -60,7 +61,6 @@ export async function POST(request: NextRequest) {
   if (role === "EMPLOYEE") {
     try {
       const body = await request.json();
-      const { prisma } = await import("@/lib/prisma");
 
       const user = await prisma.user.findUnique({
         where: { id: userId },
@@ -114,7 +114,6 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { loanId, status, remarks } = body;
-    const { prisma } = await import("@/lib/prisma");
 
     const loan = await prisma.loan.update({
       where: { id: loanId },

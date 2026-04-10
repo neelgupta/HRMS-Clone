@@ -49,6 +49,16 @@ model Company {
   leaveTypeConfigs     LeaveTypeConfig[]
   shifts               Shift[]
   users                User[]
+  salaryComponents     SalaryComponent[]
+  salaryStructures     SalaryStructure[]
+  taxDeclarations      TaxDeclaration[]
+  payrollRuns          PayrollRun[]
+  loans                Loan[]
+  reimbursements       Reimbursement[]
+  payrollSettings      PayrollSetting?
+  employeeTaxConfigs   EmployeeTaxConfig[]
+  ptSlabs              ProfessionalTaxSlab[]
+  fullFinalSettlements FullFinalSettlement[]
 
   @@map("companies")
 }
@@ -69,6 +79,7 @@ model User {
   leaveApprovalHistory LeaveApprovalHistory[]
   leaveComments        LeaveComment[]
   resetTokens          PasswordResetToken[]
+  payrollPin           PayrollPINConfig?
   branch               Branch?                @relation(fields: [branchId], references: [id])
   company              Company                @relation(fields: [companyId], references: [id])
   employee             Employee?              @relation(fields: [employeeId], references: [id])
@@ -281,6 +292,16 @@ model Employee {
   leaveBalances            LeaveBalance[]
   shiftAssignments         ShiftAssignment[]
   user                     User?
+  salaryStructures         SalaryStructure[]
+  taxDeclarations          TaxDeclaration[]
+  payrollItems             PayrollItem[]
+  loans                    Loan[]
+  reimbursements           Reimbursement[]
+  pfRecords                PFRecord[]
+  esiRecords               ESIRecord[]
+  tdsRecords               TDSRecord[]
+  taxConfig                EmployeeTaxConfig?
+  fullFinalSettlement      FullFinalSettlement?
 
   @@index([companyId])
   @@index([branchId])
@@ -1079,7 +1100,9 @@ model PayrollRun {
   totalEmployees   Int
   totalEarnings    Decimal           @db.Decimal(15, 2)
   totalDeductions  Decimal           @db.Decimal(15, 2)
+  totalGross        Decimal           @db.Decimal(15, 2)
   totalNetPay      Decimal           @db.Decimal(15, 2)
+  runDate          DateTime          @default(now())
   processedBy      String
   processedAt      DateTime?
   lockedAt         DateTime?
@@ -1107,27 +1130,33 @@ model PayrollItem {
   id                String           @id @default(uuid())
   payrollRunId      String
   employeeId        String
-  workingDays      Int
-  daysWorked       Int
-  lopDays          Decimal          @db.Decimal(5, 2)
-  overtimeHours    Decimal          @db.Decimal(5, 2)
+  workingDays       Int
+  daysWorked        Int
+  lopDays           Decimal          @db.Decimal(5, 2)
+  halfDays          Decimal          @db.Decimal(5, 2) @default(0)
+  lateDays          Int              @default(0)
+  overtimeHours     Decimal          @db.Decimal(5, 2)
+  overtimeAmount    Decimal          @db.Decimal(12, 2) @default(0)
+  grossSalary       Decimal          @db.Decimal(12, 2) @default(0)
+  lopAmount         Decimal          @db.Decimal(12, 2) @default(0)
   basicEarnings     Decimal          @db.Decimal(12, 2)
   hraEarnings       Decimal          @db.Decimal(12, 2)
-  conveyanceEarnings Decimal          @db.Decimal(12, 2)
-  specialAllowance Decimal          @db.Decimal(12, 2)
+  conveyanceEarnings Decimal         @db.Decimal(12, 2)
+  specialAllowance  Decimal          @db.Decimal(12, 2)
   bonusEarnings     Decimal          @db.Decimal(12, 2)
-  otherEarnings    Decimal           @db.Decimal(12, 2)
-  totalEarnings    Decimal           @db.Decimal(12, 2)
-  pfDeduction      Decimal           @db.Decimal(12, 2)
-  esiDeduction     Decimal           @db.Decimal(12, 2)
-  tdsDeduction     Decimal           @db.Decimal(12, 2)
-  professionalTax  Decimal           @db.Decimal(12, 2)
-  loanDeduction   Decimal           @db.Decimal(12, 2)
-  otherDeductions  Decimal           @db.Decimal(12, 2)
-  totalDeductions  Decimal           @db.Decimal(12, 2)
-  netPay           Decimal           @db.Decimal(12, 2)
-  arrears          Decimal           @db.Decimal(12, 2)
-  reimbursements  Decimal           @db.Decimal(12, 2)
+  otherEarnings     Decimal          @db.Decimal(12, 2)
+  totalEarnings     Decimal          @db.Decimal(12, 2)
+  pfDeduction       Decimal          @db.Decimal(12, 2)
+  esiDeduction      Decimal          @db.Decimal(12, 2)
+  tdsDeduction      Decimal          @db.Decimal(12, 2)
+  professionalTax   Decimal          @db.Decimal(12, 2)
+  loanDeduction     Decimal          @db.Decimal(12, 2)
+  otherDeductions   Decimal          @db.Decimal(12, 2)
+  totalDeductions   Decimal          @db.Decimal(12, 2)
+  netPay            Decimal          @db.Decimal(12, 2)
+  arrears           Decimal          @db.Decimal(12, 2) @default(0)
+  reimbursements    Decimal          @db.Decimal(12, 2) @default(0)
+  taxRegimeUsed     TaxRegime        @default(NEW)
   status            PayrollItemStatus @default(CALCULATED)
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
@@ -1356,21 +1385,201 @@ enum ReimbursementStatus {
   PAID
 }
 
-// Payroll Settings
+// ── New Payroll Enums ─────────────────────────────────────────
+
+enum TaxRegime {
+  OLD
+  NEW
+}
+
+enum SalaryCycle {
+  MONTHLY
+  BIWEEKLY
+  WEEKLY
+}
+
+enum WorkingDaysCalcMethod {
+  CALENDAR_DAYS_MINUS_HOLIDAYS
+  FIXED_TWENTY_SIX
+}
+
+enum MidMonthMethod {
+  CALENDAR_DAYS
+  WORKING_DAYS
+}
+
+enum RoundingRule {
+  ROUND_OFF
+  ROUND_UP
+  ROUND_DOWN
+  NO_ROUNDING
+}
+
+enum LOPMethod {
+  PER_WORKING_DAY
+  PER_CALENDAR_DAY
+}
+
+enum FnFStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  PAID
+  CANCELLED
+}
+
+enum SeparationType {
+  RESIGNATION
+  TERMINATION
+  RETIREMENT
+  ABSCONDING
+  DEATH
+}
+
+// ── Payroll Settings (extended) ───────────────────────────────
+
 model PayrollSetting {
-  id                    String   @id @default(uuid())
-  companyId             String   @unique
-  pfRate                Decimal  @db.Decimal(5, 2) @default(12)
-  pfWageCeiling         Decimal  @db.Decimal(10, 2) @default(15000)
-  esiRate               Decimal  @db.Decimal(5, 2) @default(0.75)
-  esiEmployerRate       Decimal  @db.Decimal(5, 2) @default(3.25)
-  esiWageCeiling        Decimal  @db.Decimal(10, 2) @default(21000)
-  professionalTax      Decimal  @db.Decimal(10, 2) @default(200)
-  defaultBasicPercent  Decimal  @db.Decimal(5, 2) @default(40)
-  defaultHraPercent    Decimal  @db.Decimal(5, 2) @default(10)
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
-  company              Company  @relation(fields: [companyId], references: [id])
-  
+  id                    String                @id @default(uuid())
+  companyId             String                @unique
+
+  // PF / EPF
+  pfEnabled             Boolean               @default(true)
+  pfRate                Decimal               @db.Decimal(5, 2)  @default(12)
+  pfWageCeiling         Decimal               @db.Decimal(10, 2) @default(15000)
+  pfContribOnActual     Boolean               @default(false)
+  vpfEnabled            Boolean               @default(false)
+
+  // ESI
+  esiEnabled            Boolean               @default(true)
+  esiRate               Decimal               @db.Decimal(5, 2)  @default(0.75)
+  esiEmployerRate       Decimal               @db.Decimal(5, 2)  @default(3.25)
+  esiWageCeiling        Decimal               @db.Decimal(10, 2) @default(21000)
+
+  // TDS / Income Tax
+  tdsEnabled            Boolean               @default(true)
+  taxRegime             TaxRegime             @default(NEW)
+
+  // Professional Tax
+  ptEnabled             Boolean               @default(true)
+  ptState               String?
+  professionalTax       Decimal               @db.Decimal(10, 2) @default(200)
+
+  // Gratuity
+  gratuityEnabled       Boolean               @default(true)
+  gratuityRate          Decimal               @db.Decimal(6, 4)  @default(0.0481)
+
+  // Default component percentages
+  defaultBasicPercent   Decimal               @db.Decimal(5, 2)  @default(40)
+  defaultHraPercent     Decimal               @db.Decimal(5, 2)  @default(10)
+  defaultConveyanceAmt  Decimal               @db.Decimal(10, 2) @default(1600)
+
+  // Salary cycle
+  salaryCycle           SalaryCycle           @default(MONTHLY)
+  salaryPayDay          Int                   @default(1)
+
+  // Calculation rules
+  workingDaysCalcMethod WorkingDaysCalcMethod @default(CALENDAR_DAYS_MINUS_HOLIDAYS)
+  midMonthCalcMethod    MidMonthMethod        @default(CALENDAR_DAYS)
+  roundingRule          RoundingRule          @default(ROUND_OFF)
+
+  // Overtime
+  overtimeEnabled       Boolean               @default(false)
+  overtimeRate          Decimal               @db.Decimal(4, 2)  @default(2.0)
+
+  // LOP / Leave
+  halfDayAsLop          Decimal               @db.Decimal(3, 2)  @default(0.5)
+  lateDaysThreshold     Int                   @default(3)
+
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  company               Company               @relation(fields: [companyId], references: [id])
+
   @@map("payroll_settings")
+}
+
+// ── Employee Tax Config ───────────────────────────────────────
+
+model EmployeeTaxConfig {
+  id            String    @id @default(uuid())
+  companyId     String
+  employeeId    String    @unique
+  taxRegime     TaxRegime @default(NEW)
+  isMetroCity   Boolean   @default(false)
+  monthlyRent   Decimal?  @db.Decimal(10, 2)
+  pfOptOut      Boolean   @default(false)
+  vpfAmount     Decimal?  @db.Decimal(10, 2)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  company       Company   @relation(fields: [companyId], references: [id])
+  employee      Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@map("employee_tax_configs")
+}
+
+// ── Professional Tax Slabs (company-overridable) ──────────────
+
+model ProfessionalTaxSlab {
+  id          String   @id @default(uuid())
+  companyId   String
+  state       String
+  minSalary   Decimal  @db.Decimal(10, 2)
+  maxSalary   Decimal? @db.Decimal(10, 2)
+  monthlyPT   Decimal  @db.Decimal(8, 2)
+  createdAt   DateTime @default(now())
+  company     Company  @relation(fields: [companyId], references: [id])
+
+  @@index([companyId, state])
+  @@map("professional_tax_slabs")
+}
+
+// ── Payroll PIN Security ──────────────────────────────────────
+
+model PayrollPINConfig {
+  id          String    @id @default(uuid())
+  userId      String    @unique
+  pinHash     String
+  attempts    Int       @default(0)
+  lockedUntil DateTime?
+  lastChanged DateTime  @default(now())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("payroll_pin_configs")
+}
+
+// ── Full & Final Settlement ───────────────────────────────────
+
+model FullFinalSettlement {
+  id                    String         @id @default(uuid())
+  companyId             String
+  employeeId            String         @unique
+  lastWorkingDate       DateTime
+  resignationDate       DateTime?
+  separationType        SeparationType
+  noticePeriodDays      Int            @default(0)
+  noticePeriodServed    Int            @default(0)
+  noticeRecoveryAmount  Decimal        @db.Decimal(12, 2) @default(0)
+  noticePayout          Decimal        @db.Decimal(12, 2) @default(0)
+  leaveEncashmentDays   Decimal        @db.Decimal(5, 2)  @default(0)
+  leaveEncashmentAmount Decimal        @db.Decimal(12, 2) @default(0)
+  gratuityAmount        Decimal        @db.Decimal(12, 2) @default(0)
+  outstandingLoanAmount Decimal        @db.Decimal(12, 2) @default(0)
+  otherDeductions       Decimal        @db.Decimal(12, 2) @default(0)
+  otherPayments         Decimal        @db.Decimal(12, 2) @default(0)
+  lastMonthSalary       Decimal        @db.Decimal(12, 2) @default(0)
+  totalPayable          Decimal        @db.Decimal(12, 2) @default(0)
+  status                FnFStatus      @default(DRAFT)
+  approvedBy            String?
+  approvedAt            DateTime?
+  settledAt             DateTime?
+  remarks               String?
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+  company               Company        @relation(fields: [companyId], references: [id])
+  employee              Employee       @relation(fields: [employeeId], references: [id])
+
+  @@index([companyId])
+  @@map("full_final_settlements")
 }

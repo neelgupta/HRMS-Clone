@@ -75,7 +75,7 @@ export async function POST(request: Request) {
 
     const response = NextResponse.json({
       message: "Password set successfully",
-      redirectTo: "/dashboard/hr",
+      redirectTo: "/hr",
     });
 
     response.cookies.set("auth_token", jwt, {

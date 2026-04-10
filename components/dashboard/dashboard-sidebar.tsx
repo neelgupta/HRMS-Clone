@@ -33,7 +33,7 @@ const hrNavItems: NavItem[] = [
   { label: "Holidays", href: ROUTES.HR.HOLIDAYS, icon: MdCalendarMonth, available: true },
   { label: "Notifications", href: ROUTES.HR.NOTIFICATIONS, icon: MdNotifications, available: true },
   { label: "Organization", href: ROUTES.HR.ORGANIZATION, icon: MdAccountTree, available: true },
-  { label: "Payroll", href: "", icon: MdPayments, available: false },
+  { label: "Payroll", href: ROUTES.HR.PAYROLL.LIST, icon: MdPayments, available: true },
   { label: "Settings", href: ROUTES.HR.SETTINGS, icon: MdSettings, available: true },
 ];
 
@@ -136,6 +136,17 @@ export function DashboardSidebar({ mobileOpen, onClose }: DashboardSidebarProps)
   const navItems = isEmployee ? employeeNavItems : hrNavItems;
   const title = isEmployee ? "Employee Portal" : "HR Command";
 
+  const activeHref = navItems
+  .filter((item) => {
+    if (!item.available) return false;
+
+    if (item.href === "/") {
+      return pathname === "/";
+    }
+
+    return pathname === item.href || pathname.startsWith(item.href + "/");
+  })
+  .sort((a, b) => b.href.length - a.href.length)[0]?.href;
   return (
     <>
       <div
@@ -198,31 +209,24 @@ export function DashboardSidebar({ mobileOpen, onClose }: DashboardSidebarProps)
                 </p>
               </div>
 
-              <nav className="mt-6 space-y-2">
-                {navItems.map((item) => {
-                  // const active = item.available && (
-                  //   pathname === item.href || 
-                  //   (item.href !== "" && pathname.startsWith(`${item.href}/`))
-                  // );
-                  const active = item.available && (
-  pathname === item.href ||
-  (item.href !== "/" && pathname.startsWith(item.href + "/") && item.href.split("/").length === pathname.split("/").length)
-);
+             <nav className="mt-6 space-y-2">
+  {navItems.map((item) => {
+    const active = item.available && activeHref === item.href;
 
-                  return (
-                    <NavItem
-                      key={item.label}
-                      label={item.label}
-                      href={item.href}
-                      icon={item.icon}
-                      available={item.available}
-                      active={active}
-                      onClose={onClose}
-                      isDark={isDark}
-                    />
-                  );
-                })}
-              </nav>
+    return (
+      <NavItem
+        key={item.label}
+        label={item.label}
+        href={item.href}
+        icon={item.icon}
+        available={item.available}
+        active={active}
+        onClose={onClose}
+        isDark={isDark}
+      />
+    );
+  })}
+</nav>
             </>
           )}
         </div>

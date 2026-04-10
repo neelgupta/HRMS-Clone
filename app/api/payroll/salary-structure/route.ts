@@ -2,6 +2,9 @@ import { NextResponse, type NextRequest } from "next/server";
 import { requireAuth } from "@/lib/rbac";
 import { getErrorResponse } from "@/lib/api-response";
 
+const PrismaClient = require("@prisma/client").PrismaClient;
+const prisma = new PrismaClient();
+
 // GET /api/payroll/salary-structure - Get salary structures
 export async function GET(request: NextRequest) {
   const authResult = await requireAuth(request);
@@ -17,7 +20,6 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const { prisma } = await import("@/lib/prisma");
     const { searchParams } = request.nextUrl;
     const employeeId = searchParams.get("employeeId");
 
@@ -58,8 +60,6 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { employeeId, name, effectiveFrom, items } = body;
-
-    const { prisma } = await import("@/lib/prisma");
 
     await prisma.salaryStructure.updateMany({
       where: { employeeId, isActive: true },

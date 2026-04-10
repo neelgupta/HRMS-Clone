@@ -469,6 +469,8 @@ export async function updateEmployee(
       pfNumber: updateData.pfNumber,
       pfUAN: updateData.pfUAN,
       esiNumber: updateData.esiNumber,
+      companyEmail: updateData.companyEmail || null,
+      photoUrl: updateData.photoUrl || null,
     },
     include: {
       branch: { select: { id: true, name: true } },

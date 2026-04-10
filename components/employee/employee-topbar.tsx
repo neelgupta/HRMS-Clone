@@ -25,6 +25,7 @@ type EmployeeTopbarProps = {
   userName: string;
   userInitials: string;
   designation?: string;
+  photoUrl?: string | null;
   onLogout: () => Promise<void>;
   notificationCount?: number;
   notifications?: NotificationItem[];
@@ -39,6 +40,7 @@ export function EmployeeTopbar({
   userName, 
   userInitials, 
   designation = "Employee", 
+  photoUrl,
   onLogout,
   notificationCount = 0,
   notifications = [],
@@ -93,8 +95,12 @@ export function EmployeeTopbar({
                 onClick={() => setShowUserMenu(!showUserMenu)}
                 className="flex items-center gap-3 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-2xl px-3 py-2 transition-colors"
               >
-                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold text-sm">
-                  {userInitials}
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold text-sm overflow-hidden">
+                  {photoUrl ? (
+                    <img src={photoUrl} alt={userName} className="w-full h-full object-cover" />
+                  ) : (
+                    userInitials
+                  )}
                 </div>
                 <div className="text-left hidden md:block">
                   <p className="text-sm font-medium text-slate-900 dark:text-white">{userName}</p>

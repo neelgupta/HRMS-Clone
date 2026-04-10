@@ -16,6 +16,7 @@ type EmployeeProfile = {
     lastName: string;
     email: string;
     phone: string | null;
+    photoUrl: string | null;
     dateOfBirth: string | null;
     gender: string | null;
     maritalStatus: string | null;
@@ -84,8 +85,12 @@ function ProfileContent() {
       <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
         <div className="p-6 text-center">
           <div className="relative inline-block">
-            <div className="w-28 h-28 mx-auto rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white text-3xl font-bold shadow-lg shadow-indigo-200 dark:shadow-indigo-900">
-              {initials}
+            <div className="w-28 h-28 mx-auto rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white text-3xl font-bold shadow-lg shadow-indigo-200 dark:shadow-indigo-900 overflow-hidden">
+              {profile?.employee?.photoUrl ? (
+                <img src={profile.employee.photoUrl} alt={fullName} className="w-full h-full object-cover" />
+              ) : (
+                initials
+              )}
             </div>
             {/* <button className="absolute bottom-0 right-0 w-8 h-8 bg-slate-900 dark:bg-slate-600 rounded-xl flex items-center justify-center text-white hover:bg-slate-800 dark:hover:bg-slate-500 transition-colors">
               <MdCameraAlt className="text-sm" />

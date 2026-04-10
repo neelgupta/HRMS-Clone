@@ -12,6 +12,7 @@ import {
   MdBeachAccess,
   MdMoreTime,
   MdHelp,
+  MdReceipt,
 } from "react-icons/md";
 import { useTheme } from "@/contexts/theme-context";
 import { ROUTES } from "@/lib/constants";
@@ -28,6 +29,7 @@ const navItems: NavItem[] = [
   { label: "Inbox", href: ROUTES.EMPLOYEE.INBOX, icon: MdInbox },
   { label: "Employee", href: ROUTES.EMPLOYEE.EMPLOYEES, icon: MdPeople },
   { label: "Attendance", href: ROUTES.EMPLOYEE.ATTENDANCE, icon: MdAccessTime },
+  { label: "Salary & Payslip", href: ROUTES.EMPLOYEE.SALARY, icon: MdReceipt },
   { label: "Leave", href: ROUTES.EMPLOYEE.LEAVE.BASE, icon: MdEventNote },
   { label: "Overtime", href: ROUTES.EMPLOYEE.OVERTIME, icon: MdMoreTime },
   { label: "My Holidays", href: ROUTES.EMPLOYEE.HOLIDAYS, icon: MdBeachAccess },
@@ -85,10 +87,11 @@ type EmployeeSidebarProps = {
   mobileOpen: boolean;
   onClose: () => void;
   userName?: string;
+  userPhoto?: string | null;
   activeItem?: string;
 };
 
-export function EmployeeSidebar({ mobileOpen, onClose, userName = "Employee", activeItem }: EmployeeSidebarProps) {
+export function EmployeeSidebar({ mobileOpen, onClose, userName = "Employee", userPhoto }: EmployeeSidebarProps) {
   const pathname = usePathname();
   const { theme, mounted } = useTheme();
 
@@ -145,8 +148,19 @@ export function EmployeeSidebar({ mobileOpen, onClose, userName = "Employee", ac
 
         <div className="flex-1 overflow-y-auto px-4 py-5">
           <div className="rounded-2xl bg-gradient-to-br from-indigo-600 via-indigo-500 to-purple-600 p-5 text-white shadow-lg shadow-indigo-500/20">
-            <p className="text-xs uppercase tracking-[0.28em] text-indigo-200">Welcome</p>
-            <p className="mt-3 text-lg font-semibold">{userName}</p>
+            <div className="flex items-center gap-3">
+              {userPhoto ? (
+                <img src={userPhoto} alt={userName} className="w-10 h-10 rounded-xl object-cover" />
+              ) : (
+                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-sm font-semibold">
+                  {userName?.charAt(0) || "E"}
+                </div>
+              )}
+              <div>
+                <p className="text-xs uppercase tracking-[0.28em] text-indigo-200">Welcome</p>
+                <p className="text-lg font-semibold">{userName}</p>
+              </div>
+            </div>
             <p className="mt-2 text-sm leading-6 text-indigo-100/90">
               Your self-service portal for attendance and profile.
             </p>

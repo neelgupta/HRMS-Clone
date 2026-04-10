@@ -2,6 +2,9 @@ import { NextResponse, type NextRequest } from "next/server";
 import { requireAuth } from "@/lib/rbac";
 import { getErrorResponse } from "@/lib/api-response";
 
+const PrismaClient = require("@prisma/client").PrismaClient;
+const prisma = new PrismaClient();
+
 // GET /api/payroll/reimbursement - Get reimbursements
 export async function GET(request: NextRequest) {
   const authResult = await requireAuth(request);
@@ -15,7 +18,6 @@ export async function GET(request: NextRequest) {
   const employeeId = searchParams.get("employeeId");
 
   if (role === "EMPLOYEE") {
-    const { prisma } = await import("@/lib/prisma");
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { employeeId: true },
@@ -28,7 +30,6 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const { prisma } = await import("@/lib/prisma");
     const where: any = { companyId };
     if (employeeId) where.employeeId = employeeId;
 
@@ -62,7 +63,6 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { prisma } = await import("@/lib/prisma");
 
     let employeeId = body.employeeId;
 
@@ -111,7 +111,6 @@ export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
     const { reimbursementId, status, remarks } = body;
-    const { prisma } = await import("@/lib/prisma");
 
     const reimbursement = await prisma.reimbursement.update({
       where: { id: reimbursementId },

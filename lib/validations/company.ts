@@ -37,10 +37,29 @@ const dateStringSchema = z
   .optional()
   .transform((val) => (val === "" ? undefined : val));
 
+const dateStringSchemaNoFuture = z
+  .string()
+  .trim()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD format.")
+  .refine((val) => {
+    if (!val) return true;
+    return new Date(val) <= new Date(new Date().toDateString());
+  }, "Date cannot be in the future.")
+  .optional()
+  .transform((val) => (val === "" ? undefined : val));
+
 const emailSchema = z
   .string()
   .trim()
   .email("Enter a valid email address.")
+  .refine((val) => !val || !val.includes(" "), "Email must not contain spaces.")
+  .optional()
+  .transform((val) => (val === "" ? undefined : val));
+
+const phoneSchema = z
+  .string()
+  .trim()
+  .regex(/^[0-9]{10,15}$/, "Enter 10-15 digits.")
   .optional()
   .transform((val) => (val === "" ? undefined : val));
 
@@ -54,6 +73,30 @@ const websiteSchema = z
   .optional()
   .transform((val) => (val === "" ? undefined : val));
 
+const panNumberSchema = z
+  .string()
+  .trim()
+  .regex(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, "Enter valid PAN (e.g., ABCDE1234F).")
+  .optional()
+  .transform((val) => (val === "" ? undefined : val));
+
+const tanNumberSchema = z
+  .string()
+  .trim()
+  .regex(/^[A-Z]{4}[0-9]{5}[A-Z]{1}$/, "Enter valid TAN (e.g., BLRA12345B).")
+  .optional()
+  .transform((val) => (val === "" ? undefined : val));
+
+const gstNumberSchema = z
+  .string()
+  .trim()
+  .regex(
+    /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/,
+    "Enter valid GST number (e.g., 29ABCDE1234F1Z5).",
+  )
+  .optional()
+  .transform((val) => (val === "" ? undefined : val));
+
 export const addressSchema = z.object({
   type: z.enum(["HEAD_OFFICE", "BRANCH"]),
   label: optionalTrimmedString,
@@ -62,19 +105,27 @@ export const addressSchema = z.object({
   city: z.string().trim().min(2, "City is required."),
   state: z.string().trim().min(2, "State is required."),
   country: z.string().trim().min(2, "Country is required."),
-  pincode: z.string().trim().min(4, "Pincode is required."),
+  pincode: z
+    .string()
+    .trim()
+    .regex(/^[0-9]{6}$/, "Enter 6-digit pincode.")
+    .min(6, "Pincode is required."),
 });
 
 export const branchSchema = z.object({
   name: z.string().trim().min(2, "Branch name is required."),
   contactEmail: emailSchema,
-  contactPhone: optionalTrimmedString,
+  contactPhone: phoneSchema,
   addressLine1: z.string().trim().min(2, "Address line 1 is required."),
   addressLine2: optionalTrimmedString,
   city: z.string().trim().min(2, "City is required."),
   state: z.string().trim().min(2, "State is required."),
   country: z.string().trim().min(2, "Country is required."),
-  pincode: z.string().trim().min(4, "Pincode is required."),
+  pincode: z
+    .string()
+    .trim()
+    .regex(/^[0-9]+$/, "Enter valid pincode (digits only).")
+    .min(4, "Pincode is required."),
 });
 
 export const bankDetailSchema = z.object({
@@ -124,14 +175,14 @@ export const companySetupSchema = z.object({
   iconUrl: z.string().trim().max(255).default(""),
   industry: z.enum(INDUSTRIES),
   registrationNumber: optionalTrimmedString,
-  panNumber: optionalTrimmedString,
-  tanNumber: optionalTrimmedString,
-  gstNumber: optionalTrimmedString,
-  companyStartDate: dateStringSchema,
+  panNumber: panNumberSchema,
+  tanNumber: tanNumberSchema,
+  gstNumber: gstNumberSchema,
+  companyStartDate: dateStringSchemaNoFuture,
   fiscalYearStart: dateStringSchema,
   fiscalYearEnd: dateStringSchema,
   primaryEmail: emailSchema,
-  primaryPhone: optionalTrimmedString,
+  primaryPhone: phoneSchema,
   website: websiteSchema,
   addresses: z.array(addressSchema).min(1, "Add at least one address."),
   branches: z.array(branchSchema).default([]),

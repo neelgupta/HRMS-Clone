@@ -2,6 +2,9 @@ import { NextResponse, type NextRequest } from "next/server";
 import { requireAuth } from "@/lib/rbac";
 import { getErrorResponse } from "@/lib/api-response";
 
+const PrismaClient = require("@prisma/client").PrismaClient;
+const prisma = new PrismaClient();
+
 // GET /api/payroll/settings - Get payroll settings
 export async function GET(request: NextRequest) {
   const authResult = await requireAuth(request);
@@ -17,8 +20,6 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const { prisma } = await import("@/lib/prisma");
-    
     let settings = await prisma.payrollSetting.findUnique({
       where: { companyId },
     });
@@ -51,7 +52,6 @@ export async function PUT(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { prisma } = await import("@/lib/prisma");
 
     const settings = await prisma.payrollSetting.upsert({
       where: { companyId },

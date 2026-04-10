@@ -64,35 +64,31 @@ function DashboardContent() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [isOnBreak, setIsOnBreak] = useState(false);
   const [isClockedIn, setIsClockedIn] = useState(false);
-  const [workingHours, setWorkingHours] = useState(0); // in seconds
-  const [breakTime, setBreakTime] = useState(0); // in seconds
+  const [workingHours, setWorkingHours] = useState(0);
+  const [breakTime, setBreakTime] = useState(0);
   const [attendanceActivities, setAttendanceActivities] = useState<AttendanceActivity[]>([]);
   const [breakLoading, setBreakLoading] = useState(false);
   const [profile, setProfile] = useState<{
-    employee: { firstName: string; lastName: string; designation: string | null; department: string | null; employeeCode: string } | null;
+    employee: { firstName: string; lastName: string; designation: string | null; department: string | null; employeeCode: string; photoUrl: string | null } | null;
   } | null>(null);
   const [showRemarksModal, setShowRemarksModal] = useState(false);
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [modalType, setModalType] = useState<ModalType>("clockOut");
   const [remarks, setRemarks] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
   const [shiftAssigned, setShiftAssigned] = useState<boolean | null>(null);
 
-  // Calculate working hours
   const calculateWorkingHours = useCallback(() => {
     let totalWorkingSeconds = 0;
     let clockInTime: Date | null = null;
     let breakStartTime: Date | null = null;
-    let totalBreakTime = 0;
 
-    // Sort activities by time to process in chronological order
-    const sortedActivities = [...attendanceActivities].sort((a, b) => 
+    const sortedActivities = [...attendanceActivities].sort((a, b) =>
       new Date(a.time as string).getTime() - new Date(b.time as string).getTime()
     );
 
     for (const activity of sortedActivities) {
       const activityTime = new Date(activity.time);
-      
+
       switch (activity.type) {
         case "CLOCK_IN":
           clockInTime = activityTime;
@@ -100,16 +96,15 @@ function DashboardContent() {
         case "BREAK_START":
           if (clockInTime) {
             totalWorkingSeconds += (activityTime.getTime() - clockInTime.getTime()) / 1000;
-            clockInTime = null; // Pause working time during break
+            clockInTime = null;
           }
           breakStartTime = activityTime;
           break;
         case "BREAK_END":
           if (breakStartTime) {
-            totalBreakTime += (activityTime.getTime() - breakStartTime.getTime()) / 1000;
             breakStartTime = null;
           }
-          clockInTime = activityTime; // Resume working time after break
+          clockInTime = activityTime;
           break;
         case "CLOCK_OUT":
           if (clockInTime) {
@@ -120,24 +115,21 @@ function DashboardContent() {
       }
     }
 
-    // If currently clocked in and not on break, add time from last clock in to now
     if (isClockedIn && !isOnBreak) {
       if (clockInTime) {
         totalWorkingSeconds += (new Date().getTime() - clockInTime.getTime()) / 1000;
       } else {
-        // Find the most recent clock in time if not tracked in the loop
         const lastClockIn = sortedActivities
           .filter(a => a.type === "CLOCK_IN")
           .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())[0];
-        
+
         if (lastClockIn) {
           const lastClockInTime = new Date(lastClockIn.time);
-          // Check if there's a break after this clock in
-          const hasBreakAfter = sortedActivities.some(a => 
-            (a.type === "BREAK_START" || a.type === "BREAK_END") && 
+          const hasBreakAfter = sortedActivities.some(a =>
+            (a.type === "BREAK_START" || a.type === "BREAK_END") &&
             new Date(a.time).getTime() > lastClockInTime.getTime()
           );
-          
+
           if (!hasBreakAfter) {
             totalWorkingSeconds += (new Date().getTime() - lastClockInTime.getTime()) / 1000;
           }
@@ -148,22 +140,20 @@ function DashboardContent() {
     return totalWorkingSeconds;
   }, [attendanceActivities, isClockedIn, isOnBreak]);
 
-  // Update working hours and break time whenever attendance activities or clock status changes
   useEffect(() => {
     const hours = calculateWorkingHours();
     setWorkingHours(hours);
-    
-    // Calculate break time
+
     let totalBreakSeconds = 0;
     let breakStartTime: Date | null = null;
-    
-    const sortedActivities = [...attendanceActivities].sort((a, b) => 
+
+    const sortedActivities = [...attendanceActivities].sort((a, b) =>
       new Date(a.time).getTime() - new Date(b.time).getTime()
     );
 
     sortedActivities.forEach((activity) => {
       const activityTime = new Date(activity.time);
-      
+
       switch (activity.type) {
         case "BREAK_START":
           breakStartTime = activityTime;
@@ -177,20 +167,17 @@ function DashboardContent() {
       }
     });
 
-    // If currently on break, add time from break start to now
     if (isOnBreak && breakStartTime) {
       totalBreakSeconds += (new Date().getTime() - breakStartTime.getTime()) / 1000;
     }
-    
+
     setBreakTime(totalBreakSeconds);
   }, [attendanceActivities, isOnBreak]);
 
-  // Format working hours from seconds to HH:MM:SS
   const formatWorkingHours = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     const secs = Math.floor(seconds % 60);
-    
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
@@ -208,7 +195,7 @@ function DashboardContent() {
           const attendance = attendanceResult.data.attendance;
           setIsClockedIn(!!attendance.clockIn);
           setIsOnBreak(!!attendance.breakStart && !attendance.breakEnd);
-          
+
           const activities: AttendanceActivity[] = [];
           if (attendance.clockIn) {
             activities.push({
@@ -260,7 +247,7 @@ function DashboardContent() {
           }
           setAttendanceActivities(activities);
         }
-        
+
         if (attendanceResult.data?.shift) {
           setShiftAssigned(true);
         } else {
@@ -276,7 +263,6 @@ function DashboardContent() {
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentTime(new Date());
-      // Update working hours every second when clocked in
       if (isClockedIn) {
         const hours = calculateWorkingHours();
         setWorkingHours(hours);
@@ -406,381 +392,446 @@ function DashboardContent() {
   };
 
   return (
-    <>
-      <div className="grid grid-cols-12 gap-6 mb-6">
-        <div className="col-span-12 lg:col-span-4">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white text-xl font-bold shadow-lg shadow-indigo-200 dark:shadow-indigo-900">
-                {initials}
+    <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+      <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-4 max-w-[1600px]">
+        {/* Row 1 - Profile, Timing, Activity */}
+        <div className="grid grid-cols-12 gap-4 mb-4">
+          {/* Profile Card */}
+          <div className="col-span-12 lg:col-span-4 flex">
+            <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200/70 dark:border-slate-700/70 p-4 shadow-md hover:shadow-lg transition-all duration-300 flex flex-col w-full">
+              <div className="flex justify-center mb-4">
+                <div className="relative">
+                  <div className="w-20 h-20 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white text-3xl font-bold shadow-lg ring-2 ring-white/20 dark:ring-slate-700/50 overflow-hidden">
+                    {profile?.employee?.photoUrl ? (
+                      <img src={profile.employee.photoUrl} alt={fullName} className="w-full h-full object-cover" />
+                    ) : (
+                      initials
+                    )}
+                  </div>
+                  <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white dark:border-slate-800 animate-pulse"></div>
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-slate-900 dark:text-white truncate">{fullName}</h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400">{profile?.employee?.designation || "Employee"}</p>
-                <span className="inline-flex mt-1.5 items-center rounded-full bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-900/30 dark:to-green-900/30 px-2.5 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-400 ring-1 ring-emerald-200 dark:ring-emerald-800">
+              
+              <div className="text-center mb-3">
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">{fullName}</h3>
+                <p className="text-sm text-slate-600 dark:text-slate-400 font-medium mt-1">{profile?.employee?.designation || "Employee"}</p>
+              </div>
+              
+              <div className="flex justify-center mb-4">
+                <span className="inline-flex items-center rounded-full bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-900/30 dark:to-green-900/30 px-3 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400 ring-1 ring-emerald-200 dark:ring-emerald-800">
+                  <span className="w-2 h-2 bg-emerald-500 rounded-full mr-2 animate-pulse"></span>
                   Active
                 </span>
               </div>
-            </div>
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-700 dark:to-slate-600 rounded-xl p-3">
-                <p className="text-xs text-slate-500 dark:text-slate-400">Department</p>
-                <p className="text-sm font-semibold text-slate-900 dark:text-white mt-0.5 truncate">{profile?.employee?.department || "N/A"}</p>
-              </div>
-              <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-700 dark:to-slate-600 rounded-xl p-3">
-                <p className="text-xs text-slate-500 dark:text-slate-400">Employee ID</p>
-                <p className="text-sm font-semibold text-slate-900 dark:text-white mt-0.5">{profile?.employee?.employeeCode || "N/A"}</p>
+              
+              <div className="grid grid-cols-2 gap-3 mt-auto">
+                <div className="bg-gradient-to-br from-slate-50/80 to-slate-100/80 dark:from-slate-700/50 dark:to-slate-600/50 rounded-lg p-3 border border-slate-200/50 dark:border-slate-600/50">
+                  <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Department</p>
+                  <p className="text-sm font-bold text-slate-900 dark:text-white mt-1 truncate">{profile?.employee?.department || "N/A"}</p>
+                </div>
+                <div className="bg-gradient-to-br from-slate-50/80 to-slate-100/80 dark:from-slate-700/50 dark:to-slate-600/50 rounded-lg p-3 border border-slate-200/50 dark:border-slate-600/50">
+                  <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Employee ID</p>
+                  <p className="text-sm font-bold text-slate-900 dark:text-white mt-1 font-mono">{profile?.employee?.employeeCode || "N/A"}</p>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <div className="col-span-12 lg:col-span-4">
-          <div className="bg-gradient-to-br from-indigo-600 to-purple-600 dark:from-indigo-700 dark:to-purple-700 rounded-2xl p-6 h-full shadow-lg shadow-indigo-200 dark:shadow-indigo-900 text-white">
-            <h3 className="text-sm font-medium text-indigo-100 dark:text-indigo-200 mb-3">My Timing</h3>
-            <div className="text-center mb-4">
-              {!isClockedIn ? (
+          {/* My Timing Card */}
+          <div className="col-span-12 lg:col-span-4">
+            <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200/70 dark:border-slate-700/70 p-4 h-full shadow-md hover:shadow-lg transition-all duration-300">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight">My Timing</h3>
+                <div className="flex items-center gap-1.5">
+                  <div className={`w-1.5 h-1.5 rounded-full ${isClockedIn ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`}></div>
+                  <span className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                    {isClockedIn ? (isOnBreak ? 'On Break' : 'Working') : 'Offline'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-blue-50 dark:from-blue-900/30 dark:via-indigo-900/30 dark:to-blue-900/30 rounded-xl p-3 mb-3 border border-blue-200/50 dark:border-blue-800/30">
+                <div className="flex items-center justify-between mb-1">
+                  <div className="text-xs font-semibold text-blue-700 dark:text-blue-400 uppercase tracking-wider">Current Time</div>
+                  <div className="w-7 h-7 bg-blue-100 dark:bg-blue-900/50 rounded-lg flex items-center justify-center">
+                    <MdToday className="text-blue-600 dark:text-blue-400 text-sm" />
+                  </div>
+                </div>
+                <div className="text-2xl font-bold text-slate-900 dark:text-white tabular-nums">
+                  {currentTime.toLocaleTimeString("en-US", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    second: "2-digit",
+                    hour12: true,
+                  })}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 mb-3">
+                <div className="bg-gradient-to-r from-orange-50 via-amber-50 to-orange-50 dark:from-orange-900/30 dark:via-amber-900/30 dark:to-orange-900/30 rounded-xl p-3 border border-orange-200/50 dark:border-orange-800/30">
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="text-xs font-semibold text-orange-700 dark:text-orange-400 uppercase tracking-wider">Break</div>
+                    <div className="w-6 h-6 bg-orange-100 dark:bg-orange-900/50 rounded-lg flex items-center justify-center">
+                      <MdAccessTime className="text-orange-600 dark:text-orange-400 text-sm" />
+                    </div>
+                  </div>
+                  <div className="text-xl font-bold text-orange-600 dark:text-orange-400 tabular-nums text-center">
+                    {formatWorkingHours(breakTime)}
+                  </div>
+                </div>
+
+                <div className="bg-gradient-to-r from-green-50 via-emerald-50 to-green-50 dark:from-green-900/30 dark:via-emerald-900/30 dark:to-green-900/30 rounded-xl p-3 border border-green-200/50 dark:border-green-800/30">
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="text-xs font-semibold text-green-700 dark:text-green-400 uppercase tracking-wider">Work</div>
+                    <div className="w-6 h-6 bg-green-100 dark:bg-green-900/50 rounded-lg flex items-center justify-center">
+                      <MdCheckCircle className="text-green-600 dark:text-green-400 text-sm" />
+                    </div>
+                  </div>
+                  <div className="text-xl font-bold text-green-600 dark:text-green-400 tabular-nums text-center">
+                    {formatWorkingHours(workingHours)}
+                  </div>
+                </div>
+              </div>
+
+              <div className="text-center p-2 bg-slate-50 dark:bg-slate-700/30 rounded-lg border border-slate-200/50 dark:border-slate-600/50 mb-3">
+                <p className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                  {!isClockedIn ? (
+                    <span className="flex items-center justify-center gap-1">
+                      <span className="w-1.5 h-1.5 bg-slate-400 rounded-full"></span>
+                      Click "Clock In" to start
+                    </span>
+                  ) : (
+                    <span className="flex items-center justify-center gap-1">
+                      <span className={`w-1.5 h-1.5 rounded-full ${isOnBreak ? 'bg-orange-500' : 'bg-emerald-500'} animate-pulse`}></span>
+                      {isOnBreak ? 'On break' : 'Working'}
+                    </span>
+                  )}
+                </p>
+              </div>
+              
+              <div className="flex gap-2">
+                {!isClockedIn ? (
+                  <button
+                    onClick={() => {
+                      if (shiftAssigned === false) {
+                        alert("Your shift has not been assigned by HR. Please contact HR to get your shift assigned before clocking in.");
+                        return;
+                      }
+                      handleClockIn();
+                    }}
+                    disabled={shiftAssigned === null}
+                    className="flex-1 py-2 px-3 rounded-lg text-sm font-bold bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white transition-all duration-300 flex items-center justify-center gap-2 shadow-md hover:shadow-lg transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <MdCheckCircle className="text-base" />
+                    <span>{shiftAssigned === null ? "Loading..." : shiftAssigned === false ? "Shift Not Assigned" : "Clock In"}</span>
+                  </button>
+                ) : (
+                  <>
+                    <button onClick={handleBreak} disabled={breakLoading}
+                      className={`flex-1 py-2 px-3 rounded-lg text-sm font-bold transition-all duration-300 flex items-center justify-center gap-2 shadow-md hover:shadow-lg transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed ${isOnBreak
+                        ? "bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white"
+                        : "bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 text-white"
+                        }`}>
+                      <MdAccessTime className="text-base" />
+                      <span>{breakLoading || actionLoading ? "..." : isOnBreak ? "End Break" : "Start Break"}</span>
+                    </button>
+                    <button onClick={handleClockOut}
+                      className="flex-1 py-2 px-3 rounded-lg text-sm font-bold bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 text-white transition-all duration-300 flex items-center justify-center gap-2 shadow-md hover:shadow-lg transform hover:scale-105">
+                      <MdLogout className="text-base" />
+                      <span>Clock Out</span>
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Today's Activity Card */}
+          <div className="col-span-12 lg:col-span-4">
+            <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200/70 dark:border-slate-700/70 p-4 h-full shadow-md hover:shadow-lg transition-all duration-300">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight">Today's Activity</h3>
+                <div className="w-8 h-8 bg-slate-100 dark:bg-slate-700 rounded-lg flex items-center justify-center">
+                  <MdToday className="text-slate-600 dark:text-slate-400 text-base" />
+                </div>
+              </div>
+              {attendanceActivities.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-6">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-600 flex items-center justify-center">
+                    <MdToday className="text-2xl text-slate-400 dark:text-slate-500" />
+                  </div>
+                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-3">No activity yet</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Start your day</p>
+                </div>
+              ) : (
                 <div className="space-y-2">
-                  <div className="text-2xl font-bold text-indigo-200">
-                    Clock In Time
-                  </div>
-                  <div className="text-lg font-semibold">
-                    {currentTime.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true })}
-                  </div>
-                  <div className="text-xs text-indigo-300">
-                    Click "Clock In" to start your day
-                  </div>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  {/* Current Time Card */}
-                  <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm">
-                    <div className="text-center">
-                      <div className="text-lg font-bold text-slate-900 dark:text-white mb-2">
-                        Current Time
+                  {attendanceActivities.slice(-4).reverse().map((activity, index) => (
+                    <div key={activity.id} className="flex items-center gap-3 p-2 bg-gradient-to-r from-slate-50/80 to-transparent dark:from-slate-700/50 dark:to-transparent rounded-lg border border-slate-200/30 dark:border-slate-600/30 hover:shadow-md transition-all duration-200">
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center shadow-md ${activity.type === "CLOCK_IN" ? "bg-gradient-to-br from-emerald-500 to-emerald-600 text-white" :
+                        activity.type === "CLOCK_OUT" ? "bg-gradient-to-br from-red-500 to-red-600 text-white" :
+                          activity.type === "BREAK_START" ? "bg-gradient-to-br from-indigo-500 to-indigo-600 text-white" :
+                            "bg-gradient-to-br from-orange-500 to-orange-600 text-white"
+                        }`}>
+                        {activity.type === "CLOCK_IN" && <MdCheckCircle className="text-base" />}
+                        {activity.type === "CLOCK_OUT" && <MdLogout className="text-base" />}
+                        {activity.type === "BREAK_START" && <MdAccessTime className="text-base" />}
+                        {activity.type === "BREAK_END" && <MdAccessTime className="text-base" />}
                       </div>
-                      <div className="text-3xl font-bold text-indigo-600 dark:text-indigo-400">
-                        {currentTime.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true })}
-                      </div>
-                      <div className="text-sm text-slate-600 dark:text-slate-400">
-                        Working hours today
-                      </div>
-                      <div className="text-2xl font-bold text-green-600 dark:text-green-400 mt-2">
-                        {formatWorkingHours(workingHours)}
+                      <div className="flex-1">
+                        <p className="text-sm font-bold text-slate-900 dark:text-white">
+                          {activity.type === "CLOCK_IN" && "Clock In"}
+                          {activity.type === "CLOCK_OUT" && "Clock Out"}
+                          {activity.type === "BREAK_START" && "Break Start"}
+                          {activity.type === "BREAK_END" && "Break End"}
+                        </p>
+                        <p className="text-xs font-medium text-slate-500 dark:text-slate-400">{activity.formattedTime}</p>
                       </div>
                     </div>
-                  </div>
-
-                  {/* Break Time Card */}
-                  <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm">
-                    <div className="text-center">
-                      <div className="text-lg font-bold text-slate-900 dark:text-white mb-2">
-                        Break Time
-                      </div>
-                      <div className="text-3xl font-bold text-orange-600 dark:text-orange-400">
-                        {formatWorkingHours(breakTime)}
-                      </div>
-                      <div className="text-sm text-slate-600 dark:text-slate-400">
-                        Break duration today
-                      </div>
-                    </div>
-                  </div>
+                  ))}
                 </div>
-              )}
-            </div>
-            <div className="flex gap-2">
-              {!isClockedIn ? (
-                <button 
-                  onClick={() => {
-                    if (shiftAssigned === false) {
-                      alert("Your shift has not been assigned by HR. Please contact HR to get your shift assigned before clocking in.");
-                      return;
-                    }
-                    handleClockIn();
-                  }}
-                  disabled={shiftAssigned === null}
-                  className="flex-1 py-2.5 px-3 rounded-xl text-sm font-semibold bg-white text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-100 transition-all flex items-center justify-center gap-1.5 shadow-lg disabled:opacity-50">
-                  <MdCheckCircle className="text-base" /> {shiftAssigned === null ? "Loading..." : shiftAssigned === false ? "Shift Not Assigned" : "Clock In"}
-                </button>
-              ) : (
-                <>
-                  <button onClick={handleBreak} disabled={breakLoading}
-                    className={`flex-1 py-2.5 px-3 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 shadow-lg ${
-                      isOnBreak ? "bg-orange-400 hover:bg-orange-500 text-white" : "bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm"
-                    }`}>
-                    <MdAccessTime className="text-base" />
-                    {breakLoading || actionLoading ? "..." : isOnBreak ? "End Break" : "Break"}
-                  </button>
-                  <button onClick={handleClockOut}
-                    className="flex-1 py-2.5 px-3 rounded-xl text-sm font-semibold bg-white text-red-500 hover:bg-red-50 dark:hover:bg-red-100 transition-all flex items-center justify-center gap-1.5 shadow-lg">
-                    <MdLogout className="text-base" /> Clock Out
-                  </button>
-                </>
               )}
             </div>
           </div>
         </div>
 
-        <div className="col-span-12 lg:col-span-4">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 h-full shadow-sm hover:shadow-md transition-shadow">
-            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">Today&apos;s Activity</h3>
-            {attendanceActivities.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-6">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-600 flex items-center justify-center">
-                  <MdToday className="text-2xl text-slate-400 dark:text-slate-500" />
-                </div>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mt-3">No activity yet</p>
+        {/* Attendance Summary */}
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200/70 dark:border-slate-700/70 p-4 mb-4 shadow-md hover:shadow-lg transition-all duration-300">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white tracking-tight">My Attendance Summary</h3>
+            <div className="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">This Month</div>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            <div className="bg-gradient-to-br from-emerald-50/80 to-green-50/80 dark:from-emerald-900/30 dark:to-green-900/30 rounded-xl p-2 text-center border border-emerald-200/50 dark:border-emerald-800/30">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center mx-auto">
+                <MdCheckCircle className="text-sm text-white" />
               </div>
-            ) : (
-              <div className="space-y-2 max-h-36 overflow-y-auto">
-                {attendanceActivities.slice(-4).map((activity) => (
-                  <div key={activity.id} className="flex items-center gap-3 p-2 bg-gradient-to-r from-slate-50 to-transparent dark:from-slate-700/50 dark:to-transparent rounded-xl">
-                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center shadow-sm ${
-                      activity.type === "CLOCK_IN" ? "bg-gradient-to-br from-emerald-400 to-emerald-600 text-white" :
-                      activity.type === "CLOCK_OUT" ? "bg-gradient-to-br from-red-400 to-red-600 text-white" :
-                      activity.type === "BREAK_START" ? "bg-gradient-to-br from-indigo-400 to-indigo-600 text-white" :
-                      "bg-gradient-to-br from-orange-400 to-orange-600 text-white"
-                    }`}>
-                      {activity.type === "CLOCK_IN" && <MdCheckCircle className="text-sm" />}
-                      {activity.type === "CLOCK_OUT" && <MdLogout className="text-sm" />}
-                      {activity.type === "BREAK_START" && <MdAccessTime className="text-sm" />}
-                      {activity.type === "BREAK_END" && <MdAccessTime className="text-sm" />}
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">
-                        {activity.type === "CLOCK_IN" && "Clock In"}
-                        {activity.type === "CLOCK_OUT" && "Clock Out"}
-                        {activity.type === "BREAK_START" && "Break Start"}
-                        {activity.type === "BREAK_END" && "Break End"}
-                      </p>
-                      <p className="text-xs text-slate-400 dark:text-slate-500">{activity.formattedTime}</p>
-                    </div>
-                  </div>
+              <p className="text-xl font-bold text-emerald-700 dark:text-emerald-400 mt-1 tabular-nums">{summaryStats.present}</p>
+              <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-500 uppercase tracking-wider">Present</p>
+            </div>
+            <div className="bg-gradient-to-br from-red-50/80 to-pink-50/80 dark:from-red-900/30 dark:to-pink-900/30 rounded-xl p-2 text-center border border-red-200/50 dark:border-red-800/30">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center mx-auto">
+                <MdCancel className="text-sm text-white" />
+              </div>
+              <p className="text-xl font-bold text-red-700 dark:text-red-400 mt-1 tabular-nums">{summaryStats.absent}</p>
+              <p className="text-[10px] font-bold text-red-600 dark:text-red-500 uppercase tracking-wider">Absent</p>
+            </div>
+            <div className="bg-gradient-to-br from-amber-50/80 to-yellow-50/80 dark:from-amber-900/30 dark:to-yellow-900/30 rounded-xl p-2 text-center border border-amber-200/50 dark:border-amber-800/30">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center mx-auto">
+                <MdAccessTime className="text-sm text-white" />
+              </div>
+              <p className="text-xl font-bold text-amber-700 dark:text-amber-400 mt-1 tabular-nums">{summaryStats.lateIn}</p>
+              <p className="text-[10px] font-bold text-amber-600 dark:text-amber-500 uppercase tracking-wider">Late In</p>
+            </div>
+            <div className="bg-gradient-to-br from-orange-50/80 to-amber-50/80 dark:from-orange-900/30 dark:to-amber-900/30 rounded-xl p-2 text-center border border-orange-200/50 dark:border-orange-800/30">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center mx-auto">
+                <MdLogout className="text-sm text-white" />
+              </div>
+              <p className="text-xl font-bold text-orange-700 dark:text-orange-400 mt-1 tabular-nums">{summaryStats.earlyOut}</p>
+              <p className="text-[10px] font-bold text-orange-600 dark:text-orange-500 uppercase tracking-wider">Early Out</p>
+            </div>
+            <div className="bg-gradient-to-br from-purple-50/80 to-indigo-50/80 dark:from-purple-900/30 dark:to-indigo-900/30 rounded-xl p-2 text-center border border-purple-200/50 dark:border-purple-800/30">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center mx-auto">
+                <MdGavel className="text-sm text-white" />
+              </div>
+              <p className="text-xl font-bold text-purple-700 dark:text-purple-400 mt-1 tabular-nums">{summaryStats.penalty}</p>
+              <p className="text-[10px] font-bold text-purple-600 dark:text-purple-500 uppercase tracking-wider">Penalty</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Timelogs Chart and Calendar */}
+        <div className="grid grid-cols-12 gap-4 mb-4">
+          <div className="col-span-12 lg:col-span-7">
+            <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200/70 dark:border-slate-700/70 p-4 h-full shadow-md hover:shadow-lg transition-all duration-300">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-2">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight">
+                  My Timelogs - {monthNames[currentMonth.getMonth()].slice(0, 3)} {currentMonth.getFullYear()}
+                </h3>
+                <div className="flex items-center gap-2 text-xs font-medium text-slate-600 dark:text-slate-400">
+                  <span className="flex items-center gap-1.5 px-2 py-1 bg-emerald-50 dark:bg-emerald-900/30 rounded-md">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500"></span> Before
+                  </span>
+                  <span className="flex items-center gap-1.5 px-2 py-1 bg-amber-50 dark:bg-amber-900/30 rounded-md">
+                    <span className="w-2 h-2 rounded-full bg-amber-400"></span> Break
+                  </span>
+                  <span className="flex items-center gap-1.5 px-2 py-1 bg-emerald-50 dark:bg-emerald-900/30 rounded-md">
+                    <span className="w-2 h-2 rounded-full bg-emerald-600"></span> After
+                  </span>
+                </div>
+              </div>
+              <div className="h-[300px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData} barSize={28} margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: "#64748B", fontSize: 12, fontWeight: 600 }} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fill: "#64748B", fontSize: 12, fontWeight: 600 }} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "rgba(255, 255, 255, 0.95)",
+                        border: "1px solid #E2E8F0",
+                        borderRadius: "8px",
+                        fontSize: "11px",
+                        fontWeight: 500,
+                      }}
+                    />
+                    <Bar dataKey="beforeBreak" stackId="a" fill="#10B981" radius={[0, 0, 0, 0]} />
+                    <Bar dataKey="break" stackId="a" fill="#FBBF24" radius={[0, 0, 0, 0]} />
+                    <Bar dataKey="afterBreak" stackId="a" fill="#059669" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+
+          <div className="col-span-12 lg:col-span-5">
+            <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200/70 dark:border-slate-700/70 p-4 shadow-md hover:shadow-lg transition-all duration-300">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight">Calendar</h3>
+                <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-700/50 rounded-md p-1 border border-slate-200/50 dark:border-slate-600/50">
+                  <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
+                    className="p-1.5 hover:bg-white dark:hover:bg-slate-600 rounded transition-all">
+                    <span className="text-slate-600 dark:text-slate-400 text-sm font-bold">{"<"}</span>
+                  </button>
+                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300 min-w-[100px] text-center">
+                    {monthNames[currentMonth.getMonth()].slice(0, 3)} {currentMonth.getFullYear()}
+                  </span>
+                  <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
+                    className="p-1.5 hover:bg-white dark:hover:bg-slate-600 rounded transition-all">
+                    <span className="text-slate-600 dark:text-slate-400 text-sm font-bold">{">"}</span>
+                  </button>
+                </div>
+              </div>
+              <div className="grid grid-cols-7 gap-0.5">
+                {weekDays.map((day) => (
+                  <div key={day} className="text-center text-xs font-bold text-indigo-400 dark:text-indigo-500 py-1">{day.slice(0, 3)}</div>
                 ))}
+                {getDaysInMonth(currentMonth).map((date, index) => {
+                  if (!date) return <div key={`empty-${index}`} className="aspect-square"></div>;
+                  return (
+                    <div key={date.toISOString()}
+                      className={`aspect-square flex items-center justify-center rounded-lg text-sm font-bold transition-all ${isToday(date) ? "bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-md" : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
+                        }`}>
+                      {date.getDate()}
+                    </div>
+                  );
+                })}
               </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5 mb-5 shadow-sm">
-        <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-4">My Attendance Summary</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-          <div className="bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-900/30 dark:to-green-900/30 rounded-xl p-3 text-center ring-1 ring-emerald-100 dark:ring-emerald-800/50">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center mx-auto shadow-sm">
-              <MdCheckCircle className="text-lg text-white" />
-            </div>
-            <p className="text-xl font-bold text-emerald-700 dark:text-emerald-400 mt-2">{summaryStats.present}</p>
-            <p className="text-xs text-emerald-600 dark:text-emerald-500 font-medium">Present</p>
-          </div>
-          <div className="bg-gradient-to-br from-red-50 to-pink-50 dark:from-red-900/30 dark:to-pink-900/30 rounded-xl p-3 text-center ring-1 ring-red-100 dark:ring-red-800/50">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-400 to-red-600 flex items-center justify-center mx-auto shadow-sm">
-              <MdCancel className="text-lg text-white" />
-            </div>
-            <p className="text-xl font-bold text-red-700 dark:text-red-400 mt-2">{summaryStats.absent}</p>
-            <p className="text-xs text-red-600 dark:text-red-500 font-medium">Absent</p>
-          </div>
-          <div className="bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-900/30 dark:to-yellow-900/30 rounded-xl p-3 text-center ring-1 ring-amber-100 dark:ring-amber-800/50">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center mx-auto shadow-sm">
-              <MdAccessTime className="text-lg text-white" />
-            </div>
-            <p className="text-xl font-bold text-amber-700 dark:text-amber-400 mt-2">{summaryStats.lateIn}</p>
-            <p className="text-xs text-amber-600 dark:text-amber-500 font-medium">Late In</p>
-          </div>
-          <div className="bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-900/30 dark:to-amber-900/30 rounded-xl p-3 text-center ring-1 ring-orange-100 dark:ring-orange-800/50">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center mx-auto shadow-sm">
-              <MdLogout className="text-lg text-white" />
-            </div>
-            <p className="text-xl font-bold text-orange-700 dark:text-orange-400 mt-2">{summaryStats.earlyOut}</p>
-            <p className="text-xs text-orange-600 dark:text-orange-500 font-medium">Early Out</p>
-          </div>
-          <div className="bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-900/30 dark:to-indigo-900/30 rounded-xl p-3 text-center ring-1 ring-purple-100 dark:ring-purple-800/50">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center mx-auto shadow-sm">
-              <MdGavel className="text-lg text-white" />
-            </div>
-            <p className="text-xl font-bold text-purple-700 dark:text-purple-400 mt-2">{summaryStats.penalty}</p>
-            <p className="text-xs text-purple-600 dark:text-purple-500 font-medium">Penalty</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-12 gap-5 mb-5">
-        <div className="col-span-12 lg:col-span-7">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-                My Timelogs - {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
-              </h3>
-              <div className="flex items-center gap-4 text-xs text-slate-600 dark:text-slate-400">
-                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded bg-emerald-500"></span> Before</span>
-                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded bg-amber-400"></span> Break</span>
-                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded bg-emerald-600"></span> After</span>
-              </div>
-            </div>
-            <div className="h-52">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData} barSize={28}>
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: "#64748B", fontSize: 11 }} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fill: "#64748B", fontSize: 11 }} />
-                  <Tooltip contentStyle={{ backgroundColor: "#fff", border: "1px solid #E2E8F0", borderRadius: "12px", fontSize: "12px" }} />
-                  <Bar dataKey="beforeBreak" stackId="a" fill="#10B981" radius={[0, 0, 0, 0]} />
-                  <Bar dataKey="break" stackId="a" fill="#FBBF24" radius={[0, 0, 0, 0]} />
-                  <Bar dataKey="afterBreak" stackId="a" fill="#059669" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
             </div>
           </div>
         </div>
 
-        <div className="col-span-12 lg:col-span-5">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5 h-full shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Attendance Calendar</h3>
-              <div className="flex items-center gap-1">
-                <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
-                  className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
-                  <span className="text-slate-500 dark:text-slate-400 text-sm">{"<"}</span>
-                </button>
-                <span className="text-xs font-semibold text-slate-600 dark:text-slate-300 min-w-[90px] text-center">
-                  {monthNames[currentMonth.getMonth()].slice(0, 3)} {currentMonth.getFullYear()}
-                </span>
-                <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
-                  className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
-                  <span className="text-slate-500 dark:text-slate-400 text-sm">{">"}</span>
-                </button>
-              </div>
-            </div>
-            <div className="grid grid-cols-7 gap-1">
-              {weekDays.map((day) => (
-                <div key={day} className="text-center text-[10px] font-semibold text-indigo-400 dark:text-indigo-500 py-1">{day}</div>
-              ))}
-              {getDaysInMonth(currentMonth).map((date, index) => {
-                if (!date) return <div key={`empty-${index}`} className="aspect-square"></div>;
-                return (
-                  <div key={date.toISOString()}
-                    className={`aspect-square flex items-center justify-center rounded-xl text-xs font-medium transition-all ${
-                      isToday(date) ? "bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-200 dark:shadow-indigo-900" : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
-                    }`}>
-                    {date.getDate()}
+        {/* Alerts and Quick Links */}
+        <div className="grid grid-cols-12 gap-4">
+          <div className="col-span-12 md:col-span-6">
+            <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-3 shadow-sm hover:shadow-md transition-shadow">
+              <h3 className="text-xs font-semibold text-slate-700 dark:text-slate-200 mb-2">Alerts</h3>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 p-2 bg-gradient-to-r from-emerald-50 to-transparent dark:from-emerald-900/20 dark:to-transparent rounded-lg">
+                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center">
+                    <MdCheckCircle className="text-sm text-white" />
                   </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-12 gap-5">
-        <div className="col-span-12 md:col-span-6">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm hover:shadow-md transition-shadow">
-            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-4">Alerts</h3>
-            <div className="space-y-3">
-              <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-emerald-50 to-transparent dark:from-emerald-900/20 dark:to-transparent rounded-xl">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-sm">
-                  <MdCheckCircle className="text-lg text-white" />
+                  <div className="flex-1">
+                    <p className="text-xs font-semibold text-slate-900 dark:text-white">Early Out</p>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400">No early out this month</p>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <p className="text-sm font-semibold text-slate-900 dark:text-white">Early Out</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">No early out this month</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-emerald-50 to-transparent dark:from-emerald-900/20 dark:to-transparent rounded-xl">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-sm">
-                  <MdCheckCircle className="text-lg text-white" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-semibold text-slate-900 dark:text-white">Late Arrivals</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">No late arrivals this month</p>
+                <div className="flex items-center gap-2 p-2 bg-gradient-to-r from-emerald-50 to-transparent dark:from-emerald-900/20 dark:to-transparent rounded-lg">
+                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center">
+                    <MdCheckCircle className="text-sm text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs font-semibold text-slate-900 dark:text-white">Late Arrivals</p>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400">No late arrivals this month</p>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <div className="col-span-12 md:col-span-6">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm hover:shadow-md transition-shadow">
-            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-4">Quick Links</h3>
-            <div className="grid grid-cols-2 gap-3">
-              <button onClick={() => router.push(ROUTES.EMPLOYEE.LEAVE.BASE)}
-                className="flex items-center gap-2 p-3 bg-gradient-to-r from-indigo-50 to-transparent dark:from-indigo-900/20 dark:to-transparent rounded-xl hover:from-indigo-100 dark:hover:from-indigo-900/40 transition-all group">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow">
-                  <MdEventNote className="text-lg text-white" />
-                </div>
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Apply Leave</span>
-              </button>
-              <button onClick={() => router.push(ROUTES.EMPLOYEE.HOLIDAYS)}
-                className="flex items-center gap-2 p-3 bg-gradient-to-r from-purple-50 to-transparent dark:from-purple-900/20 dark:to-transparent rounded-xl hover:from-purple-100 dark:hover:from-purple-900/40 transition-all group">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow">
-                  <MdBeachAccess className="text-lg text-white" />
-                </div>
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Holidays</span>
-              </button>
-              <button onClick={() => router.push(ROUTES.EMPLOYEE.OVERTIME)}
-                className="flex items-center gap-2 p-3 bg-gradient-to-r from-amber-50 to-transparent dark:from-amber-900/20 dark:to-transparent rounded-xl hover:from-amber-100 dark:hover:from-amber-900/40 transition-all group">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow">
-                  <MdMoreTime className="text-lg text-white" />
-                </div>
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Overtime</span>
-              </button>
-              <button onClick={() => router.push(ROUTES.EMPLOYEE.HELP)}
-                className="flex items-center gap-2 p-3 bg-gradient-to-r from-blue-50 to-transparent dark:from-blue-900/20 dark:to-transparent rounded-xl hover:from-blue-100 dark:hover:from-blue-900/40 transition-all group">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow">
-                  <MdHelp className="text-lg text-white" />
-                </div>
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Help Desk</span>
-              </button>
+          <div className="col-span-12 md:col-span-6">
+            <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-3 shadow-sm hover:shadow-md transition-shadow">
+              <h3 className="text-xs font-semibold text-slate-700 dark:text-slate-200 mb-2">Quick Links</h3>
+              <div className="grid grid-cols-2 gap-2">
+                <button onClick={() => router.push(ROUTES.EMPLOYEE.LEAVE.BASE)}
+                  className="flex items-center gap-1.5 p-2 bg-gradient-to-r from-indigo-50 to-transparent dark:from-indigo-900/20 dark:to-transparent rounded-lg hover:from-indigo-100 transition-all">
+                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center">
+                    <MdEventNote className="text-sm text-white" />
+                  </div>
+                  <span className="text-xs font-medium text-slate-700 dark:text-slate-200">Leave</span>
+                </button>
+                <button onClick={() => router.push(ROUTES.EMPLOYEE.HOLIDAYS)}
+                  className="flex items-center gap-1.5 p-2 bg-gradient-to-r from-purple-50 to-transparent dark:from-purple-900/20 dark:to-transparent rounded-lg hover:from-purple-100 transition-all">
+                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center">
+                    <MdBeachAccess className="text-sm text-white" />
+                  </div>
+                  <span className="text-xs font-medium text-slate-700 dark:text-slate-200">Holidays</span>
+                </button>
+                <button onClick={() => router.push(ROUTES.EMPLOYEE.OVERTIME)}
+                  className="flex items-center gap-1.5 p-2 bg-gradient-to-r from-amber-50 to-transparent dark:from-amber-900/20 dark:to-transparent rounded-lg hover:from-amber-100 transition-all">
+                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center">
+                    <MdMoreTime className="text-sm text-white" />
+                  </div>
+                  <span className="text-xs font-medium text-slate-700 dark:text-slate-200">Overtime</span>
+                </button>
+                <button onClick={() => router.push(ROUTES.EMPLOYEE.HELP)}
+                  className="flex items-center gap-1.5 p-2 bg-gradient-to-r from-blue-50 to-transparent dark:from-blue-900/20 dark:to-transparent rounded-lg hover:from-blue-100 transition-all">
+                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+                    <MdHelp className="text-sm text-white" />
+                  </div>
+                  <span className="text-xs font-medium text-slate-700 dark:text-slate-200">Help</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <div className="mt-5 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm hover:shadow-md transition-shadow">
-        <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-4">Notice Board</h3>
-        <div className="flex flex-col items-center justify-center py-8">
-          <div className="w-16 h-16 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-600 rounded-2xl flex items-center justify-center">
-            <MdToday className="text-2xl text-slate-400 dark:text-slate-500" />
+        {/* Notice Board */}
+        <div className="mt-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-3 shadow-sm hover:shadow-md transition-shadow">
+          <h3 className="text-xs font-semibold text-slate-700 dark:text-slate-200 mb-2">Notice Board</h3>
+          <div className="flex flex-col items-center justify-center py-4">
+            <div className="w-10 h-10 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-600 rounded-xl flex items-center justify-center">
+              <MdToday className="text-xl text-slate-400 dark:text-slate-500" />
+            </div>
+            <p className="text-xs font-semibold text-slate-600 dark:text-slate-300 mt-2">No Notice Found</p>
+            <p className="text-[10px] text-slate-400 dark:text-slate-500">New notices will appear here</p>
           </div>
-          <p className="text-sm font-semibold text-slate-600 dark:text-slate-300 mt-4">No Notice Found</p>
-          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">New notices will appear here</p>
         </div>
-      </div>
 
-      {/* Remarks Modal */}
-      {showRemarksModal && (
-        <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-[9999]">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-md mx-4 shadow-2xl border border-slate-200 dark:border-slate-700">
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
-              {modalType === "clockIn" && "Clock In"}
-              {modalType === "clockOut" && "Clock Out"}
-              {modalType === "breakStart" && "Break Start"}
-              {modalType === "breakEnd" && "Break End"}
-            </h3>
-            <textarea
-              value={remarks}
-              onChange={(e) => setRemarks(e.target.value)}
-              placeholder="Enter remarks (optional)..."
-              className="w-full px-4 py-3 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              rows={4}
-            />
-            <div className="flex justify-end gap-3 mt-4">
-              <button
-                onClick={() => setShowRemarksModal(false)}
-                className="px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleModalSubmit}
-                disabled={actionLoading}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-400"
-              >
-                {actionLoading ? "Processing..." : "Submit"}
-              </button>
+        {/* Remarks Modal */}
+        {showRemarksModal && (
+          <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-[9999]">
+            <div className="bg-white dark:bg-slate-800 rounded-xl p-4 w-full max-w-sm mx-3 shadow-2xl border border-slate-200 dark:border-slate-700">
+              <h3 className="text-base font-semibold text-slate-900 dark:text-white mb-3">
+                {modalType === "clockIn" && "Clock In"}
+                {modalType === "clockOut" && "Clock Out"}
+                {modalType === "breakStart" && "Break Start"}
+                {modalType === "breakEnd" && "Break End"}
+              </h3>
+              <textarea
+                value={remarks}
+                onChange={(e) => setRemarks(e.target.value)}
+                placeholder="Enter remarks (optional)..."
+                className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                rows={3}
+              />
+              <div className="flex justify-end gap-2 mt-3">
+                <button
+                  onClick={() => setShowRemarksModal(false)}
+                  className="px-3 py-1.5 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-sm hover:bg-slate-200 dark:hover:bg-slate-600"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleModalSubmit}
+                  disabled={actionLoading}
+                  className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:bg-blue-400"
+                >
+                  {actionLoading ? "..." : "Submit"}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
-    </>
+        )}
+      </div>
+    </div>
   );
 }
 

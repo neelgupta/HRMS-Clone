@@ -180,6 +180,7 @@ export function EmployeeLayout({ children, title, subtitle }: EmployeeLayoutProp
         mobileOpen={mobileOpen}
         onClose={() => setMobileOpen(false)}
         userName={fullName}
+        userPhoto={profile?.employee?.photoUrl || null}
       />
 
       <div className="lg:pl-[292px]">
@@ -187,6 +188,7 @@ export function EmployeeLayout({ children, title, subtitle }: EmployeeLayoutProp
           userName={fullName}
           userInitials={initials}
           designation={profile?.employee?.designation || "Employee"}
+          photoUrl={profile?.employee?.photoUrl || null}
           onLogout={handleLogout}
           notificationCount={notificationCount}
           notifications={recentNotifications}

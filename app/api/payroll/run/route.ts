@@ -3,6 +3,9 @@ import { requireAuth } from "@/lib/rbac";
 import { getErrorResponse } from "@/lib/api-response";
 import { runPayroll, getPayrollSettings, lockPayroll } from "@/lib/server/payroll";
 
+const PrismaClient = require("@prisma/client").PrismaClient;
+const prisma = new PrismaClient();
+
 // POST /api/payroll/run - Run payroll for a month
 export async function POST(request: NextRequest) {
   const authResult = await requireAuth(request);
@@ -60,7 +63,6 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const { prisma } = await import("@/lib/prisma");
     const { searchParams } = request.nextUrl;
     const month = parseInt(searchParams.get("month") || "");
     const year = parseInt(searchParams.get("year") || "");

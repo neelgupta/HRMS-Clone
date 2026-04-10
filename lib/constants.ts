@@ -34,12 +34,25 @@ export const ROUTES = {
     },
     HOLIDAYS: "/hr/holidays",
     SHIFTS: "/hr/shifts",
+    PAYROLL: {
+      BASE: "/hr/payroll",
+      LIST: "/hr/payroll",
+      RUN: "/hr/payroll/run",
+      SETTINGS: "/hr/payroll/settings",
+      
+      COMPONENTS: "/hr/payroll/components",
+      SALARY_STRUCTURE: "/hr/payroll/salary-structure",
+      LOANS: "/hr/payroll/loans",
+      REIMBURSEMENTS: "/hr/payroll/reimbursements",
+      REPORTS: "/hr/payroll/reports",
+    },
   },
   EMPLOYEE: {
     BASE: "/employee",
     DASHBOARD: "/employee",
     PROFILE: "/employee/profile",
     ATTENDANCE: "/employee/attendance",
+    SALARY: "/employee/salary",
     LEAVE: {
       BASE: "/employee/leave",
       APPLY: "/employee/leave",

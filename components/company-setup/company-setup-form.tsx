@@ -389,7 +389,7 @@ export function CompanySetupForm() {
                 >
                   <TextInput
                     {...register("primaryPhone")}
-                    placeholder="+91 98765 43210"
+                    placeholder="98765 43210"
                   />
                 </FormField>
                 <FormField label="Website" error={errors.website?.message}>
