@@ -54,8 +54,14 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   }
 
   try {
-    const body = await request.json();
-    const parsed = updateEmployeeSchema.parse(body);
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ message: "Invalid JSON body." }, { status: 400 });
+    }
+
+    const parsed = updateEmployeeSchema.omit({ id: true }).parse(body);
 
     const existing = await getEmployeeById(companyId, id);
     if (!existing) {
@@ -64,7 +70,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     if (parsed.email && parsed.email !== existing.email) {
       const emailExists = await prisma.employee.findFirst({
-        where: { companyId, email: parsed.email.toLowerCase(), id: { not: id } },
+        // Email is globally unique in the DB schema, so don't scope this check to companyId.
+        where: { email: parsed.email.toLowerCase(), id: { not: id } },
       });
       if (emailExists) {
         return NextResponse.json({ message: "An employee with this email already exists." }, { status: 409 });

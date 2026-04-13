@@ -57,6 +57,34 @@ export async function fetchCompanySetup() {
   return parseJson<CompanyResponse>(response);
 }
 
+export type CompanySummary = {
+  company: {
+    id: string;
+    name: string;
+    logoUrl: string | null;
+    primaryPhone: string | null;
+    addresses: Array<{
+      addressLine1: string;
+      addressLine2: string | null;
+      city: string;
+      state: string;
+      country: string;
+      pincode: string;
+    }>;
+  };
+};
+
+export async function fetchCompanySummary() {
+  const response = await fetch("/api/company/summary", { credentials: "include" });
+
+  if (!response.ok) {
+    const data = await parseJson<ApiErrorResponse | {}>(response).catch(() => ({}));
+    throw new Error("message" in data ? data.message : "Could not load company details.");
+  }
+
+  return parseJson<CompanySummary>(response);
+}
+
 export async function saveCompanySetup(values: CompanySetupInput, companyExists: boolean) {
   const response = await fetch(companyExists ? "/api/company/update" : "/api/company/create", {
     method: companyExists ? "PUT" : "POST",

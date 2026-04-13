@@ -28,6 +28,7 @@ export type EmployeeDetail = EmployeeListItem & {
   dateOfLeaving: string | null;
   photoUrl: string | null;
   reportingManagerId: string | null;
+  basicSalary: number | null;
   emergencyContactName: string | null;
   emergencyContactPhone: string | null;
   emergencyContactRelation: string | null;

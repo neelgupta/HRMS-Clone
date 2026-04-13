@@ -19,6 +19,46 @@ import type {
 } from "@prisma/client";
 import { v4 as uuidv4 } from "uuid";
 
+function normalizeToken(value: string | null | undefined): string {
+  return String(value ?? "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function tokenList(value: string | null | undefined): string[] {
+  const normalized = normalizeToken(value);
+  return normalized ? normalized.split(" ") : [];
+}
+
+function isUnplannedLeaveType(params: { name?: string | null; code?: string | null }): boolean {
+  const name = normalizeToken(params.name);
+  const code = normalizeToken(params.code);
+  const nameTokens = tokenList(params.name);
+  const codeTokens = tokenList(params.code);
+  return (
+    name.includes("unplan") ||
+    name.includes("unplai") ||
+    name.includes("unpla") ||
+    code.includes("unplan") ||
+    code.includes("unplai") ||
+    code.includes("unpla") ||
+    nameTokens.includes("unplanned") ||
+    codeTokens.includes("unplanned") ||
+    (nameTokens.includes("un") && (nameTokens.includes("planned") || nameTokens.includes("plan"))) ||
+    (codeTokens.includes("un") && (codeTokens.includes("planned") || codeTokens.includes("plan")))
+  );
+}
+
+function isPaidLeaveType(params: { name?: string | null; code?: string | null; type?: LeaveCategory | null }): boolean {
+  const nameTokens = tokenList(params.name);
+  const codeTokens = tokenList(params.code);
+  if (params.type === "UNPAID") return false;
+  if (nameTokens.includes("unpaid")) return false;
+  if (codeTokens.includes("unpaid")) return false;
+  return nameTokens.includes("paid") || codeTokens.includes("paid");
+}
+
 export type LeaveApplicationWithRelations = LeaveApplication & {
   employee: {
     id: string;
@@ -293,6 +333,55 @@ export async function processMonthlyAccrual(companyId: string, month: number, ye
   }
 }
 
+export async function ensureEmployeePaidLeaveBalance(companyId: string, employeeId: string, year: number) {
+  const configs = await prisma.leaveTypeConfig.findMany({
+    where: { companyId, isActive: true },
+    select: { id: true, name: true, code: true, type: true },
+  });
+
+  const paidConfigs = configs.filter((c) => isPaidLeaveType({ name: c.name, code: c.code, type: c.type }));
+  if (paidConfigs.length === 0) return;
+
+  await Promise.all(
+    paidConfigs.map(async (config) => {
+      const existing = await prisma.leaveBalance.findFirst({
+        where: { employeeId, year, leaveTypeId: config.id },
+      });
+
+      if (!existing) {
+        await prisma.leaveBalance.create({
+          data: {
+            employeeId,
+            companyId,
+            leaveTypeId: config.id,
+            year,
+            month: null,
+            allocatedDays: 1,
+            accruedDays: 0,
+            carriedForward: 0,
+            usedDays: 0,
+            pendingDays: 0,
+            availableDays: 1,
+            encashedDays: 0,
+            expiredDays: 0,
+          },
+        });
+        return;
+      }
+
+      if (existing.allocatedDays >= 1) return;
+
+      const allocatedDays = 1;
+      const availableDays = allocatedDays + existing.accruedDays + existing.carriedForward - existing.usedDays - existing.pendingDays;
+
+      await prisma.leaveBalance.update({
+        where: { id: existing.id },
+        data: { allocatedDays, availableDays },
+      });
+    }),
+  );
+}
+
 // ========================================
 // LEAVE APPLICATION
 // ========================================
@@ -372,12 +461,45 @@ export async function createLeaveApplication(
 
   const employee = await prisma.employee.findUnique({
     where: { id: employeeId },
-    select: { reportingManagerId: true },
+    select: { reportingManagerId: true, employmentStatus: true },
   });
 
   const policy = await prisma.leavePolicy.findUnique({
     where: { companyId },
   });
+
+  const isUnplanned = isUnplannedLeaveType({ name: leaveType.name, code: leaveType.code });
+  const isPaid = isPaidLeaveType({ name: leaveType.name, code: leaveType.code, type: leaveType.type });
+
+  if (employee?.employmentStatus === "PROBATION") {
+    const allowed = leaveType.type === "UNPAID" || isUnplanned;
+    if (!allowed) throw new Error("During probation, you can only apply for Unpaid/Unplanned leave.");
+  }
+
+  if (isPaid) {
+    const year = data.startDate.getFullYear();
+    const yearStart = new Date(year, 0, 1);
+    const yearEnd = new Date(year, 11, 31);
+
+    const existing = await prisma.leaveApplication.aggregate({
+      where: {
+        companyId,
+        employeeId,
+        leaveTypeId: data.leaveTypeId,
+        isCancelled: false,
+        status: { notIn: ["REJECTED", "CANCELLED"] },
+        startDate: { gte: yearStart, lte: yearEnd },
+      },
+      _sum: { totalDays: true },
+    });
+
+    const usedOrPending = existing._sum.totalDays ?? 0;
+    if (usedOrPending + totalDays > 1) {
+      throw new Error("Paid leave limit exceeded. Each employee can take only 1 paid leave per year.");
+    }
+
+    await ensureEmployeePaidLeaveBalance(companyId, employeeId, year);
+  }
 
   const application = await prisma.leaveApplication.create({
     data: {

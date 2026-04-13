@@ -36,6 +36,7 @@ export type AttendanceListItem = {
   date: string;
   clockIn: string | null;
   clockOut: string | null;
+  totalBreakMins: number | null;
   totalHours: number | null;
   overtimeHours: number | null;
   status: string;
@@ -75,6 +76,47 @@ export type AttendanceSummary = {
   totalHoliday: number;
   totalWeekOff: number;
   totalOvertimeHours: number;
+};
+
+export type EmployeeAttendanceDashboard = {
+  month: string;
+  dateFrom: string;
+  dateTo: string;
+  summary: {
+    present: number;
+    absent: number;
+    lateIn: number;
+    earlyOut: number;
+    halfDay: number;
+    penalty: number;
+  };
+  timelogs: Array<{
+    name: string;
+    date: string; // YYYY-MM-DD
+    day: string; // Mon/Tue/...
+    beforeBreak: number;
+    break: number;
+    afterBreak: number;
+    times: {
+      clockIn: string | null;
+      breakStart: string | null;
+      breakEnd: string | null;
+      clockOut: string | null;
+    };
+    durationsMins: {
+      beforeBreak: number;
+      break: number;
+      afterBreak: number;
+      total: number;
+    };
+  }>;
+  alerts: {
+    earlyOut: number;
+    lateArrivals: number;
+    halfDays: number;
+    maxLateArrivalsAllowed: number;
+    remainingLateAllowed: number;
+  };
 };
 
 type ApiResponse<T> = {
@@ -266,11 +308,23 @@ export async function manualAttendance(
   }
 }
 
+let todayAttendanceCache: { data: any; timestamp: number } | null = null;
+const ATTENDANCE_CACHE_DURATION = 5000;
+
+export function clearTodayAttendanceCache() {
+  todayAttendanceCache = null;
+}
+
 export async function fetchTodayAttendance(): Promise<ApiResponse<{
   attendance: AttendanceDetail | null;
   shift: ShiftListItem | null;
   currentTime: string;
 }>> {
+  const now = Date.now();
+  if (todayAttendanceCache && now - todayAttendanceCache.timestamp < ATTENDANCE_CACHE_DURATION) {
+    return { data: todayAttendanceCache.data };
+  }
+
   try {
     const response = await fetch("/api/attendance/today");
 
@@ -285,6 +339,7 @@ export async function fetchTodayAttendance(): Promise<ApiResponse<{
       currentTime: string;
     }>(response);
 
+    todayAttendanceCache = { data: result, timestamp: now };
     return { data: result };
   } catch {
     return { error: "Something went wrong. Please try again." };
@@ -305,9 +360,10 @@ export async function clockIn(values: ClockInInput): Promise<ApiResponse<{ atten
     }
 
     const result = await parseJson<{ attendance: AttendanceDetail }>(response);
+    clearTodayAttendanceCache();
     return { data: result };
   } catch {
-    return { error: "Something went wrong. Please try again." };
+    return { error: "Failed to clock in." };
   }
 }
 
@@ -325,6 +381,7 @@ export async function clockOut(values: ClockOutInput): Promise<ApiResponse<{ att
     }
 
     const result = await parseJson<{ attendance: AttendanceDetail }>(response);
+    clearTodayAttendanceCache();
     return { data: result };
   } catch {
     return { error: "Something went wrong. Please try again." };
@@ -348,6 +405,27 @@ export async function fetchAttendanceSummary(
     }
 
     const result = await parseJson<AttendanceSummary>(response);
+    return { data: result };
+  } catch {
+    return { error: "Something went wrong. Please try again." };
+  }
+}
+
+export async function fetchEmployeeAttendanceDashboard(
+  month: string
+): Promise<ApiResponse<EmployeeAttendanceDashboard>> {
+  try {
+    const searchParams = new URLSearchParams();
+    if (month) searchParams.set("month", month);
+
+    const response = await fetch(`/api/attendance/dashboard?${searchParams.toString()}`);
+
+    if (!response.ok) {
+      const data = await parseJson<{ message?: string }>(response);
+      return { error: data.message || "Failed to fetch dashboard attendance." };
+    }
+
+    const result = await parseJson<EmployeeAttendanceDashboard>(response);
     return { data: result };
   } catch {
     return { error: "Something went wrong. Please try again." };
@@ -448,6 +526,7 @@ export async function breakStart(values: BreakStartInput): Promise<ApiResponse<{
     }
 
     const result = await parseJson<{ attendance: AttendanceDetail }>(response);
+    clearTodayAttendanceCache();
     return { data: result };
   } catch {
     return { error: "Something went wrong. Please try again." };
@@ -468,6 +547,7 @@ export async function breakEnd(values: BreakEndInput): Promise<ApiResponse<{ att
     }
 
     const result = await parseJson<{ attendance: AttendanceDetail }>(response);
+    clearTodayAttendanceCache();
     return { data: result };
   } catch {
     return { error: "Something went wrong. Please try again." };

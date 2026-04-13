@@ -39,6 +39,7 @@ export type AttendanceListItem = {
   date: Date;
   clockIn: Date | null;
   clockOut: Date | null;
+  totalBreakMins: number | null;
   totalHours: number | null;
   overtimeHours: number | null;
   status: string;
@@ -329,10 +330,21 @@ export async function getEmployeeShift(
   });
 
   if (!assignment) {
-    const defaultShift = await prisma.shift.findFirst({
-      where: { companyId: undefined, isActive: true },
+    const employee = await prisma.employee.findUnique({
+      where: { id: employeeId },
+      select: { companyId: true },
     });
-    return { shift: defaultShift, assignment: null };
+
+    if (!employee) {
+      return { shift: null, assignment: null };
+    }
+
+    const defaultShift = await prisma.shift.findFirst({
+      where: { companyId: employee.companyId, isActive: true },
+      orderBy: { createdAt: "asc" },
+    });
+
+    return { shift: (defaultShift as ShiftListItem | null) ?? null, assignment: null };
   }
 
   return {
@@ -341,13 +353,71 @@ export async function getEmployeeShift(
   };
 }
 
+function parseTimeToMinutes(time: string): number {
+  const [h, m] = time.split(":").map((v) => Number(v));
+  return h * 60 + m;
+}
+
+function dateOnlyUtc(date: Date): Date {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+}
+
+function dateOnlyUtcFromYmd(ymd: string): Date {
+  const [year, month, day] = ymd.split("-").map((value) => Number(value));
+  if (!year || !month || !day) {
+    throw new Error("Invalid date format. Expected YYYY-MM-DD.");
+  }
+  return new Date(Date.UTC(year, month - 1, day));
+}
+
+function getShiftWindow(params: {
+  date: Date;
+  shift: { startTime: string; endTime: string; isNightShift?: boolean | null };
+}): { start: Date; end: Date; durationHours: number } {
+  const base = new Date(params.date);
+  base.setHours(0, 0, 0, 0);
+
+  const startMinutes = parseTimeToMinutes(params.shift.startTime);
+  const endMinutes = parseTimeToMinutes(params.shift.endTime);
+
+  const start = new Date(base.getTime() + startMinutes * 60_000);
+  let end = new Date(base.getTime() + endMinutes * 60_000);
+
+  const crossesMidnight =
+    params.shift.isNightShift === true || endMinutes <= startMinutes;
+  if (crossesMidnight) {
+    end = new Date(end.getTime() + 24 * 60 * 60_000);
+  }
+
+  const durationHours = Math.max(0, (end.getTime() - start.getTime()) / (1000 * 60 * 60));
+  return { start, end, durationHours };
+}
+
+function roundHours(value: number): number {
+  // Keep more precision so the timelog chart shows activity immediately after clock-in.
+  // Example: 1 minute ≈ 0.02 hours (would become 0.0 if rounded to 0.1).
+  const rounded = Math.round(value * 100) / 100;
+  if (value > 0 && rounded === 0) return 0.01;
+  return rounded;
+}
+
+function formatDateYmd(date: Date): string {
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function diffMins(start: Date, end: Date): number {
+  return Math.max(0, Math.round((end.getTime() - start.getTime()) / (1000 * 60)));
+}
+
 export async function clockIn(
   companyId: string,
   employeeId: string,
   input: ClockInInput
 ): Promise<{ attendance: AttendanceDetail }> {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const today = dateOnlyUtc(new Date());
 
   const existing = await prisma.attendance.findFirst({
     where: { employeeId, date: today },
@@ -362,10 +432,11 @@ export async function clockIn(
   let remarks = input.remarks;
 
   if (shift) {
-    const shiftStartTime = parseInt(shift.startTime.split(":")[0]) * 60 + parseInt(shift.startTime.split(":")[1]);
-    const clockInTime = today.getHours() * 60 + today.getMinutes();
+    const now = new Date();
+    const { start: shiftStart } = getShiftWindow({ date: today, shift });
+    const latestOnTime = new Date(shiftStart.getTime() + shift.gracePeriodMins * 60_000);
 
-    if (clockInTime > shiftStartTime + shift.gracePeriodMins) {
+    if (now.getTime() > latestOnTime.getTime()) {
       status = "LATE";
       remarks = remarks || "Late arrival";
     }
@@ -430,8 +501,7 @@ export async function clockOut(
   employeeId: string,
   input: ClockOutInput
 ): Promise<{ attendance: AttendanceDetail }> {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const today = dateOnlyUtc(new Date());
 
   const existing = await prisma.attendance.findFirst({
     where: { employeeId, date: today },
@@ -456,15 +526,20 @@ export async function clockOut(
   totalHours = Math.max(0, totalHours);
 
   let overtimeHours = 0;
-  if (existing.shift) {
-    const shift = existing.shift;
-    const shiftHours = (parseInt(shift.endTime.split(":")[0]) * 60 + parseInt(shift.endTime.split(":")[1])) -
-      (parseInt(shift.startTime.split(":")[0]) * 60 + parseInt(shift.startTime.split(":")[1]));
-    const expectedHours = shiftHours / 60;
+  const expectedHours = existing.shift
+    ? getShiftWindow({ date: existing.date, shift: existing.shift }).durationHours
+    : null;
 
-    if (totalHours > expectedHours) {
-      overtimeHours = totalHours - expectedHours;
-    }
+  if (expectedHours !== null && totalHours > expectedHours) {
+    overtimeHours = totalHours - expectedHours;
+  }
+
+  // Update status based on working hours thresholds (shift-specific, with sane defaults).
+  let nextStatus: AttendanceStatus = existing.status;
+  const minWorkingHours = existing.shift?.minWorkingHours ?? 8;
+
+  if (totalHours > 0 && totalHours < minWorkingHours) {
+    nextStatus = "HALF_DAY";
   }
 
   const attendance = await prisma.attendance.update({
@@ -476,6 +551,7 @@ export async function clockOut(
       clockOutPhoto: input.clockOutPhoto,
       totalHours,
       overtimeHours,
+      status: nextStatus,
       remarks: input.remarks || existing.remarks,
     },
     include: {
@@ -524,8 +600,7 @@ export async function breakStart(
   employeeId: string,
   input: { remarks?: string }
 ): Promise<{ attendance: AttendanceDetail }> {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const today = dateOnlyUtc(new Date());
 
   const existing = await prisma.attendance.findFirst({
     where: { employeeId, date: today },
@@ -535,18 +610,20 @@ export async function breakStart(
     throw new Error("No attendance record found for today. Please clock in first.");
   }
 
-  if (existing.breakStart && !existing.breakEnd) {
-    throw new Error("Already on break. Please end break first.");
+  if (existing.clockOut) {
+    throw new Error("You are already clocked out for today.");
   }
 
-  if (existing.breakStart && existing.breakEnd) {
-    throw new Error("Break already completed for today.");
+  if (existing.breakStart && !existing.breakEnd) {
+    throw new Error("Already on break. Please end break first.");
   }
 
   const attendance = await prisma.attendance.update({
     where: { id: existing.id },
     data: {
       breakStart: new Date(),
+      // Support multiple breaks by clearing breakEnd and accumulating totalBreakMins on every break end.
+      breakEnd: null,
       remarks: input.remarks || existing.remarks,
     },
     include: {
@@ -595,8 +672,7 @@ export async function breakEnd(
   employeeId: string,
   input: { remarks?: string }
 ): Promise<{ attendance: AttendanceDetail }> {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const today = dateOnlyUtc(new Date());
 
   const existing = await prisma.attendance.findFirst({
     where: { employeeId, date: today },
@@ -616,12 +692,13 @@ export async function breakEnd(
 
   const breakEndTime = new Date();
   const breakMins = Math.round((breakEndTime.getTime() - existing.breakStart.getTime()) / (1000 * 60));
+  const totalBreakMins = (existing.totalBreakMins ?? 0) + Math.max(0, breakMins);
 
   const attendance = await prisma.attendance.update({
     where: { id: existing.id },
     data: {
       breakEnd: breakEndTime,
-      totalBreakMins: breakMins,
+      totalBreakMins,
       remarks: input.remarks || existing.remarks,
     },
     include: {
@@ -668,8 +745,7 @@ export async function breakEnd(
 export async function getTodayAttendance(
   employeeId: string
 ): Promise<AttendanceDetail | null> {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const today = dateOnlyUtc(new Date());
 
   const attendance = await prisma.attendance.findFirst({
     where: { employeeId, date: today },
@@ -720,11 +796,13 @@ export async function listAttendances(
   companyId: string,
   input: AttendanceSearchInput
 ): Promise<ListAttendancesResult> {
+  const buildDateOnly = (dateStr: string) => dateOnlyUtcFromYmd(dateStr);
+
   const where: Prisma.AttendanceWhereInput = {
     companyId,
     ...(input.employeeId && { employeeId: input.employeeId }),
-    ...(input.dateFrom && { date: { gte: new Date(input.dateFrom) } }),
-    ...(input.dateTo && { date: { lte: new Date(input.dateTo) } }),
+    ...(input.dateFrom && { date: { gte: buildDateOnly(input.dateFrom) } }),
+    ...(input.dateTo && { date: { lte: buildDateOnly(input.dateTo) } }),
     ...(input.status && { status: input.status as AttendanceStatus }),
     ...(input.department && {
       employee: { department: { name: { contains: input.department, mode: "insensitive" } } },
@@ -776,6 +854,7 @@ export async function listAttendances(
       date: a.date,
       clockIn: a.clockIn,
       clockOut: a.clockOut,
+      totalBreakMins: a.totalBreakMins,
       totalHours: a.totalHours,
       overtimeHours: a.overtimeHours,
       status: a.status,
@@ -850,8 +929,7 @@ export async function manualAttendance(
     throw new Error("Employee not found");
   }
 
-  const date = new Date(input.date);
-  date.setHours(0, 0, 0, 0);
+  const date = dateOnlyUtc(new Date(input.date));
 
   const existing = await prisma.attendance.findFirst({
     where: { employeeId: input.employeeId, date },
@@ -915,6 +993,295 @@ export async function manualAttendance(
       totalBreakMins: attendance.totalBreakMins,
       remarks: attendance.remarks,
       regularizations: [],
+    },
+  };
+}
+
+export type EmployeeAttendanceDashboard = {
+  month: string; // YYYY-MM
+  dateFrom: string;
+  dateTo: string;
+  summary: {
+    present: number;
+    absent: number;
+    lateIn: number;
+    earlyOut: number;
+    halfDay: number;
+    penalty: number;
+  };
+  timelogs: Array<{
+    // X-axis label in UI (date label like "13 Apr")
+    name: string;
+    // Calendar date for this entry (YYYY-MM-DD)
+    date: string;
+    // Weekday (Mon/Tue/...)
+    day: string;
+    beforeBreak: number;
+    break: number;
+    afterBreak: number;
+    times: {
+      clockIn: string | null;
+      breakStart: string | null;
+      breakEnd: string | null;
+      clockOut: string | null;
+    };
+    durationsMins: {
+      beforeBreak: number;
+      break: number;
+      afterBreak: number;
+      total: number;
+    };
+  }>;
+  alerts: {
+    earlyOut: number;
+    lateArrivals: number;
+    halfDays: number;
+    maxLateArrivalsAllowed: number;
+    remainingLateAllowed: number;
+  };
+};
+
+export async function getEmployeeAttendanceDashboard(params: {
+  companyId: string;
+  employeeId: string;
+  month?: string; // YYYY-MM
+}): Promise<EmployeeAttendanceDashboard> {
+  const now = new Date();
+  const todayYmd = formatDateYmd(now);
+  const [yearStr, monthStr] = (params.month ?? "").split("-");
+  const year = Number(yearStr) || now.getUTCFullYear();
+  const monthIndex = (Number(monthStr) || now.getUTCMonth() + 1) - 1;
+
+  const monthStart = new Date(Date.UTC(year, monthIndex, 1));
+  const monthEnd = new Date(Date.UTC(year, monthIndex + 1, 0));
+
+  const policy = await prisma.attendancePolicy.findUnique({
+    where: { companyId: params.companyId },
+    select: {
+      earlyDepartureMins: true,
+    },
+  });
+  const earlyDepartureMins = policy?.earlyDepartureMins ?? 0;
+
+  const attendances = await prisma.attendance.findMany({
+    where: {
+      companyId: params.companyId,
+      employeeId: params.employeeId,
+      date: { gte: monthStart, lte: monthEnd },
+    },
+    include: {
+      shift: {
+        select: {
+          startTime: true,
+          endTime: true,
+          gracePeriodMins: true,
+          halfDayHours: true,
+          minWorkingHours: true,
+          isNightShift: true,
+        },
+      },
+    },
+    orderBy: { date: "asc" },
+  });
+
+  const attendanceByDate = new Map<string, (typeof attendances)[number]>();
+  for (const a of attendances) {
+    attendanceByDate.set(formatDateYmd(a.date), a);
+  }
+
+  const isWeekdayUtc = (date: Date) => {
+    const day = date.getUTCDay();
+    return day >= 1 && day <= 5;
+  };
+
+  const computeWorkedHours = (attendance: (typeof attendances)[number]) => {
+    if (!attendance.clockIn || !attendance.clockOut) return null;
+    let hours = (attendance.clockOut.getTime() - attendance.clockIn.getTime()) / (1000 * 60 * 60);
+    if (attendance.totalBreakMins) hours -= attendance.totalBreakMins / 60;
+    return Math.max(0, hours);
+  };
+
+  const rangeEnd =
+    year === now.getUTCFullYear() && monthIndex === now.getUTCMonth()
+      ? dateOnlyUtc(now)
+      : monthEnd;
+
+  let present = 0;
+  let absent = 0;
+
+  for (let cursor = new Date(monthStart); cursor.getTime() <= rangeEnd.getTime(); cursor = new Date(cursor.getTime() + 24 * 60 * 60_000)) {
+    if (!isWeekdayUtc(cursor)) continue;
+    const ymd = formatDateYmd(cursor);
+    const attendance = attendanceByDate.get(ymd);
+
+    if (!attendance) {
+      absent++;
+      continue;
+    }
+
+    if (
+      ymd === todayYmd &&
+      attendance.clockIn &&
+      !attendance.clockOut
+    ) {
+      // Don't count the current in-progress day as absent/present yet.
+      continue;
+    }
+
+    if (attendance.status === "ON_LEAVE" || attendance.status === "HOLIDAY" || attendance.status === "WEEK_OFF") {
+      continue;
+    }
+
+    const requiredHours = attendance.shift?.minWorkingHours ?? 8;
+    const workedHours = attendance.totalHours ?? computeWorkedHours(attendance);
+
+    if (
+      attendance.clockIn &&
+      attendance.clockOut &&
+      workedHours !== null &&
+      workedHours >= requiredHours
+    ) {
+      present++;
+    } else {
+      absent++;
+    }
+  }
+
+  let lateIn = 0;
+  let earlyOut = 0;
+  let halfDay = 0;
+
+  for (const a of attendances) {
+    if (a.shift && a.clockIn) {
+      const { start } = getShiftWindow({ date: a.date, shift: a.shift });
+      const latestOnTime = new Date(start.getTime() + (a.shift.gracePeriodMins ?? 0) * 60_000);
+      if (a.clockIn.getTime() > latestOnTime.getTime()) {
+        lateIn++;
+      }
+    }
+
+    const minWorkingHours = a.shift?.minWorkingHours ?? 8;
+    const halfDayHours = a.shift?.halfDayHours ?? 4;
+    if (a.totalHours !== null && a.totalHours !== undefined) {
+      if (a.totalHours > 0 && a.totalHours < minWorkingHours && a.totalHours >= halfDayHours) {
+        halfDay++;
+      }
+    }
+
+    if (a.shift && a.clockOut) {
+      const { end } = getShiftWindow({ date: a.date, shift: a.shift });
+      const earliestAllowed = new Date(end.getTime() - earlyDepartureMins * 60_000);
+      if (a.clockOut.getTime() < earliestAllowed.getTime()) {
+        earlyOut++;
+      }
+    }
+  }
+
+  const penalty = lateIn + earlyOut;
+
+  // Timelogs chart: show all days in the selected month up to today (for the current month).
+  const timelogs: EmployeeAttendanceDashboard["timelogs"] = [];
+
+  for (let cursor = new Date(monthStart); cursor.getTime() <= rangeEnd.getTime(); cursor = new Date(cursor.getTime() + 24 * 60 * 60_000)) {
+    const date = cursor;
+    const ymd = formatDateYmd(date);
+    const attendance = attendanceByDate.get(ymd);
+
+    const label = date.toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      timeZone: "UTC",
+    });
+
+    const dayName = date.toLocaleDateString("en-US", { weekday: "short", timeZone: "UTC" });
+
+    if (!attendance) {
+      timelogs.push({
+        name: label,
+        date: ymd,
+        day: dayName,
+        beforeBreak: 0,
+        break: 0,
+        afterBreak: 0,
+        times: { clockIn: null, breakStart: null, breakEnd: null, clockOut: null },
+        durationsMins: { beforeBreak: 0, break: 0, afterBreak: 0, total: 0 },
+      });
+      continue;
+    }
+
+    const rawClockIn = attendance.clockIn;
+    const rawClockOut = attendance.clockOut;
+    const breakStart = attendance.breakStart;
+    const breakEnd = attendance.breakEnd;
+
+    const activeClockOut = rawClockOut ?? (ymd === todayYmd && rawClockIn ? new Date() : null);
+
+    if (!rawClockIn || !activeClockOut) {
+      timelogs.push({
+        name: label,
+        date: ymd,
+        day: dayName,
+        beforeBreak: 0,
+        break: 0,
+        afterBreak: 0,
+        times: {
+          clockIn: rawClockIn ? rawClockIn.toISOString() : null,
+          breakStart: breakStart ? breakStart.toISOString() : null,
+          breakEnd: breakEnd ? breakEnd.toISOString() : null,
+          clockOut: rawClockOut ? rawClockOut.toISOString() : null,
+        },
+        durationsMins: { beforeBreak: 0, break: 0, afterBreak: 0, total: 0 },
+      });
+      continue;
+    }
+
+    const clockIn = rawClockIn;
+    const clockOut = activeClockOut;
+
+    // Support multiple breaks by using `totalBreakMins` as the accumulated break time for the day.
+    const baseBreakMins = attendance.totalBreakMins ?? 0;
+    const inProgressBreakMins = breakStart && !breakEnd ? diffMins(breakStart, clockOut) : 0;
+    const breakMins = Math.max(0, baseBreakMins + Math.max(0, inProgressBreakMins));
+
+    const workedMins = Math.max(0, diffMins(clockIn, clockOut) - breakMins);
+
+    timelogs.push({
+      name: label,
+      date: ymd,
+      day: dayName,
+      beforeBreak: roundHours(workedMins / 60),
+      break: roundHours(breakMins / 60),
+      afterBreak: 0,
+      times: {
+        clockIn: rawClockIn.toISOString(),
+        breakStart: breakStart ? breakStart.toISOString() : null,
+        breakEnd: breakEnd ? breakEnd.toISOString() : null,
+        clockOut: rawClockOut ? rawClockOut.toISOString() : null,
+      },
+      durationsMins: {
+        beforeBreak: workedMins,
+        break: breakMins,
+        afterBreak: 0,
+        total: workedMins,
+      },
+    });
+  }
+
+  const maxLateArrivalsAllowed = 3;
+  const remainingLateAllowed = Math.max(0, maxLateArrivalsAllowed - lateIn);
+
+  return {
+    month: `${year}-${String(monthIndex + 1).padStart(2, "0")}`,
+    dateFrom: monthStart.toISOString(),
+    dateTo: monthEnd.toISOString(),
+    summary: { present, absent, lateIn, earlyOut, halfDay, penalty },
+    timelogs,
+    alerts: {
+      earlyOut,
+      lateArrivals: lateIn,
+      halfDays: halfDay,
+      maxLateArrivalsAllowed,
+      remainingLateAllowed,
     },
   };
 }

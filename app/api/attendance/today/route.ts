@@ -23,8 +23,8 @@ export async function GET(request: NextRequest) {
       return Response.json({ message: "Employee not linked to user." }, { status: 400 });
     }
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const now = new Date();
+    const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
 
     const [attendance, shiftResult] = await Promise.all([
       getTodayAttendance(user.employeeId),

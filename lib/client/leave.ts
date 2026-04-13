@@ -362,7 +362,14 @@ export async function getHolidays(year?: number, branchId?: string): Promise<Api
   if (year) params.set("year", String(year));
   if (branchId) params.set("branchId", branchId);
   const res = await fetch(`/api/leave/holidays?${params}`, { credentials: "include" });
-  return res.json();
+  const payload = (await res.json().catch(() => ({}))) as any;
+
+  // Holidays endpoint returns `{ holidays, year }` (not wrapped), but client code expects `ApiResponse`.
+  if (payload && Array.isArray(payload.holidays)) {
+    return { data: { holidays: payload.holidays, year: payload.year ?? year ?? new Date().getFullYear() } };
+  }
+
+  return payload as ApiResponse<{ holidays: Holiday[]; year: number }>;
 }
 
 export async function createHoliday(data: HolidayInput): Promise<ApiResponse<{ holiday: Holiday }>> {

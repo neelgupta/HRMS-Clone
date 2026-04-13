@@ -56,7 +56,7 @@ export function DashboardTopbar({
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
+        {/* <div className="flex flex-wrap items-center gap-3">
           <ThemeToggle />
           
           <button
@@ -101,7 +101,7 @@ export function DashboardTopbar({
               <span className={theme === "dark" ? "text-red-400" : ""}>Logout</span>
             </button>
           ) : null}
-        </div>
+        </div> */}
       </div>
     </header>
   );

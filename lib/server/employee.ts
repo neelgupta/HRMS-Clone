@@ -7,6 +7,7 @@ import type {
 } from "@/lib/validations/employee";
 import { Prisma } from "@prisma/client";
 import { hashPassword } from "@/lib/password";
+import { ApiError } from "@/lib/api-response";
 
 export type EmployeeListItem = {
   id: string;
@@ -31,6 +32,7 @@ export type EmployeeDetail = EmployeeListItem & {
   bloodGroup: string | null;
   dateOfLeaving: Date | null;
   reportingManagerId: string | null;
+  basicSalary: number | null;
 
   emergencyContactName: string | null;
   emergencyContactPhone: string | null;
@@ -116,6 +118,32 @@ type ListEmployeesResult = {
   limit: number;
   totalPages: number;
 };
+
+function parseDateInput(value: string | null | undefined, field: string): Date | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+
+  const ddmmyyyy = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(trimmed);
+  const normalized = ddmmyyyy ? `${ddmmyyyy[3]}-${ddmmyyyy[2]}-${ddmmyyyy[1]}` : trimmed;
+
+  const time = Date.parse(normalized);
+  if (Number.isNaN(time)) {
+    throw new ApiError(400, `Invalid date for ${field}. Use YYYY-MM-DD.`, { field, value });
+  }
+
+  return new Date(time);
+}
+
+function parseRequiredDate(value: string | null | undefined, field: string): Date {
+  const parsed = parseDateInput(value, field);
+  if (!parsed || !(parsed instanceof Date)) {
+    throw new ApiError(400, `Invalid date for ${field}. Use YYYY-MM-DD.`, { field, value });
+  }
+  return parsed;
+}
 
 async function generateEmployeeCode(companyId: string): Promise<string> {
   const prefix = "EMP";
@@ -229,14 +257,14 @@ export async function createEmployee(
         photoUrl: input.photoUrl || null,
         branchId: input.branchId,
         departmentId,
-        designationId,
-        reportingManagerId,
-        dateOfBirth: input.dateOfBirth ? new Date(input.dateOfBirth) : null,
-        gender: input.gender,
-        maritalStatus: input.maritalStatus,
-        bloodGroup: input.bloodGroup,
-        dateOfJoining: input.dateOfJoining ? new Date(input.dateOfJoining) : null,
-        probationEndDate: input.probationEndDate ? new Date(input.probationEndDate) : null,
+      designationId,
+      reportingManagerId,
+      dateOfBirth: parseDateInput(input.dateOfBirth, "dateOfBirth") ?? null,
+      gender: input.gender,
+      maritalStatus: input.maritalStatus,
+      bloodGroup: input.bloodGroup,
+      dateOfJoining: parseDateInput(input.dateOfJoining, "dateOfJoining") ?? null,
+      probationEndDate: parseDateInput(input.probationEndDate, "probationEndDate") ?? null,
       employmentType: input.employmentType,
       employmentStatus: input.employmentStatus,
       emergencyContactName: input.emergencyContactName,
@@ -264,6 +292,7 @@ export async function createEmployee(
       pfNumber: input.pfNumber,
       pfUAN: input.pfUAN,
       esiNumber: input.esiNumber,
+      basicSalary: input.basicSalary ?? null,
       education: input.education
         ? {
             create: input.education.map((edu) => ({
@@ -279,8 +308,8 @@ export async function createEmployee(
             create: input.workHistory.map((wh) => ({
               companyName: wh.companyName,
               designation: wh.designation,
-              startDate: new Date(wh.startDate),
-              endDate: wh.endDate ? new Date(wh.endDate) : null,
+              startDate: parseRequiredDate(wh.startDate, "workHistory.startDate"),
+              endDate: parseDateInput(wh.endDate ?? null, "workHistory.endDate") ?? null,
               isCurrent: wh.isCurrent,
               reasonForLeaving: wh.reasonForLeaving,
             })),
@@ -407,14 +436,14 @@ export async function updateEmployee(
       branchId: updateData.branchId,
       departmentId,
       designationId,
-      dateOfBirth: updateData.dateOfBirth ? new Date(updateData.dateOfBirth) : undefined,
+      dateOfBirth: parseDateInput(updateData.dateOfBirth, "dateOfBirth"),
       gender: updateData.gender,
       maritalStatus: updateData.maritalStatus,
       bloodGroup: updateData.bloodGroup,
-      dateOfJoining: updateData.dateOfJoining ? new Date(updateData.dateOfJoining) : undefined,
+      dateOfJoining: parseDateInput(updateData.dateOfJoining, "dateOfJoining"),
       employmentType: updateData.employmentType,
       employmentStatus: updateData.employmentStatus,
-      dateOfLeaving: updateData.dateOfLeaving ? new Date(updateData.dateOfLeaving) : undefined,
+      dateOfLeaving: parseDateInput(updateData.dateOfLeaving, "dateOfLeaving"),
       emergencyContactName: updateData.emergencyContactName,
       emergencyContactPhone: updateData.emergencyContactPhone,
       emergencyContactRelation: updateData.emergencyContactRelation,
@@ -440,6 +469,7 @@ export async function updateEmployee(
       pfNumber: updateData.pfNumber,
       pfUAN: updateData.pfUAN,
       esiNumber: updateData.esiNumber,
+      ...(updateData.basicSalary !== undefined ? { basicSalary: updateData.basicSalary } : {}),
     },
     include: {
       branch: { select: { id: true, name: true } },
@@ -474,8 +504,8 @@ export async function updateEmployee(
           employeeId: id,
           companyName: wh.companyName,
           designation: wh.designation,
-          startDate: new Date(wh.startDate),
-          endDate: wh.endDate ? new Date(wh.endDate) : null,
+          startDate: parseRequiredDate(wh.startDate, "workHistory.startDate"),
+          endDate: parseDateInput(wh.endDate ?? null, "workHistory.endDate") ?? null,
           isCurrent: wh.isCurrent,
           reasonForLeaving: wh.reasonForLeaving,
         })),
@@ -651,8 +681,8 @@ export async function uploadDocument(
       fileUrl: input.fileUrl,
       fileSize: input.fileSize,
       mimeType: input.mimeType,
-      expiryDate: input.expiryDate ? new Date(input.expiryDate) : null,
-      isExpired: input.expiryDate ? new Date(input.expiryDate) < new Date() : false,
+      expiryDate: parseDateInput(input.expiryDate ?? null, "expiryDate") ?? null,
+      isExpired: input.expiryDate ? parseRequiredDate(input.expiryDate, "expiryDate") < new Date() : false,
     },
   });
 
