@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useMemo, useState, useEffect, Suspense } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "react-hot-toast";
@@ -30,6 +30,72 @@ import {
   type CreateLeaveApplicationInput,
 } from "@/lib/validations/leave-full";
 
+function normalizeToken(value: string | null | undefined): string {
+  return String(value ?? "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function tokenList(value: string | null | undefined): string[] {
+  const normalized = normalizeToken(value);
+  return normalized ? normalized.split(" ") : [];
+}
+
+function isUnpaidLeaveType(type: LeaveTypeConfig): boolean {
+  const name = normalizeToken(type.name);
+  const code = normalizeToken(type.code);
+  const nameTokens = tokenList(type.name);
+  const codeTokens = tokenList(type.code);
+  return (
+    type.type === "UNPAID" ||
+    name.includes("unpaid") ||
+    code.includes("unpaid") ||
+    nameTokens.includes("unpaid") ||
+    codeTokens.includes("unpaid") ||
+    (nameTokens.includes("un") && nameTokens.includes("paid")) ||
+    (codeTokens.includes("un") && codeTokens.includes("paid"))
+  );
+}
+
+function isUnplannedLeaveType(type: LeaveTypeConfig): boolean {
+  const name = normalizeToken(type.name);
+  const code = normalizeToken(type.code);
+  const nameTokens = tokenList(type.name);
+  const codeTokens = tokenList(type.code);
+  return (
+    name.includes("unplan") ||
+    name.includes("unplai") || // handles "unplained"
+    name.includes("unpla") ||
+    code.includes("unplan") ||
+    code.includes("unplai") ||
+    code.includes("unpla") ||
+    nameTokens.includes("unplanned") ||
+    codeTokens.includes("unplanned") ||
+    (nameTokens.includes("un") && (nameTokens.includes("planned") || nameTokens.includes("plan"))) ||
+    (codeTokens.includes("un") && (codeTokens.includes("planned") || codeTokens.includes("plan")))
+  );
+}
+
+function isPaidLeaveType(type: LeaveTypeConfig): boolean {
+  // Avoid matching "unpaid" as paid.
+  const nameTokens = tokenList(type.name);
+  const codeTokens = tokenList(type.code);
+  return (nameTokens.includes("paid") || codeTokens.includes("paid")) && !isUnpaidLeaveType(type);
+}
+
+function uniqById<T extends { id: string }>(items: Array<T | null | undefined>): T[] {
+  const seen = new Set<string>();
+  const out: T[] = [];
+  for (const item of items) {
+    if (!item) continue;
+    if (seen.has(item.id)) continue;
+    seen.add(item.id);
+    out.push(item);
+  }
+  return out;
+}
+
 function LeaveContent() {
   const [activeTab, setActiveTab] = useState<"my" | "apply">("my");
   const [leaveTypes, setLeaveTypes] = useState<LeaveTypeConfig[]>([]);
@@ -43,7 +109,9 @@ function LeaveContent() {
   const [selectedDates, setSelectedDates] = useState<{ start: string; end: string }>({ start: "", end: "" });
   const [previewDays, setPreviewDays] = useState(0);
   const [previewBalance, setPreviewBalance] = useState<number | null>(null);
-
+  const [employmentStatus, setEmploymentStatus] = useState<string | null>(null);
+  const [isMultiDay, setIsMultiDay] = useState(false);
+  
   const {
     register,
     handleSubmit,
@@ -66,16 +134,54 @@ function LeaveContent() {
   const watchEndSession = watch("endSession");
   const watchLeaveTypeId = watch("leaveTypeId");
 
+  const allowedLeaveTypes = useMemo(() => {
+    const active = leaveTypes.filter((lt) => lt.isActive);
+
+    const paid = active.filter(isPaidLeaveType);
+    const unpaid = active.filter(isUnpaidLeaveType);
+    const unplanned = active.filter(isUnplannedLeaveType);
+
+    const isProbation = employmentStatus === "PROBATION";
+    if (isProbation) {
+      const filtered = uniqById([...unpaid, ...unplanned]);
+      return filtered.length > 0 ? filtered : active;
+    }
+
+    const filtered = uniqById([paid[0] ?? null, ...unplanned, ...unpaid]);
+    return filtered.length > 0 ? filtered : active;
+  }, [leaveTypes, employmentStatus]);
+
+  useEffect(() => {
+    if (!watchStartDate) return;
+    if (!isMultiDay) {
+      setValue("endDate", watchStartDate, { shouldValidate: true, shouldDirty: true });
+      return;
+    }
+    if (watchEndDate && watchEndDate < watchStartDate) {
+      setValue("endDate", watchStartDate, { shouldValidate: true, shouldDirty: true });
+    }
+  }, [isMultiDay, watchStartDate, watchEndDate, setValue]);
+
   useEffect(() => {
     fetchData();
   }, []);
 
   useEffect(() => {
-    if (watchLeaveTypeId) {
-      const type = leaveTypes.find((lt) => lt.id === watchLeaveTypeId);
-      setSelectedType(type || null);
+    if (!watchLeaveTypeId) {
+      setSelectedType(null);
+      return;
     }
-  }, [watchLeaveTypeId, leaveTypes]);
+    const type = allowedLeaveTypes.find((lt) => lt.id === watchLeaveTypeId);
+    setSelectedType(type || null);
+  }, [watchLeaveTypeId, allowedLeaveTypes]);
+
+  useEffect(() => {
+    if (!watchLeaveTypeId) return;
+    if (allowedLeaveTypes.some((t) => t.id === watchLeaveTypeId)) return;
+    setValue("leaveTypeId", "");
+    setSelectedType(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allowedLeaveTypes]);
 
   useEffect(() => {
     if (watchStartDate && watchEndDate) {
@@ -95,29 +201,41 @@ function LeaveContent() {
   async function fetchData() {
     setLoading(true);
     try {
-      const [typesRes, balanceRes, holidayRes, leaveRes] = await Promise.all([
+      const [typesRes, balanceRes, holidayRes, leaveRes, profileRes] = await Promise.allSettled([
         getLeaveTypes(),
         getLeaveBalances(),
         getHolidays(),
         fetch("/api/leave", { credentials: "include" }).then((r) => r.json()),
+        fetch("/api/employees/me", { credentials: "include" }).then((r) => r.json()),
       ]);
 
-      const res = typesRes as any;
-      const balRes = balanceRes as any;
-      const holRes = holidayRes as any;
+      if (typesRes.status === "fulfilled") {
+        const res = typesRes.value as any;
+        const fetchedTypes = res.leaveTypes || res.data?.leaveTypes || [];
+        setLeaveTypes(fetchedTypes.filter((lt: LeaveTypeConfig) => lt.isActive));
+      }
 
-      // API returns { leaveTypes } directly, not wrapped in data
-      const fetchedTypes = res.leaveTypes || res.data?.leaveTypes || [];
-      setLeaveTypes(fetchedTypes.filter((lt: LeaveTypeConfig) => lt.isActive));
+      if (balanceRes.status === "fulfilled") {
+        const balRes = balanceRes.value as any;
+        const fetchedBalances = balRes.balances || balRes.data?.balances || [];        
+        setBalances(fetchedBalances);
+      }
 
-      const fetchedBalances = balRes.balances || balRes.data?.balances || [];
-      setBalances(fetchedBalances);
+      if (holidayRes.status === "fulfilled") {
+        const holRes = holidayRes.value as any;
+        const fetchedHolidays = holRes.holidays || holRes.data?.holidays || [];
+        setHolidays(fetchedHolidays);
+      }
 
-      const fetchedHolidays = holRes.holidays || holRes.data?.holidays || [];
-      setHolidays(fetchedHolidays);
+      if (leaveRes.status === "fulfilled") {
+        const leaveJson = leaveRes.value as any;
+        if (leaveJson?.applications) setApplications(leaveJson.applications);
+      }
 
-      if (leaveRes.applications) {
-        setApplications(leaveRes.applications);
+      if (profileRes.status === "fulfilled") {
+        const prof = profileRes.value as any;
+        const status = prof?.employee?.employmentStatus ?? null;
+        setEmploymentStatus(typeof status === "string" ? status : null);
       }
     } catch {
       toast.error("Failed to fetch leave data");
@@ -237,11 +355,9 @@ function LeaveContent() {
   }
 
   function handlePreview() {
-    setSelectedDates({ start: watchStartDate || "", end: watchEndDate || "" });
+    setSelectedDates({ start: watchStartDate || "", end: watchEndDate || watchStartDate || "" });
     setConfirmModal(true);
   }
-
-  const activeLeaveTypes = leaveTypes.filter((lt) => lt.isActive);
 
 return (
     <>
@@ -398,20 +514,28 @@ return (
             <FormField label="Leave Type" required error={errors.leaveTypeId?.message}>
               <SelectInput
                 {...register("leaveTypeId")}
+                disabled={loading || allowedLeaveTypes.length === 0}
                 onChange={(e) => {
                   setValue("leaveTypeId", e.target.value);
                   trigger("leaveTypeId");
                 }}
               >
-                <option value="">Select leave type</option>
-                {activeLeaveTypes.map((type) => {
-                  const balance = balances.find((b) => b.leaveTypeId === type.id);
-                  return (
-                    <option key={type.id} value={type.id}>
-                      {type.name} ({balance?.availableDays ?? 0} days available)
-                    </option>
-                  );
-                })}
+                <option value="">
+                  {loading
+                    ? "Loading leave types..."
+                    : allowedLeaveTypes.length === 0
+                      ? "No leave types configured"
+                      : "Select leave type"}
+                </option>
+                {!loading &&
+                  allowedLeaveTypes.map((type) => {
+                    const balance = balances.find((b) => b.leaveTypeId === type.id);
+                    return (
+                      <option key={type.id} value={type.id}>
+                        {type.name} ({balance?.availableDays ?? 0} days available)
+                      </option>
+                    );
+                  })}
               </SelectInput>
             </FormField>
 
@@ -444,14 +568,25 @@ return (
                 />
               </FormField>
 
-              <FormField label="To Date" required error={errors.endDate?.message}>
-                <TextInput
-                  type="date"
-                  {...register("endDate")}
-                  min={watchStartDate || new Date().toISOString().split("T")[0]}
-                />
-              </FormField>
+              {isMultiDay ? (
+                <FormField label="To Date" required error={errors.endDate?.message}>
+                  <TextInput
+                    type="date"
+                    {...register("endDate")}
+                    min={watchStartDate || new Date().toISOString().split("T")[0]}
+                  />
+                </FormField>
+              ) : (
+                <input type="hidden" {...register("endDate")} />
+              )}
             </div>
+
+            <ToggleField
+              checked={isMultiDay}
+              onChange={setIsMultiDay}
+              label="Multiple days?"
+              description="Turn on to select a To Date. Otherwise this is treated as a 1-day leave."
+            />
 
             {/* Session Selection */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -463,13 +598,13 @@ return (
                 </SelectInput>
               </FormField>
 
-              <FormField label="End Session">
+              {/* <FormField label="End Session">
                 <SelectInput {...register("endSession")}>
                   <option value="FULL_DAY">Full Day</option>
                   <option value="FIRST_HALF">First Half</option>
                   <option value="SECOND_HALF">Second Half</option>
                 </SelectInput>
-              </FormField>
+              </FormField> */}
             </div>
 
             {/* Preview */}

@@ -102,6 +102,7 @@ const defaultValues: CreateEmployeeInput = {
   pfNumber: "",
   pfUAN: "",
   esiNumber: "",
+  basicSalary: null,
   education: [],
   workHistory: [],
 };
@@ -112,6 +113,31 @@ export function EmployeeForm({ employee, companyBranches, departments, designati
   const [showCredentials, setShowCredentials] = useState(false);
   const [loginCredentials, setLoginCredentials] = useState<LoginCredentials | null>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  type TabId =
+    | "personal"
+    | "salary"
+    | "credentials"
+    | "employment"
+    | "contact"
+    | "address"
+    | "bank"
+    | "education"
+    | "experience";
+
+  const tabs: Array<{ id: TabId; label: string }> = [
+    { id: "personal", label: "Personal" },
+    { id: "employment", label: "Employment" },
+    { id: "contact", label: "Emergency" },
+    { id: "address", label: "Address" },
+    { id: "bank", label: "Bank & ID" },
+    { id: "salary", label: "Salary" },
+    { id: "education", label: "Education" },
+    { id: "experience", label: "Experience" },
+    { id: "credentials", label: "Credentials" },
+  ];
+
+  const [activeTab, setActiveTab] = useState<TabId>("personal");
   const [formData, setFormData] = useState<CreateEmployeeInput>(
     employee
       ? {
@@ -156,6 +182,7 @@ export function EmployeeForm({ employee, companyBranches, departments, designati
           pfNumber: employee.pfNumber || "",
           pfUAN: employee.pfUAN || "",
           esiNumber: employee.esiNumber || "",
+          basicSalary: employee.basicSalary ?? null,
           education: employee.education?.map((e) => ({
             id: e.id,
             degree: e.degree,
@@ -246,8 +273,27 @@ export function EmployeeForm({ employee, companyBranches, departments, designati
   }, [updateField]);
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8">
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
+        <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900/40">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={`rounded-2xl px-4 py-2 text-sm font-medium transition ${
+                activeTab === tab.id
+                  ? "bg-indigo-600 text-white shadow-sm shadow-indigo-200 dark:shadow-indigo-900/40"
+                  : "text-slate-600 hover:bg-white hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {activeTab === "personal" && (
+          <section className="p-6">
         <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Personal Information</h3>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Basic details about the employee.</p>
 
@@ -401,10 +447,31 @@ export function EmployeeForm({ employee, companyBranches, departments, designati
           </div>
         </div>
       </section>
+        )}
 
-    
+        {activeTab === "salary" && (
+          <section className="p-6">
+        <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Salary</h3>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Salary details for this employee.</p>
 
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+        <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2">
+          <div>
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-200">Basic Salary</label>
+            <input
+              type="number"
+              min={0}
+              step="0.01"
+              value={formData.basicSalary ?? ""}
+              onChange={(e) => updateField("basicSalary", e.target.value === "" ? null : Number(e.target.value))}
+              placeholder="0"
+              className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900/40 dark:text-white"
+            />
+          </div>
+        </div>
+      </section>
+        )}
+        {activeTab === "credentials" && (
+          <section className="p-6">
         <h3 className="text-lg font-semibold text-slate-900 dark:text-white">User Credentials</h3>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Login credentials for the employee. Leave blank to auto-generate.</p>
 
@@ -432,8 +499,10 @@ export function EmployeeForm({ employee, companyBranches, departments, designati
           </div>
         </div>
       </section>
+        )}
 
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+        {activeTab === "employment" && (
+          <section className="p-6">
         <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Employment Details</h3>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Job role and employment information.</p>
 
@@ -539,8 +608,10 @@ export function EmployeeForm({ employee, companyBranches, departments, designati
           </div>
         </div>
       </section>
+        )}
 
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+        {activeTab === "contact" && (
+          <section className="p-6">
         <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Emergency Contact</h3>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Contact person in case of emergency.</p>
 
@@ -579,8 +650,11 @@ export function EmployeeForm({ employee, companyBranches, departments, designati
           </div>
         </div>
       </section>
+        )}
 
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+        {activeTab === "address" && (
+          <>
+            <section className="p-6">
         <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Present Address</h3>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Current residential address.</p>
 
@@ -653,7 +727,7 @@ export function EmployeeForm({ employee, companyBranches, departments, designati
         </div>
       </section>
 
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+            <section className="border-t border-slate-200 p-6 dark:border-slate-700">
         <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Permanent Address</h3>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Permanent residential address.</p>
 
@@ -725,8 +799,12 @@ export function EmployeeForm({ employee, companyBranches, departments, designati
           </div>
         </div>
       </section>
+          </>
+        )}
 
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+        {activeTab === "bank" && (
+          <>
+            <section className="p-6">
         <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Bank Details</h3>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Employee bank account information for salary.</p>
 
@@ -788,7 +866,7 @@ export function EmployeeForm({ employee, companyBranches, departments, designati
         </div>
       </section>
 
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+            <section className="border-t border-slate-200 p-6 dark:border-slate-700">
         <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Identity Documents</h3>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">PAN, Aadhar, PF, and ESI details.</p>
 
@@ -851,8 +929,11 @@ export function EmployeeForm({ employee, companyBranches, departments, designati
           </div>
         </div>
       </section>
+          </>
+        )}
 
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+        {activeTab === "education" && (
+          <section className="p-6">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Education</h3>
@@ -952,8 +1033,10 @@ export function EmployeeForm({ employee, companyBranches, departments, designati
           )}
         </div>
       </section>
+        )}
 
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+        {activeTab === "experience" && (
+          <section className="p-6">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Work Experience</h3>
@@ -1065,7 +1148,9 @@ export function EmployeeForm({ employee, companyBranches, departments, designati
           )}
         </div>
       </section>
+        )}
 
+      </div>
       <div className="flex items-center justify-end gap-4">
         <button
           type="button"

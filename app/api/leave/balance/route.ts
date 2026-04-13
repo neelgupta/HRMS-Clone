@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { requireAuth } from "@/lib/rbac";
 import { getErrorResponse } from "@/lib/api-response";
-import { getEmployeeLeaveBalances, getLeavePolicy, updateLeavePolicy, initializeEmployeeLeaveBalances } from "@/lib/server/leave-full";
+import { ensureEmployeePaidLeaveBalance, getEmployeeLeaveBalances, getLeavePolicy, updateLeavePolicy, initializeEmployeeLeaveBalances } from "@/lib/server/leave-full";
 import { leavePolicySchema } from "@/lib/validations/leave-full";
 
 // GET /api/leave/balance - Get employee's leave balances
@@ -42,6 +42,7 @@ export async function GET(request: NextRequest) {
     }
 
     const year = parseInt(searchParams.get("year") || new Date().getFullYear().toString());
+    await ensureEmployeePaidLeaveBalance(companyId, employeeId, year);
     const balances = await getEmployeeLeaveBalances(employeeId, year);
 
     return NextResponse.json({ balances, year });

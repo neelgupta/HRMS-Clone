@@ -3,6 +3,7 @@ import { requireUser } from "@/lib/auth-guard";
 import { getErrorResponse } from "@/lib/api-response";
 import { attendanceSearchSchema, manualAttendanceSchema } from "@/lib/validations/attendance";
 import { listAttendances, manualAttendance } from "@/lib/server/attendance";
+import { prisma } from "@/lib/prisma";
 
 export async function GET(request: NextRequest) {
   const authResult = await requireUser();
@@ -27,9 +28,18 @@ export async function GET(request: NextRequest) {
     });
 
     if (role === "EMPLOYEE") {
+      const user = await prisma.user.findFirst({
+        where: { id: userId, companyId },
+        select: { employeeId: true },
+      });
+
+      if (!user?.employeeId) {
+        return NextResponse.json({ message: "Employee not linked to user." }, { status: 400 });
+      }
+
       const result = await listAttendances(companyId, {
         ...params,
-        employeeId: userId,
+        employeeId: user.employeeId,
       });
       return NextResponse.json(result);
     }

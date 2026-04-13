@@ -32,7 +32,7 @@ const hrNavItems: NavItem[] = [
   { label: "Holidays", href: "/dashboard/hr/holidays", icon: MdCalendarMonth, available: true },
   { label: "Notifications", href: "/dashboard/hr/notifications", icon: MdNotifications, available: true },
   { label: "Organization", href: "/dashboard/hr/organization", icon: MdAccountTree, available: true },
-  { label: "Payroll", href: "", icon: MdPayments, available: false },
+  { label: "Payroll", href: "/dashboard/hr/payroll", icon: MdPayments, available: true },
   { label: "Settings", href: "/dashboard/hr/settings", icon: MdSettings, available: true },
 ];
 

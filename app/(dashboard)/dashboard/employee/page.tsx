@@ -24,7 +24,14 @@ import {
 } from "react-icons/md";
 import { EmployeeLayout } from "@/components/employee";
 import { DashboardLoader } from "@/components/ui/loader";
-import { breakStart, breakEnd, fetchTodayAttendance } from "@/lib/client/attendance";
+import {
+  breakStart,
+  breakEnd,
+  fetchTodayAttendance,
+  fetchEmployeeAttendanceDashboard,
+  type EmployeeAttendanceDashboard,
+  type AttendanceDetail,
+} from "@/lib/client/attendance";
 
 type AttendanceActivity = {
   id: string;
@@ -39,23 +46,72 @@ const monthNames = [
   "July", "August", "September", "October", "November", "December"
 ];
 
-const chartData = [
-  { name: "Mon", beforeBreak: 3, break: 1, afterBreak: 4, missing: 0 },
-  { name: "Tue", beforeBreak: 4, break: 0.5, afterBreak: 3.5, missing: 0 },
-  { name: "Wed", beforeBreak: 3.5, break: 1, afterBreak: 3.5, missing: 0 },
-  { name: "Thu", beforeBreak: 4, break: 0.5, afterBreak: 4, missing: 0 },
-  { name: "Fri", beforeBreak: 3, break: 1, afterBreak: 4, missing: 0 },
+const emptyTimelogs: EmployeeAttendanceDashboard["timelogs"] = [
+  { name: "—", date: "", day: "Mon", beforeBreak: 0, break: 0, afterBreak: 0, times: { clockIn: null, breakStart: null, breakEnd: null, clockOut: null }, durationsMins: { beforeBreak: 0, break: 0, afterBreak: 0, total: 0 } },
+  { name: "—", date: "", day: "Tue", beforeBreak: 0, break: 0, afterBreak: 0, times: { clockIn: null, breakStart: null, breakEnd: null, clockOut: null }, durationsMins: { beforeBreak: 0, break: 0, afterBreak: 0, total: 0 } },
+  { name: "—", date: "", day: "Wed", beforeBreak: 0, break: 0, afterBreak: 0, times: { clockIn: null, breakStart: null, breakEnd: null, clockOut: null }, durationsMins: { beforeBreak: 0, break: 0, afterBreak: 0, total: 0 } },
+  { name: "—", date: "", day: "Thu", beforeBreak: 0, break: 0, afterBreak: 0, times: { clockIn: null, breakStart: null, breakEnd: null, clockOut: null }, durationsMins: { beforeBreak: 0, break: 0, afterBreak: 0, total: 0 } },
+  { name: "—", date: "", day: "Fri", beforeBreak: 0, break: 0, afterBreak: 0, times: { clockIn: null, breakStart: null, breakEnd: null, clockOut: null }, durationsMins: { beforeBreak: 0, break: 0, afterBreak: 0, total: 0 } },
 ];
 
-const summaryStats = {
-  present: 22,
-  absent: 0,
-  lateIn: 0,
-  earlyOut: 0,
-  penalty: 0,
-};
-
 type ModalType = "clockIn" | "clockOut" | "breakStart" | "breakEnd";
+
+type TimelogEntry = EmployeeAttendanceDashboard["timelogs"][number];
+
+function formatTime(iso: string | null): string {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
+
+function formatMinutes(mins: number): string {
+  if (!mins) return "0m";
+  const hours = Math.floor(mins / 60);
+  const minutes = mins % 60;
+  if (hours <= 0) return `${minutes}m`;
+  if (minutes <= 0) return `${hours}h`;
+  return `${hours}h ${minutes}m`;
+}
+
+function formatHms(totalSeconds: number): string {
+  const seconds = Math.max(0, Math.floor(totalSeconds));
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
+function TimelogTooltip(props: {
+  active?: boolean;
+  payload?: Array<{ payload: TimelogEntry }>;
+}) {
+  if (!props.active || !props.payload?.length) return null;
+  const entry = props.payload[0]?.payload;
+  if (!entry) return null;
+
+  return (
+    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 shadow-lg text-xs min-w-[220px]">
+      <p className="font-semibold text-slate-900 dark:text-white mb-2">
+        {entry.day}, {entry.name}
+      </p>
+      <div className="space-y-1 text-slate-600 dark:text-slate-300">
+        <p>Clock In: <span className="font-medium text-slate-900 dark:text-white">{formatTime(entry.times.clockIn)}</span></p>
+        <p>Break Start: <span className="font-medium text-slate-900 dark:text-white">{formatTime(entry.times.breakStart)}</span></p>
+        <p>Break End: <span className="font-medium text-slate-900 dark:text-white">{formatTime(entry.times.breakEnd)}</span></p>
+        <p>Clock Out: <span className="font-medium text-slate-900 dark:text-white">{formatTime(entry.times.clockOut)}</span></p>
+        <div className="pt-2 border-t border-slate-200 dark:border-slate-700">
+          <p>Before Lunch: <span className="font-medium text-slate-900 dark:text-white">{formatMinutes(entry.durationsMins.beforeBreak)}</span></p>
+          <p>Break: <span className="font-medium text-slate-900 dark:text-white">{formatMinutes(entry.durationsMins.break)}</span></p>
+          <p>After Break: <span className="font-medium text-slate-900 dark:text-white">{formatMinutes(entry.durationsMins.afterBreak)}</span></p>
+          <p>Total Worked: <span className="font-medium text-slate-900 dark:text-white">{formatMinutes(entry.durationsMins.total)}</span></p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function DashboardContent() {
   const router = useRouter();
@@ -64,15 +120,15 @@ function DashboardContent() {
   const [isOnBreak, setIsOnBreak] = useState(false);
   const [isClockedIn, setIsClockedIn] = useState(false);
   const [attendanceActivities, setAttendanceActivities] = useState<AttendanceActivity[]>([]);
-  const [breakLoading, setBreakLoading] = useState(false);
+  const [todayAttendance, setTodayAttendance] = useState<AttendanceDetail | null>(null);
   const [profile, setProfile] = useState<{
     employee: { firstName: string; lastName: string; designation: string | null; department: string | null; employeeCode: string } | null;
   } | null>(null);
   const [showRemarksModal, setShowRemarksModal] = useState(false);
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [modalType, setModalType] = useState<ModalType>("clockOut");
   const [remarks, setRemarks] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
+  const [dashboard, setDashboard] = useState<EmployeeAttendanceDashboard | null>(null);
 
   useEffect(() => {
     const loadData = async () => {
@@ -86,6 +142,7 @@ function DashboardContent() {
         const attendanceResult = await fetchTodayAttendance();
         if (attendanceResult.data?.attendance) {
           const attendance = attendanceResult.data.attendance;
+          setTodayAttendance(attendance);
           setIsClockedIn(!!attendance.clockIn);
           setIsOnBreak(!!attendance.breakStart && !attendance.breakEnd);
           
@@ -139,6 +196,8 @@ function DashboardContent() {
             });
           }
           setAttendanceActivities(activities);
+        } else {
+          setTodayAttendance(null);
         }
       } catch {
         console.error("Failed to load data");
@@ -147,10 +206,23 @@ function DashboardContent() {
     void loadData();
   }, []);
 
+  const loadDashboard = async (monthDate: Date = currentMonth) => {
+    const month = `${monthDate.getFullYear()}-${String(monthDate.getMonth() + 1).padStart(2, "0")}`;
+    const result = await fetchEmployeeAttendanceDashboard(month);
+    if (result.data) setDashboard(result.data);
+  };
+
   useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    void loadDashboard();
+  }, [currentMonth]);
+
+  useEffect(() => {
+    if (!isClockedIn) return;
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
     return () => clearInterval(timer);
-  }, []);
+  }, [isClockedIn]);
 
   const fullName = profile?.employee
     ? `${profile.employee.firstName} ${profile.employee.lastName}`
@@ -160,8 +232,39 @@ function DashboardContent() {
     ? `${profile.employee.firstName.charAt(0)}${profile.employee.lastName.charAt(0)}`
     : "E";
 
+  const clockInActivity = attendanceActivities.find(a => a.type === "CLOCK_IN");
+  const breakStartActivity = attendanceActivities.find(a => a.type === "BREAK_START");
+  const clockOutActivity = attendanceActivities.find(a => a.type === "CLOCK_OUT");
+
+  const calculateWorkingTime = () => {
+    if (!isClockedIn || !clockInActivity) return "—";
+    const clockInTime = new Date(clockInActivity.time).getTime();
+    let endTime = clockOutActivity ? new Date(clockOutActivity.time).getTime() : Date.now();
+    if (isOnBreak && breakStartActivity) {
+      endTime = new Date(breakStartActivity.time).getTime();
+    }
+    const diff = endTime - clockInTime;
+    const mins = Math.floor(diff / 60000);
+    const hours = Math.floor(mins / 60);
+    const remainingMins = mins % 60;
+    if (hours === 0) return `${remainingMins}m`;
+    return `${hours}h ${remainingMins}m`;
+  };
+
+  const calculateBreakTime = () => {
+    if (!isClockedIn || !todayAttendance) return "—";
+    const baseSeconds = (todayAttendance.totalBreakMins ?? 0) * 60;
+    const liveSeconds =
+      todayAttendance.breakStart && !todayAttendance.breakEnd
+        ? Math.max(0, Math.floor((currentTime.getTime() - new Date(todayAttendance.breakStart).getTime()) / 1000))
+        : 0;
+    const totalSeconds = baseSeconds + liveSeconds;
+    if (totalSeconds <= 0) return "—";
+    return formatHms(totalSeconds);
+  };
+
   const handleBreak = async () => {
-    if (breakLoading) return;
+    if (actionLoading) return;
     setShowRemarksModal(true);
     setModalType(isOnBreak ? "breakEnd" : "breakStart");
     setRemarks("");
@@ -181,6 +284,8 @@ function DashboardContent() {
         body: JSON.stringify({}),
       });
       if (response.ok) {
+        const payload = (await response.json().catch(() => null)) as { attendance?: AttendanceDetail } | null;
+        if (payload?.attendance) setTodayAttendance(payload.attendance);
         setIsClockedIn(true);
         setAttendanceActivities((prev) => [
           ...prev,
@@ -191,6 +296,7 @@ function DashboardContent() {
             formattedTime: currentTime.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true }),
           },
         ]);
+        void loadDashboard();
       }
     } catch {
       alert("Failed to clock in");
@@ -209,6 +315,8 @@ function DashboardContent() {
           body: JSON.stringify({ remarks: remarks || undefined }),
         });
         if (response.ok) {
+          const payload = (await response.json().catch(() => null)) as { attendance?: AttendanceDetail } | null;
+          if (payload?.attendance) setTodayAttendance(payload.attendance);
           setIsClockedIn(false);
           setIsOnBreak(false);
           setAttendanceActivities((prev) => [
@@ -220,10 +328,12 @@ function DashboardContent() {
               formattedTime: currentTime.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true }),
             },
           ]);
+          void loadDashboard();
         }
       } else if (modalType === "breakStart") {
         const result = await breakStart({ remarks: remarks || undefined });
         if (result.error) { alert(result.error); return; }
+        if (result.data?.attendance) setTodayAttendance(result.data.attendance);
         setIsOnBreak(true);
         setAttendanceActivities((prev) => [
           ...prev,
@@ -234,9 +344,11 @@ function DashboardContent() {
             formattedTime: currentTime.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true }),
           },
         ]);
+        void loadDashboard();
       } else if (modalType === "breakEnd") {
         const result = await breakEnd({ remarks: remarks || undefined });
         if (result.error) { alert(result.error); return; }
+        if (result.data?.attendance) setTodayAttendance(result.data.attendance);
         setIsOnBreak(false);
         setAttendanceActivities((prev) => [
           ...prev,
@@ -247,6 +359,7 @@ function DashboardContent() {
             formattedTime: currentTime.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true }),
           },
         ]);
+          void loadDashboard();
       }
     } catch {
       alert("Failed to process request");
@@ -271,6 +384,22 @@ function DashboardContent() {
     const today = new Date();
     return date.getDate() === today.getDate() && date.getMonth() === today.getMonth() && date.getFullYear() === today.getFullYear();
   };
+
+  const summaryStats = dashboard?.summary ?? {
+    present: 0,
+    absent: 0,
+    lateIn: 0,
+    earlyOut: 0,
+    halfDay: 0,
+    penalty: 0,
+  };
+
+  const chartData = dashboard?.timelogs ?? emptyTimelogs;
+  const chartMinWidth = Math.max(560, chartData.length * 44);
+  const xInterval = chartData.length > 14 ? Math.ceil(chartData.length / 10) : 0;
+  const barSize = chartData.length > 24 ? 10 : chartData.length > 14 ? 14 : 22;
+  
+  const alerts = dashboard?.alerts ?? null;
 
   return (
     <>
@@ -305,31 +434,41 @@ function DashboardContent() {
         <div className="col-span-12 lg:col-span-4">
           <div className="bg-gradient-to-br from-indigo-600 to-purple-600 dark:from-indigo-700 dark:to-purple-700 rounded-2xl p-6 h-full shadow-lg shadow-indigo-200 dark:shadow-indigo-900 text-white">
             <h3 className="text-sm font-medium text-indigo-100 dark:text-indigo-200 mb-3">My Timing</h3>
-            <div className="text-center mb-4">
+            {/* <div className="text-center mb-4">
               <div className="text-4xl font-bold">
                 {currentTime.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true })}
               </div>
               <div className="text-xs text-indigo-200 dark:text-indigo-300 mt-1">
                 {currentTime.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
               </div>
+            </div> */}
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3">
+                <p className="text-xs text-indigo-200 dark:text-indigo-300">Current Time</p>
+                <p className="text-sm font-bold text-white">{isClockedIn ? calculateWorkingTime() : "—"}</p>
+              </div>
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3">
+                <p className="text-xs text-indigo-200 dark:text-indigo-300">Break Time</p>
+                <p className="text-sm font-bold text-white">{calculateBreakTime()}</p>
+              </div>
             </div>
             <div className="flex gap-2">
               {!isClockedIn ? (
                 <button onClick={handleClockIn}
-                  className="flex-1 py-2.5 px-3 rounded-xl text-sm font-semibold bg-white text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-100 transition-all flex items-center justify-center gap-1.5 shadow-lg">
+                  className="flex-1 py-2.5 px-3 rounded-xl text-sm font-semibold bg-white text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-100 transition-all flex items-center justify-center gap-1.5 shadow-lg cursor-pointer">
                   <MdCheckCircle className="text-base" /> Clock In
                 </button>
               ) : (
                 <>
-                  <button onClick={handleBreak} disabled={breakLoading}
+                  <button onClick={handleBreak} disabled={actionLoading}
                     className={`flex-1 py-2.5 px-3 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 shadow-lg ${
-                      isOnBreak ? "bg-orange-400 hover:bg-orange-500 text-white" : "bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm"
+                      isOnBreak ? "bg-orange-400 hover:bg-orange-500 text-white" : "bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm cursor-pointer"
                     }`}>
                     <MdAccessTime className="text-base" />
-                    {breakLoading || actionLoading ? "..." : isOnBreak ? "End Break" : "Break"}
+                    {actionLoading ? "..." : isOnBreak ? "End Break" : "Break"}
                   </button>
                   <button onClick={handleClockOut}
-                    className="flex-1 py-2.5 px-3 rounded-xl text-sm font-semibold bg-white text-red-500 hover:bg-red-50 dark:hover:bg-red-100 transition-all flex items-center justify-center gap-1.5 shadow-lg">
+                    className="flex-1 py-2.5 px-3 rounded-xl text-sm font-semibold bg-white text-red-500 hover:bg-red-50 dark:hover:bg-red-100 transition-all flex items-center justify-center gap-1.5 shadow-lg cursor-pointer">
                     <MdLogout className="text-base" /> Clock Out
                   </button>
                 </>
@@ -382,7 +521,7 @@ function DashboardContent() {
 
       <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5 mb-5 shadow-sm">
         <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-4">My Attendance Summary</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
           <div className="bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-900/30 dark:to-green-900/30 rounded-xl p-3 text-center ring-1 ring-emerald-100 dark:ring-emerald-800/50">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center mx-auto shadow-sm">
               <MdCheckCircle className="text-lg text-white" />
@@ -411,6 +550,13 @@ function DashboardContent() {
             <p className="text-xl font-bold text-orange-700 dark:text-orange-400 mt-2">{summaryStats.earlyOut}</p>
             <p className="text-xs text-orange-600 dark:text-orange-500 font-medium">Early Out</p>
           </div>
+          <div className="bg-gradient-to-br from-sky-50 to-blue-50 dark:from-sky-900/30 dark:to-blue-900/30 rounded-xl p-3 text-center ring-1 ring-sky-100 dark:ring-sky-800/50">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-400 to-sky-600 flex items-center justify-center mx-auto shadow-sm">
+              <MdAccessTime className="text-lg text-white" />
+            </div>
+            <p className="text-xl font-bold text-sky-700 dark:text-sky-400 mt-2">{summaryStats.halfDay}</p>
+            <p className="text-xs text-sky-600 dark:text-sky-500 font-medium">Half Day</p>
+          </div>
           <div className="bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-900/30 dark:to-indigo-900/30 rounded-xl p-3 text-center ring-1 ring-purple-100 dark:ring-purple-800/50">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center mx-auto shadow-sm">
               <MdGavel className="text-lg text-white" />
@@ -429,22 +575,32 @@ function DashboardContent() {
                 My Timelogs - {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
               </h3>
               <div className="flex items-center gap-4 text-xs text-slate-600 dark:text-slate-400">
-                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded bg-emerald-500"></span> Before</span>
+                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded bg-emerald-500"></span> Before Break</span>
                 <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded bg-amber-400"></span> Break</span>
-                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded bg-emerald-600"></span> After</span>
+                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded bg-emerald-600"></span> After Break</span>
               </div>
             </div>
             <div className="h-52">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData} barSize={28}>
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: "#64748B", fontSize: 11 }} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fill: "#64748B", fontSize: 11 }} />
-                  <Tooltip contentStyle={{ backgroundColor: "#fff", border: "1px solid #E2E8F0", borderRadius: "12px", fontSize: "12px" }} />
-                  <Bar dataKey="beforeBreak" stackId="a" fill="#10B981" radius={[0, 0, 0, 0]} />
-                  <Bar dataKey="break" stackId="a" fill="#FBBF24" radius={[0, 0, 0, 0]} />
-                  <Bar dataKey="afterBreak" stackId="a" fill="#059669" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              <div className="h-52 overflow-x-auto">
+                <div className="h-52" style={{ minWidth: chartMinWidth }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={chartData} barSize={barSize}>
+                      <XAxis
+                        dataKey="name"
+                        axisLine={false}
+                        tickLine={false}
+                        interval={xInterval}
+                        tick={{ fill: "#64748B", fontSize: 11 }}
+                      />
+                      <YAxis axisLine={false} tickLine={false} tick={{ fill: "#64748B", fontSize: 11 }} />
+                      <Tooltip content={<TimelogTooltip />} />
+                      <Bar dataKey="beforeBreak" stackId="a" fill="#10B981" radius={[0, 0, 0, 0]} />
+                      <Bar dataKey="break" stackId="a" fill="#FBBF24" radius={[0, 0, 0, 0]} />
+                      <Bar dataKey="afterBreak" stackId="a" fill="#059669" radius={[6, 6, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -455,27 +611,27 @@ function DashboardContent() {
               <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Attendance Calendar</h3>
               <div className="flex items-center gap-1">
                 <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
-                  className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
+                  className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
                   <span className="text-slate-500 dark:text-slate-400 text-sm">{"<"}</span>
                 </button>
                 <span className="text-xs font-semibold text-slate-600 dark:text-slate-300 min-w-[90px] text-center">
                   {monthNames[currentMonth.getMonth()].slice(0, 3)} {currentMonth.getFullYear()}
                 </span>
                 <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
-                  className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
+                  className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
                   <span className="text-slate-500 dark:text-slate-400 text-sm">{">"}</span>
                 </button>
               </div>
             </div>
             <div className="grid grid-cols-7 gap-1">
               {weekDays.map((day) => (
-                <div key={day} className="text-center text-[10px] font-semibold text-indigo-400 dark:text-indigo-500 py-1">{day}</div>
+                <div key={day} className="text-center text-[10px] font-semibold text-indigo-400 dark:text-indigo-500 py-1 w-[40px]">{day}</div>
               ))}
               {getDaysInMonth(currentMonth).map((date, index) => {
-                if (!date) return <div key={`empty-${index}`} className="aspect-square"></div>;
+                if (!date) return <div key={`empty-${index}`} className="aspect-square h-[40px]"></div>;
                 return (
                   <div key={date.toISOString()}
-                    className={`aspect-square flex items-center justify-center rounded-xl text-xs font-medium transition-all ${
+                    className={`aspect-square flex items-center justify-center rounded-xl text-xs font-medium transition-all w-[40px] h-[40px] ${
                       isToday(date) ? "bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-200 dark:shadow-indigo-900" : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
                     }`}>
                     {date.getDate()}
@@ -498,7 +654,9 @@ function DashboardContent() {
                 </div>
                 <div className="flex-1">
                   <p className="text-sm font-semibold text-slate-900 dark:text-white">Early Out</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">No early out this month</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    {!alerts ? "—" : alerts.earlyOut > 0 ? `${alerts.earlyOut} early out${alerts.earlyOut === 1 ? "" : "s"} this month` : "No early out this month"}
+                  </p>
                 </div>
               </div>
               <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-emerald-50 to-transparent dark:from-emerald-900/20 dark:to-transparent rounded-xl">
@@ -507,7 +665,9 @@ function DashboardContent() {
                 </div>
                 <div className="flex-1">
                   <p className="text-sm font-semibold text-slate-900 dark:text-white">Late Arrivals</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">No late arrivals this month</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    {!alerts ? "—" : alerts.lateArrivals > 0 ? `${alerts.lateArrivals} late arrival${alerts.lateArrivals === 1 ? "" : "s"} this month` : "No late arrivals this month"}
+                  </p>
                 </div>
               </div>
             </div>

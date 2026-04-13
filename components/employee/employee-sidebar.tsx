@@ -11,6 +11,7 @@ import {
   MdEventNote,
   MdBeachAccess,
   MdMoreTime,
+  MdPayments,
   MdHelp,
 } from "react-icons/md";
 import { useTheme } from "@/contexts/theme-context";
@@ -28,6 +29,7 @@ const navItems: NavItem[] = [
   { label: "Employee", href: "/dashboard/employee/employees", icon: MdPeople },
   { label: "Attendance", href: "/dashboard/employee/attendance", icon: MdAccessTime },
   { label: "Leave", href: "/dashboard/employee/leave", icon: MdEventNote },
+  { label: "Payroll", href: "/dashboard/employee/payroll", icon: MdPayments },
   { label: "Overtime", href: "/dashboard/employee/overtime", icon: MdMoreTime },
   { label: "My Holidays", href: "/dashboard/employee/holidays", icon: MdBeachAccess },
   { label: "Help Desk", href: "/dashboard/employee/help", icon: MdHelp },

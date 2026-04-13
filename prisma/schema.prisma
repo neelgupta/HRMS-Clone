@@ -49,6 +49,7 @@ model Company {
   leaveTypeConfigs     LeaveTypeConfig[]
   shifts               Shift[]
   users                User[]
+  payrollRuns          PayrollRun[]
 
   @@map("companies")
 }
@@ -258,6 +259,7 @@ model Employee {
   pfNumber                 String?
   pfUAN                    String?
   esiNumber                String?
+  basicSalary              Float?
   createdAt                DateTime                   @default(now())
   updatedAt                DateTime                   @updatedAt
   isDeleted                Boolean                    @default(false)
@@ -280,6 +282,7 @@ model Employee {
   leaveBalances            LeaveBalance[]
   shiftAssignments         ShiftAssignment[]
   user                     User?
+  payrollItems             PayrollItem[]
 
   @@index([companyId])
   @@index([branchId])
@@ -750,12 +753,63 @@ model LeaveApprovalHistory {
   @@map("leave_approval_history")
 }
 
+model PayrollRun {
+  id          String           @id @default(uuid())
+  companyId   String
+  year        Int
+  month       Int
+  periodStart DateTime         @db.Date
+  periodEnd   DateTime         @db.Date
+  weekOffDays Int              @default(0)
+  holidays    Int              @default(0)
+  workingDays Int              @default(0)
+  sharedWithEmployees Boolean  @default(false)
+  generatedBy String
+  status      PayrollRunStatus @default(GENERATED)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  company     Company          @relation(fields: [companyId], references: [id])
+  items       PayrollItem[]
+
+  @@unique([companyId, year, month])
+  @@index([companyId])
+  @@map("payroll_runs")
+}
+
+model PayrollItem {
+  id           String     @id @default(uuid())
+  payrollRunId String
+  companyId    String
+  employeeId   String
+  basicSalary  Float?
+  workingDays  Int
+  payableDays  Float
+  presentDays  Float
+  grossPay     Float?
+  deductions   Float?
+  netPay       Float?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  payrollRun   PayrollRun @relation(fields: [payrollRunId], references: [id], onDelete: Cascade)
+  employee     Employee   @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([payrollRunId, employeeId])
+  @@index([companyId])
+  @@index([employeeId])
+  @@map("payroll_items")
+}
+
 enum Role {
   SUPER_ADMIN
   HR_ADMIN
   PAYROLL_MANAGER
   DEPT_MANAGER
   EMPLOYEE
+}
+
+enum PayrollRunStatus {
+  GENERATED
+  FINALIZED
 }
 
 enum CompanyStatus {
