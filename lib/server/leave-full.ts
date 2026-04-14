@@ -909,19 +909,10 @@ export async function createHRNotification(
   return null;
 }
 
-export async function getHRNotifications(companyId: string, unreadOnly: boolean = false) {
-  const hrAdmin = await prisma.user.findFirst({
-    where: { companyId, role: "HR_ADMIN" },
-    select: { employeeId: true },
-  });
-
-  if (!hrAdmin?.employeeId) {
-    return [];
-  }
-
+export async function getHRNotifications(employeeId: string, unreadOnly: boolean = false) {
   return prisma.leaveNotification.findMany({
     where: { 
-      employeeId: hrAdmin.employeeId,
+      employeeId,
       ...(unreadOnly ? { isRead: false } : {}),
     },
     orderBy: { createdAt: "desc" },

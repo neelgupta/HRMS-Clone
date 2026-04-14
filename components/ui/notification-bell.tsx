@@ -43,6 +43,9 @@ const notificationIcons: Record<string, { icon: typeof MdNotifications; color: s
   COMP_OFF_APPROVED: { icon: MdCheckCircle, color: "text-green-500", bg: "bg-green-100" },
   COMP_OFF_REJECTED: { icon: MdCancel, color: "text-red-500", bg: "bg-red-100" },
   COMP_OFF_APPLIED: { icon: MdEventNote, color: "text-blue-500", bg: "bg-blue-100" },
+  TICKET_CREATED: { icon: MdEventNote, color: "text-indigo-500", bg: "bg-indigo-100" },
+  TICKET_UPDATED: { icon: MdAccessTime, color: "text-amber-500", bg: "bg-amber-100" },
+  TICKET_COMMENT_ADDED: { icon: MdCheck, color: "text-blue-500", bg: "bg-blue-100" },
 };
 
 function formatTimeAgo(dateStr: string): string {

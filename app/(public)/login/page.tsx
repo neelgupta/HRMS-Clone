@@ -7,6 +7,7 @@ import { MdArrowForward, MdEmail, MdLock } from "react-icons/md";
 import { Spinner } from "@/components/ui/loaders/spinner";
 import { dismissToast, showError, showLoading, showSuccess } from "@/lib/toast";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { API_ENDPOINTS } from "@/lib/constants";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -22,9 +23,12 @@ export default function LoginPage() {
     const toastId = showLoading("Signing you in...");
 
     try {
-      const response = await fetch("/api/auth/login", {
+      const response = await fetch(API_ENDPOINTS.AUTH.LOGIN, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
         body: JSON.stringify({ email, password }),
       });
       const data = (await response.json()) as { message?: string; redirectTo?: string };

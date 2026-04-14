@@ -12,7 +12,8 @@ function isCompatibleClient(client: PrismaClient) {
   // In dev, Next.js HMR can keep an older PrismaClient instance in the global cache.
   // If the Prisma schema changes (new models), the old instance won't have the new model delegates.
   // Recreate the client in that case to avoid requiring a full dev-server restart.
-  return "payrollRun" in (client as unknown as Record<string, unknown>) && "payrollItem" in (client as unknown as Record<string, unknown>);
+  const test = client as unknown as Record<string, unknown>;
+  return "payrollRun" in test && "payrollItem" in test && "ticket" in test && "ticketComment" in test;
 }
 
 export const prisma = globalForPrisma.prisma && isCompatibleClient(globalForPrisma.prisma)

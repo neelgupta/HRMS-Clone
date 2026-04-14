@@ -245,6 +245,16 @@ export async function createEmployee(
     reportingManagerId = input.reportingManagerId;
   }
 
+  let branchId: string | null | undefined = input.branchId;
+  if (branchId) {
+    const branch = await prisma.branch.findFirst({
+      where: { id: branchId, companyId },
+    });
+    if (!branch) {
+      throw new ApiError(400, "Invalid branch ID. The specified branch does not exist.", { field: "branchId", value: branchId });
+    }
+  }
+
   try {
     const employee = await prisma.employee.create({
       data: {
@@ -255,7 +265,7 @@ export async function createEmployee(
         email: input.email.toLowerCase(),
         phone: input.phone,
         photoUrl: input.photoUrl || null,
-        branchId: input.branchId,
+        branchId,
         departmentId,
       designationId,
       reportingManagerId,

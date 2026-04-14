@@ -1,3 +1,4 @@
+import { API_ENDPOINTS, buildApiUrl } from "@/lib/constants";
 import type { CompanySetupInput } from "@/lib/validations/company";
 export { getDefaultCompanySetupValues } from "@/lib/company-defaults";
 
@@ -36,7 +37,7 @@ async function parseJson<T>(response: Response): Promise<T> {
 }
 
 export async function fetchCurrentUser() {
-  const response = await fetch("/api/auth/me");
+  const response = await fetch(API_ENDPOINTS.AUTH.ME);
 
   if (!response.ok) {
     const data = await parseJson<ApiErrorResponse | {}>(response).catch(() => ({}));

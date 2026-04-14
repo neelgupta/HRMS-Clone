@@ -8,9 +8,9 @@ export async function GET(request: NextRequest) {
   const authResult = await requireAuth(request);
   if ("response" in authResult) return authResult.response;
 
-  const { companyId, role } = authResult.user;
+  const { userId, companyId, role } = authResult.user;
 
-  if (!["HR_ADMIN", "SUPER_ADMIN"].includes(role)) {
+  if (!["HR_ADMIN", "SUPER_ADMIN", "PAYROLL_MANAGER", "DEPT_MANAGER"].includes(role)) {
     return NextResponse.json({ message: "Forbidden" }, { status: 403 });
   }
 
@@ -18,7 +18,16 @@ export async function GET(request: NextRequest) {
   const unreadOnly = searchParams.get("unread") === "true";
 
   try {
-    const notifications = await getHRNotifications(companyId, unreadOnly);
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { employeeId: true },
+    });
+
+    if (!user?.employeeId) {
+      return NextResponse.json({ notifications: [] });
+    }
+
+    const notifications = await getHRNotifications(user.employeeId, unreadOnly);
     return NextResponse.json({ notifications });
   } catch (error: any) {
     return getErrorResponse(error, error.message || "Failed to fetch notifications");

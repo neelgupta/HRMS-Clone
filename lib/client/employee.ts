@@ -1,3 +1,4 @@
+import { API_ENDPOINTS, buildApiUrl } from "@/lib/constants";
 import type {
   CreateEmployeeInput,
   UpdateEmployeeInput,
@@ -129,7 +130,7 @@ export async function fetchEmployees(params: EmployeeSearchInput): Promise<ApiRe
     searchParams.set("page", String(params.page));
     searchParams.set("limit", String(params.limit));
 
-    const response = await fetch(`/api/employees?${searchParams.toString()}`);
+    const response = await fetch(buildApiUrl(`/api/employees?${searchParams.toString()}`));
 
     if (!response.ok) {
       const data = await parseJson<{ message?: string }>(response);
@@ -152,17 +153,51 @@ export async function fetchEmployees(params: EmployeeSearchInput): Promise<ApiRe
 
 export async function fetchEmployeeById(id: string): Promise<ApiResponse<EmployeeDetail>> {
   try {
-    const response = await fetch(`/api/employees/${id}`);
+    const response = await fetch(buildApiUrl(`/api/employees/${id}`));
 
     if (!response.ok) {
       const data = await parseJson<{ message?: string }>(response);
-      return { error: data.message || "Failed to fetch employee." };
+      return { error: data.message || 'Failed to fetch employee.' };
     }
 
     const data = await parseJson<EmployeeDetail>(response);
     return { data };
   } catch {
-    return { error: "Something went wrong. Please try again." };
+    return { error: 'Something went wrong. Please try again.' };
+  }
+}
+
+export async function fetchCompanyEmployees(params?: { search?: string; page?: number; limit?: number }): Promise<ApiResponse<{
+  employees: EmployeeListItem[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}>> {
+  try {
+    const searchParams = new URLSearchParams();
+    if (params?.search) searchParams.set('search', params.search);
+    if (params?.page) searchParams.set('page', String(params.page));
+    if (params?.limit) searchParams.set('limit', String(params.limit));
+
+    const response = await fetch(buildApiUrl(`/api/employees/company?${searchParams.toString()}`));
+
+    if (!response.ok) {
+      const data = await parseJson<{ message?: string }>(response);
+      return { error: data.message || 'Failed to fetch employees.' };
+    }
+
+    const data = await parseJson<{
+      employees: EmployeeListItem[];
+      total: number;
+      page: number;
+      limit: number;
+      totalPages: number;
+    }>(response);
+
+    return { data };
+  } catch {
+    return { error: 'Something went wrong. Please try again.' };
   }
 }
 
@@ -179,7 +214,7 @@ export type CreateEmployeeResponse = {
 
 export async function createEmployee(values: CreateEmployeeInput): Promise<ApiResponse<CreateEmployeeResponse>> {
   try {
-    const response = await fetch("/api/employees", {
+    const response = await fetch(API_ENDPOINTS.EMPLOYEES.LIST, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(values),
@@ -199,7 +234,7 @@ export async function createEmployee(values: CreateEmployeeInput): Promise<ApiRe
 
 export async function updateEmployee(values: UpdateEmployeeInput): Promise<ApiResponse<CreateEmployeeResponse>> {
   try {
-    const response = await fetch(`/api/employees/${values.id}`, {
+    const response = await fetch(buildApiUrl(`/api/employees/${values.id}`), {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(values),
@@ -219,7 +254,7 @@ export async function updateEmployee(values: UpdateEmployeeInput): Promise<ApiRe
 
 export async function deleteEmployee(id: string): Promise<ApiResponse<void>> {
   try {
-    const response = await fetch(`/api/employees/${id}`, {
+    const response = await fetch(buildApiUrl(`/api/employees/${id}`), {
       method: "DELETE",
     });
 
@@ -238,7 +273,7 @@ export async function uploadEmployeeDocument(
   formData: FormData,
 ): Promise<ApiResponse<{ document: unknown }>> {
   try {
-    const response = await fetch("/api/employees/documents", {
+    const response = await fetch(API_ENDPOINTS.EMPLOYEES.DOCUMENTS, {
       method: "POST",
       body: formData,
     });
@@ -257,7 +292,7 @@ export async function uploadEmployeeDocument(
 
 export async function deleteEmployeeDocument(documentId: string): Promise<ApiResponse<void>> {
   try {
-    const response = await fetch(`/api/employees/documents/${documentId}`, {
+    const response = await fetch(buildApiUrl(`/api/employees/documents/${documentId}`), {
       method: "DELETE",
     });
 
@@ -274,7 +309,7 @@ export async function deleteEmployeeDocument(documentId: string): Promise<ApiRes
 
 export async function fetchEmployeeStats(): Promise<ApiResponse<EmployeeStats>> {
   try {
-    const response = await fetch("/api/employees/stats");
+    const response = await fetch(API_ENDPOINTS.EMPLOYEES.STATS);
 
     if (!response.ok) {
       const data = await parseJson<{ message?: string }>(response);
@@ -290,7 +325,7 @@ export async function fetchEmployeeStats(): Promise<ApiResponse<EmployeeStats>> 
 
 export async function exportEmployeesCSV(): Promise<ApiResponse<string>> {
   try {
-    const response = await fetch("/api/employees/export");
+    const response = await fetch(API_ENDPOINTS.EMPLOYEES.EXPORT);
 
     if (!response.ok) {
       const data = await parseJson<{ message?: string }>(response);
@@ -319,7 +354,7 @@ export async function updateEmployeeCredentials(
   values: UpdateCredentialsInput,
 ): Promise<ApiResponse<UpdateCredentialsResponse>> {
   try {
-    const response = await fetch(`/api/employees/${employeeId}/credentials`, {
+    const response = await fetch(buildApiUrl(`/api/employees/${employeeId}/credentials`), {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(values),

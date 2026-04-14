@@ -1,3 +1,5 @@
+import { API_ENDPOINTS, buildApiUrl } from "@/lib/constants";
+
 export type UserWithEmployee = {
   id: string;
   name: string;
@@ -75,7 +77,7 @@ async function parseJson<T>(response: Response): Promise<T> {
 
 export async function fetchCurrentUserWithEmployee(): Promise<ApiResponse<UserWithEmployee>> {
   try {
-    const response = await fetch("/api/auth/me");
+    const response = await fetch(API_ENDPOINTS.AUTH.ME);
 
     if (!response.ok) {
       const data = await parseJson<{ message?: string }>(response);
@@ -91,7 +93,7 @@ export async function fetchCurrentUserWithEmployee(): Promise<ApiResponse<UserWi
 
 export async function fetchUserById(id: string): Promise<ApiResponse<UserWithEmployee>> {
   try {
-    const response = await fetch(`/api/users/${id}`);
+    const response = await fetch(buildApiUrl(`/api/users/${id}`));
 
     if (!response.ok) {
       const data = await parseJson<{ message?: string }>(response);
@@ -110,7 +112,7 @@ export async function linkUserToEmployee(
   employeeId: string,
 ): Promise<ApiResponse<UserWithEmployee>> {
   try {
-    const response = await fetch(`/api/users/${userId}/link`, {
+    const response = await fetch(buildApiUrl(`/api/users/${userId}/link`), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ employeeId }),
@@ -142,7 +144,7 @@ export async function fetchUnlinkedEmployees(): Promise<
   >
 > {
   try {
-    const response = await fetch("/api/users/unlinked-employees");
+    const response = await fetch(API_ENDPOINTS.USERS.UNLINKED_EMPLOYEES);
 
     if (!response.ok) {
       const data = await parseJson<{ message?: string }>(response);

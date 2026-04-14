@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { MdAccountTree, MdBusiness, MdDashboard, MdPayments, MdPeople, MdSettings, MdAccessTime, MdSchedule, MdPerson, MdAssessment, MdEventNote, MdCalendarMonth, MdPolicy, MdNotifications } from "react-icons/md";
+import { MdAccountTree, MdBusiness, MdDashboard, MdPayments, MdPeople, MdSettings, MdAccessTime, MdSchedule, MdPerson, MdAssessment, MdEventNote, MdCalendarMonth, MdPolicy, MdNotifications, MdHelpOutline } from "react-icons/md";
 import { useTheme } from "@/contexts/theme-context";
 
 type DashboardSidebarProps = {
@@ -30,6 +30,7 @@ const hrNavItems: NavItem[] = [
   { label: "Leave Types", href: "/dashboard/hr/leave-types", icon: MdPolicy, available: true },
   { label: "Leave Policy", href: "/dashboard/hr/leave-policy", icon: MdPolicy, available: true },
   { label: "Holidays", href: "/dashboard/hr/holidays", icon: MdCalendarMonth, available: true },
+  { label: "Ticket Management", href: "/dashboard/hr/tickets", icon: MdHelpOutline, available: true },
   { label: "Notifications", href: "/dashboard/hr/notifications", icon: MdNotifications, available: true },
   { label: "Organization", href: "/dashboard/hr/organization", icon: MdAccountTree, available: true },
   { label: "Payroll", href: "/dashboard/hr/payroll", icon: MdPayments, available: true },

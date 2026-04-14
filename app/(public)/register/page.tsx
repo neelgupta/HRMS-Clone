@@ -6,6 +6,7 @@ import { MdArrowForward, MdBusiness, MdEmail, MdPerson, MdPhone } from "react-ic
 import { Spinner } from "@/components/ui/loaders/spinner";
 import { dismissToast, showError, showLoading, showSuccess } from "@/lib/toast";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { API_ENDPOINTS } from "@/lib/constants";
 
 type FormState = {
   name: string;
@@ -59,7 +60,7 @@ export default function RegisterPage() {
     setLoading(true);
     const toastId = showLoading("Creating your account...");
     try {
-      const response = await fetch("/api/auth/register", {
+      const response = await fetch(API_ENDPOINTS.AUTH.REGISTER, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
