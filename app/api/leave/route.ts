@@ -70,9 +70,9 @@ export async function GET(request: NextRequest) {
         select: { employeeId: true },
       });
       employeeId = user?.employeeId ?? undefined;
-    } else if (role === "HR_ADMIN" || role === "ADMIN") {
+    } else if (role === "HR_ADMIN" || role === "SUPER_ADMIN") {
       // HR/Admin can see all - no filter
-    } else if (role === "MANAGER") {
+    } else if (role === "PAYROLL_MANAGER") {
       approverId = userId;
     }
 

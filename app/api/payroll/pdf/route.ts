@@ -31,9 +31,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ message: "No payroll generated for this month yet." }, { status: 404 });
     }
 
-    const pdfBytes = await buildPayrollPdf({ month, run: result.run, rows: result.rows });
+    const pdfBytes = await buildPayrollPdf({
+      month,
+      run: result.run,
+      rows: result.rows,
+    });
 
-    return new NextResponse(pdfBytes, {
+    return new NextResponse(Buffer.from(pdfBytes), {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="payroll-${month}.pdf"`,

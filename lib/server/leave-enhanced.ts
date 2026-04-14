@@ -99,11 +99,14 @@ export async function updateLeaveTypeConfig(
     canApplyHalfDay: boolean;
     isActive: boolean;
     sortOrder: number;
-  }>
+  }>,
 ) {
   return prisma.leaveTypeConfig.update({
     where: { id, companyId },
-    data: input,
+    data: {
+      ...input,
+      accrualType: input.accrualType as any, // Cast to any to bypass enum type checking
+    },
   });
 }
 
@@ -345,7 +348,7 @@ export async function approveLeave(
     level: number; // 1 or 2
     action: "APPROVED" | "REJECTED" | "MODIFICATION_REQUESTED";
     remarks?: string;
-  }
+  },
 ) {
   const application = await prisma.leaveApplication.findFirst({
     where: { id: applicationId, companyId },
@@ -354,39 +357,41 @@ export async function approveLeave(
       leaveTypeConfig: true,
     },
   });
-  
+
   if (!application) {
     throw new Error("Leave application not found");
   }
-  
+
   // Verify approver has permission
   if (input.level === 1) {
     // Manager approval
     const managerEmployee = await prisma.employee.findFirst({
       where: {
-        userId: approverId,
+        user: { id: approverId },
         companyId,
       },
       select: { id: true },
     });
-    
+
     if (managerEmployee?.id !== application.employee.reportingManagerId) {
       throw new Error("You are not authorized to approve this application");
     }
   }
-  
+
   // Update application status
   const updateData: any = {};
-  
+
   if (input.level === 1) {
     updateData.level1Status = input.action;
     updateData.level1ReviewedBy = approverId;
     updateData.level1ReviewedAt = new Date();
     updateData.level1Remarks = input.remarks;
-    
+
     // Check if level 2 is required
-    const policy = await prisma.leavePolicy.findUnique({ where: { companyId } });
-    
+    const policy = await prisma.leavePolicy.findUnique({
+      where: { companyId },
+    });
+
     if (policy?.approvalLevel2 && input.action === "APPROVED") {
       updateData.currentApproverLevel = 2;
     } else if (input.action === "APPROVED") {
@@ -397,12 +402,12 @@ export async function approveLeave(
     updateData.level2ReviewedBy = approverId;
     updateData.level2ReviewedAt = new Date();
     updateData.level2Remarks = input.remarks;
-    
+
     if (input.action === "APPROVED") {
       updateData.status = "APPROVED";
     }
   }
-  
+
   const updated = await prisma.leaveApplication.update({
     where: { id: applicationId },
     data: updateData,
@@ -411,7 +416,7 @@ export async function approveLeave(
       leaveTypeConfig: true,
     },
   });
-  
+
   // Record approval history
   await prisma.leaveApprovalHistory.create({
     data: {
@@ -422,9 +427,13 @@ export async function approveLeave(
       comments: input.remarks,
     },
   });
-  
+
   // Update leave balance if approved
-  if (input.action === "APPROVED" && (input.level === 2 || !updated.currentApproverLevel)) {
+  // Update leave balance if approved
+  if (
+    input.action === "APPROVED" &&
+    (input.level === 2 || !updated.currentApproverLevel)
+  ) {
     const balance = await prisma.leaveBalance.findFirst({
       where: {
         employeeId: application.employeeId,
@@ -432,7 +441,7 @@ export async function approveLeave(
         year: application.startDate.getFullYear(),
       },
     });
-    
+
     if (balance) {
       await prisma.leaveBalance.update({
         where: { id: balance.id },
@@ -442,32 +451,35 @@ export async function approveLeave(
         },
       });
     }
-    
+
     // Notify employee
     await createNotification(companyId, application.employeeId, {
       type: "LEAVE_APPROVED",
       title: "Leave Approved",
-      message: `Your ${application.leaveTypeConfig.name} application has been approved`,
+      message: `Your ${application.leaveTypeConfig?.name ?? "leave"} application has been approved`,
       relatedType: "LeaveApplication",
       relatedId: application.id,
     });
-    
+
     // Send email
     const employeeUser = await prisma.user.findFirst({
       where: { employeeId: application.employeeId },
     });
-    
+
     if (employeeUser?.email) {
       await sendEmail({
         to: employeeUser.email,
         subject: "Leave Application Approved",
         html: `<p>Your leave application has been approved.</p>
-               <p><strong>Type:</strong> ${application.leaveTypeConfig.name}</p>
-               <p><strong>Duration:</strong> ${application.totalDays} days</p>
-               <p><strong>Dates:</strong> ${application.startDate.toDateString()} - ${application.endDate.toDateString()}</p>`,
+             <p><strong>Type:</strong> ${application.leaveTypeConfig?.name ?? "Leave"}</p>
+             <p><strong>Duration:</strong> ${application.totalDays} days</p>
+             <p><strong>Dates:</strong> ${application.startDate.toDateString()} - ${application.endDate.toDateString()}</p>`,
       });
     }
-  } else if (input.action === "REJECTED" || input.action === "MODIFICATION_REQUESTED") {
+  } else if (
+    input.action === "REJECTED" ||
+    input.action === "MODIFICATION_REQUESTED"
+  ) {
     // Restore pending balance
     const balance = await prisma.leaveBalance.findFirst({
       where: {
@@ -476,7 +488,7 @@ export async function approveLeave(
         year: application.startDate.getFullYear(),
       },
     });
-    
+
     if (balance) {
       await prisma.leaveBalance.update({
         where: { id: balance.id },
@@ -486,18 +498,26 @@ export async function approveLeave(
         },
       });
     }
-    
+
     // Notify employee
-    const notifType = input.action === "REJECTED" ? "LEAVE_REJECTED" : "LEAVE_MODIFICATION_REQUESTED";
+    const notifType =
+      input.action === "REJECTED"
+        ? "LEAVE_REJECTED"
+        : "LEAVE_MODIFICATION_REQUESTED";
     await createNotification(companyId, application.employeeId, {
       type: notifType as any,
-      title: input.action === "REJECTED" ? "Leave Rejected" : "Modification Requested",
-      message: input.remarks || `Your ${application.leaveTypeConfig.name} application was ${input.action.toLowerCase()}`,
+      title:
+        input.action === "REJECTED"
+          ? "Leave Rejected"
+          : "Modification Requested",
+      message:
+        input.remarks ||
+        `Your ${application.leaveTypeConfig?.name ?? "leave"} application was ${input.action.toLowerCase()}`,
       relatedType: "LeaveApplication",
       relatedId: application.id,
     });
   }
-  
+
   return { application: updated };
 }
 
@@ -789,16 +809,11 @@ export async function getLeavePolicy(companyId: string) {
   return policy;
 }
 
+import { LeavePolicyUpdateInput } from "@/lib/validations/leave-enhanced";
+
 export async function updateLeavePolicy(
   companyId: string,
-  input: {
-    approvalLevel1?: string;
-    approvalLevel2?: string;
-    managerApprovalDays?: number;
-    hrApprovalDays?: number;
-    allowAutoApproval?: boolean;
-    autoApprovalDaysThreshold?: number;
-  }
+  input: LeavePolicyUpdateInput
 ) {
   return prisma.leavePolicy.upsert({
     where: { companyId },
