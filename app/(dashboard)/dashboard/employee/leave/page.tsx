@@ -121,7 +121,7 @@ function LeaveContent() {
     reset,
     trigger,
   } = useForm<CreateLeaveApplicationInput>({
-    resolver: zodResolver(createLeaveApplicationFullSchema),
+    resolver: zodResolver(createLeaveApplicationFullSchema) as any,
     defaultValues: {
       startSession: "FULL_DAY",
       endSession: "FULL_DAY",

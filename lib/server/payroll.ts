@@ -262,7 +262,7 @@ export async function generatePayrollForMonth(params: {
 
   const weeklyOffs = getWeeklyOffIndexes(
     policy
-      ? { weeklyOff1: policy.weeklyOff1, weeklyOff2: policy.weeklyOff2 }
+      ? { weeklyOff1: policy.weeklyOff1, weeklyOff2: policy.weeklyOff2 ?? undefined }
       : generalSetting?.workweek === "MON_SAT"
         ? { weeklyOff1: "SUNDAY" }
         : { weeklyOff1: "SUNDAY", weeklyOff2: "SATURDAY" },
