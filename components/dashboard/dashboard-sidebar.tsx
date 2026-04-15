@@ -40,7 +40,7 @@ const hrNavItems: NavItem[] = [
 const employeeNavItems: NavItem[] = [
   { label: "My Dashboard", href: "/dashboard/employee", icon: MdDashboard, available: true },
   { label: "My Attendance", href: "/dashboard/employee", icon: MdAccessTime, available: true },
-  { label: "My Profile", href: "/dashboard/employee", icon: MdPerson, available: true },
+  { label: "My Profile", href: "/dashboard/employee/profile", icon: MdPerson, available: true },
 ];
 
 function NavItem({
