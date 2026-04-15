@@ -1,7 +1,50 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { requireHRAdmin } from "@/lib/auth-guard";
+import { requireHRAdmin, requireUser } from "@/lib/auth-guard";
 import { uploadDocument } from "@/lib/server/employee";
 import { documentUploadSchema } from "@/lib/validations/employee";
+
+export async function GET(request: NextRequest) {
+  const authResult = await requireUser();
+
+  if ("response" in authResult) {
+    return authResult.response;
+  }
+
+  const { userId } = authResult;
+
+  try {
+    const { prisma } = await import("@/lib/prisma");
+    const user = await prisma.user.findFirst({
+      where: { id: userId },
+      select: { employeeId: true },
+    });
+
+    if (!user?.employeeId) {
+      return NextResponse.json({ message: "Employee not found." }, { status: 404 });
+    }
+
+    const documents = await prisma.document.findMany({
+      where: {
+        employeeId: user.employeeId,
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    const mappedDocuments = documents.map((doc) => ({
+      id: doc.id,
+      name: doc.name,
+      type: doc.type,
+      category: doc.type,
+      url: doc.fileUrl,
+      createdAt: doc.createdAt.toISOString(),
+    }));
+
+    return NextResponse.json({ documents: mappedDocuments });
+  } catch (error) {
+    console.error("Documents fetch error:", error);
+    return NextResponse.json({ message: "Failed to fetch documents." }, { status: 500 });
+  }
+}
 
 export async function POST(request: NextRequest) {
   const authResult = await requireHRAdmin(request);

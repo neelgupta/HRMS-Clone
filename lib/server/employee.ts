@@ -247,12 +247,23 @@ export async function createEmployee(
 
   let branchId: string | null | undefined = input.branchId;
   if (branchId) {
-    const branch = await prisma.branch.findFirst({
+    // First try to find by ID
+    let branch = await prisma.branch.findFirst({
       where: { id: branchId, companyId },
     });
+    
+    // If not found by ID, try to find by name
     if (!branch) {
-      throw new ApiError(400, "Invalid branch ID. The specified branch does not exist.", { field: "branchId", value: branchId });
+      branch = await prisma.branch.findFirst({
+        where: { name: { equals: branchId, mode: "insensitive" }, companyId },
+      });
     }
+    
+    if (!branch) {
+      throw new ApiError(400, "Invalid branch. The specified branch does not exist.", { field: "branchId", value: branchId });
+    }
+    
+    branchId = branch.id;
   }
 
   try {

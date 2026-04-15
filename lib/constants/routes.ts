@@ -33,6 +33,13 @@ export const EMPLOYEE_ROUTES = {
   HOLIDAYS: '/dashboard/employee/holidays',
   HELP: '/dashboard/employee/help',
   NOTIFICATIONS: '/dashboard/employee/notifications',
+  SELF_SERVICE: {
+    DASHBOARD: '/dashboard/employee/self-service/dashboard',
+    PROFILE: '/dashboard/employee/self-service/profile',
+    PAYSLIPS: '/dashboard/employee/self-service/payslips',
+    DOCUMENTS: '/dashboard/employee/self-service/documents',
+    ANNOUNCEMENTS: '/dashboard/employee/self-service/announcements',
+  },
 } as const;
 
 export const API_ROUTES = {

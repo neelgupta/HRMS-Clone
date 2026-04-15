@@ -17,11 +17,30 @@ export async function POST(request: NextRequest) {
   try {
     const user = await prisma.user.findFirst({
       where: { id: userId },
-      select: { employeeId: true },
+      select: { employeeId: true, companyId: true },
     });
 
     if (!user?.employeeId) {
       return NextResponse.json({ message: "Employee not linked to user." }, { status: 400 });
+    }
+
+    if (user.companyId !== companyId) {
+      console.error(`[SECURITY] Company mismatch! User ${userId} has companyId ${companyId} in token but employee belongs to ${user.companyId}`);
+      return NextResponse.json({ message: "Company mismatch detected. Please login again." }, { status: 403 });
+    }
+
+    const employee = await prisma.employee.findFirst({
+      where: { id: user.employeeId, companyId },
+      select: { id: true, companyId: true },
+    });
+
+    if (!employee) {
+      return NextResponse.json({ message: "Employee not found in your company." }, { status: 400 });
+    }
+
+    if (employee.companyId !== companyId) {
+      console.error(`[SECURITY] Employee ${employee.id} company mismatch! Expected ${companyId}, got ${employee.companyId}`);
+      return NextResponse.json({ message: "Employee company mismatch. Please contact support." }, { status: 403 });
     }
 
     const body = await request.json();
