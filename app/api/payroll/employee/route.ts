@@ -142,34 +142,31 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     );
 
     // Combine payroll runs with their items
-    const payroll = sharedRuns
-      .map((run) => {
-        const item = itemByRunId.get(run.id);
-        if (!item) return null;
-        
-        return {
-          runId: run.id,
-          year: run.year,
-          month: run.month,
-          status: run.status,
-          updatedAt: run.updatedAt.toISOString(),
-          calendar: {
-            workingDays: run.workingDays,
-            holidays: run.holidays,
-            weekOffDays: run.weekOffDays,
-          },
-          item: {
-            basicSalary: item.basicSalary ?? null,
-            grossPay: item.grossPay ?? null,
-            deductions: item.deductions ?? null,
-            netPay: item.netPay ?? null,
-            workingDays: item.workingDays,
-            presentDays: item.presentDays,
-            payableDays: item.payableDays,
-          },
-        };
-      })
-      .filter((run): run is NonNullable<typeof run> => run !== null);
+    const payroll = sharedRuns.map((run) => {
+      const item = itemByRunId.get(run.id);
+      
+      return {
+        runId: run.id,
+        year: run.year,
+        month: run.month,
+        status: run.status,
+        updatedAt: run.updatedAt.toISOString(),
+        calendar: {
+          workingDays: run.workingDays,
+          holidays: run.holidays,
+          weekOffDays: run.weekOffDays,
+        },
+        item: item ? {
+          basicSalary: item.basicSalary ?? null,
+          grossPay: item.grossPay ?? null,
+          deductions: item.deductions ?? null,
+          netPay: item.netPay ?? null,
+          workingDays: item.workingDays,
+          presentDays: item.presentDays,
+          payableDays: item.payableDays,
+        } : null,
+      };
+    });
 
     // Return successful response
     return NextResponse.json({
