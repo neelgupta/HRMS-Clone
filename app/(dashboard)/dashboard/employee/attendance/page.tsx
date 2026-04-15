@@ -47,6 +47,7 @@ function AttendanceContent() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
+  
   const getDefaultDateFrom = () => {
     const today = new Date();
     const last7Days = new Date(today);
@@ -69,7 +70,6 @@ function AttendanceContent() {
     const days: Date[] = [];
     if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return days;
     if (end.getTime() < start.getTime()) return days;
-    // Cap to avoid generating huge placeholder tables.
     const maxDays = 31;
     const diffDays = Math.floor((end.getTime() - start.getTime()) / (24 * 60 * 60_000));
     const count = Math.min(maxDays - 1, diffDays);
@@ -80,57 +80,66 @@ function AttendanceContent() {
   };
 
   const loadAttendance = async () => {
-    const result = await fetchTodayAttendance();
-    if (result.data?.attendance) {
-      const attendance = result.data.attendance;
-      setIsClockedIn(!!attendance.clockIn);
-      setIsOnBreak(!!attendance.breakStart && !attendance.breakEnd);
-      
-      if (attendance.clockIn && !attendance.clockOut) {
-        const clockInTime = new Date(attendance.clockIn).getTime();
-        const now = Date.now();
-        let workedHours = (now - clockInTime) / (1000 * 60 * 60);
+    try {
+      const result = await fetchTodayAttendance();
+      if (result.data?.attendance) {
+        const attendance = result.data.attendance;
+        setIsClockedIn(!!attendance.clockIn);
+        setIsOnBreak(!!attendance.breakStart && !attendance.breakEnd);
         
-        if (attendance.totalBreakMins) {
-          workedHours -= attendance.totalBreakMins / 60;
+        if (attendance.clockIn && !attendance.clockOut) {
+          const clockInTime = new Date(attendance.clockIn).getTime();
+          const now = Date.now();
+          let workedHours = (now - clockInTime) / (1000 * 60 * 60);
+          
+          if (attendance.totalBreakMins) {
+            workedHours -= attendance.totalBreakMins / 60;
+          }
+          setTotalHoursWorked(Math.max(0, workedHours));
+        } else if (attendance.totalHours) {
+          setTotalHoursWorked(attendance.totalHours);
         }
-        setTotalHoursWorked(Math.max(0, workedHours));
       }
-    }
-    if (result.data?.shift) {
-      setShift(result.data.shift);
+      if (result.data?.shift) {
+        setShift(result.data.shift);
+      }
+    } catch (error) {
+      console.error("Failed to load attendance:", error);
     }
   };
 
   const loadDashboard = async () => {
-    const month = `${currentTime.getFullYear()}-${String(currentTime.getMonth() + 1).padStart(2, "0")}`;
-    const result = await fetchEmployeeAttendanceDashboard(month);
-    if (result.data) {
-      setDashboard(result.data);
-      setPresentDays(result.data.summary.present);
-      
-      const todayUtc = new Date();
-      const day = todayUtc.getUTCDay(); // 0=Sun
-      const mondayOffset = (day + 6) % 7;
-      const monday = new Date(Date.UTC(todayUtc.getUTCFullYear(), todayUtc.getUTCMonth(), todayUtc.getUTCDate()));
-      monday.setUTCDate(monday.getUTCDate() - mondayOffset);
-      const sunday = new Date(monday.getTime() + 6 * 24 * 60 * 60_000);
-      const fromYmd = formatYmdUtc(monday);
-      const toYmd = formatYmdUtc(sunday);
+    try {
+      const month = `${currentTime.getFullYear()}-${String(currentTime.getMonth() + 1).padStart(2, "0")}`;
+      const result = await fetchEmployeeAttendanceDashboard(month);
+      if (result.data) {
+        setDashboard(result.data);
+        setPresentDays(result.data.summary.present);
+        
+        const todayUtc = new Date();
+        const day = todayUtc.getUTCDay();
+        const mondayOffset = (day + 6) % 7;
+        const monday = new Date(Date.UTC(todayUtc.getUTCFullYear(), todayUtc.getUTCMonth(), todayUtc.getUTCDate()));
+        monday.setUTCDate(monday.getUTCDate() - mondayOffset);
+        const sunday = new Date(monday.getTime() + 6 * 24 * 60 * 60_000);
+        const fromYmd = formatYmdUtc(monday);
+        const toYmd = formatYmdUtc(sunday);
 
-      const weekData = (result.data.timelogs || []).filter((t) => t.date >= fromYmd && t.date <= toYmd);
-      const totalHrs = weekData.reduce((sum, t) => sum + t.beforeBreak + t.afterBreak + t.break, 0);
-      setWeekTotalHours(totalHrs);
-      const daysWithData = weekData.filter(t => t.beforeBreak > 0 || t.afterBreak > 0).length;
-      setWeekAvgHours(daysWithData > 0 ? totalHrs / daysWithData : 0);
+        const weekData = (result.data.timelogs || []).filter((t) => t.date >= fromYmd && t.date <= toYmd);
+        const totalHrs = weekData.reduce((sum, t) => sum + t.beforeBreak + t.afterBreak + t.break, 0);
+        setWeekTotalHours(totalHrs);
+        const daysWithData = weekData.filter(t => t.beforeBreak > 0 || t.afterBreak > 0).length;
+        setWeekAvgHours(daysWithData > 0 ? totalHrs / daysWithData : 0);
+      }
+    } catch (error) {
+      console.error("Failed to load dashboard:", error);
     }
   };
 
   const loadAttendances = async () => {
     setLoading(true);
     try {
-      const rangeDays =
-        dateFrom && dateTo ? getDaysBetweenInclusive(dateFrom, dateTo).length : 0;
+      const rangeDays = dateFrom && dateTo ? getDaysBetweenInclusive(dateFrom, dateTo).length : 0;
       const limit = page === 1 && rangeDays > 0 ? Math.max(20, Math.min(31, rangeDays)) : 20;
 
       const result = await fetchAttendances({
@@ -144,6 +153,9 @@ function AttendanceContent() {
         setTotalPages(result.data.totalPages);
         setTotal(result.data.total);
       }
+    } catch (error) {
+      console.error("Failed to load attendances:", error);
+      showError("Failed to load attendance records");
     } finally {
       setLoading(false);
     }
@@ -166,6 +178,9 @@ function AttendanceContent() {
     }
     const timer = setInterval(() => {
       setCurrentTime(new Date());
+      if (isClockedIn && !isOnBreak) {
+        setTotalHoursWorked(prev => prev + (1 / 3600));
+      }
     }, 1000);
     return () => clearInterval(timer);
   }, [isClockedIn, isOnBreak]);
@@ -259,6 +274,9 @@ function AttendanceContent() {
           await loadAttendances();
         }
       }
+    } catch (error) {
+      console.error("Action failed:", error);
+      showError("An error occurred. Please try again.");
     } finally {
       setActionLoading(false);
       setRemarks("");
@@ -336,7 +354,6 @@ function AttendanceContent() {
     }
 
     const rows: AttendanceListItem[] = [];
-    // Show latest first (same as API orderBy date: desc).
     for (const d of days.reverse()) {
       const ymd = formatYmdUtc(d);
       const found = byYmd.get(ymd);
@@ -367,7 +384,7 @@ function AttendanceContent() {
     if (timelogs.length === 0) return weekDays.map((day) => ({ name: day, hours: 0 }));
 
     const todayUtc = new Date();
-    const day = todayUtc.getUTCDay(); // 0=Sun
+    const day = todayUtc.getUTCDay();
     const mondayOffset = (day + 6) % 7;
     const monday = new Date(Date.UTC(todayUtc.getUTCFullYear(), todayUtc.getUTCMonth(), todayUtc.getUTCDate()));
     monday.setUTCDate(monday.getUTCDate() - mondayOffset);
@@ -386,8 +403,7 @@ function AttendanceContent() {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-      {/* Attendance History Table */}
+      {/* Attendance History Table - Full Width */}
       <div className="lg:col-span-3 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
         <div className="p-4 border-b border-slate-200 dark:border-slate-700">
           <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Attendance History</h2>
@@ -457,7 +473,7 @@ function AttendanceContent() {
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
                   </td>
                 </tr>
-              ) : attendances.length === 0 ? (
+              ) : attendanceRows.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="px-4 py-8 text-center text-slate-500 dark:text-slate-400">
                     No attendance records found.
