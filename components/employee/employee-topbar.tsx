@@ -31,6 +31,7 @@ type EmployeeTopbarProps = {
   onMarkAllAsRead?: () => Promise<void>;
   onNotificationClick?: () => void;
   notificationHref?: string;
+  profileHref?: string;
 };
 
 export function EmployeeTopbar({ 
@@ -42,7 +43,8 @@ export function EmployeeTopbar({
   notifications = [],
   onMarkAsRead,
   onMarkAllAsRead,
-  onNotificationClick,
+  onNotificationCl,
+  profileHref = "/dashboard/employee/profile"ick,
   notificationHref
 }: EmployeeTopbarProps) {
   const router = useRouter();
