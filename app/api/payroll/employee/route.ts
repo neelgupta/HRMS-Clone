@@ -150,7 +150,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         year: run.year,
         month: run.month,
         status: run.status,
-        updatedAt: run.updatedAt.toISOString(),
+        updatedAt: run.updatedAt?.toISOString() ?? null,
         calendar: {
           workingDays: run.workingDays,
           holidays: run.holidays,
