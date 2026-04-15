@@ -84,7 +84,7 @@ function TicketDetailContent() {
   if (!ticket) {
     return (
       <div className="text-center py-20">
-        <p className="text-slate-500 mb-2">{error || "Ticket not found."}</p>
+        <p className="text-slate-500 mb-2">{"Ticket not found."}</p>
         <Link href="/dashboard/employee/help" className="mt-2 text-indigo-600 hover:underline">
           Back to My Tickets
         </Link>
