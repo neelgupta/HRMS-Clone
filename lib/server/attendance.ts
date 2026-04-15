@@ -274,7 +274,7 @@ export async function assignShift(
   });
 
   if (!employee) {
-    throw new Error("Employee not found");
+    throw new Error("Employee not found in your company");
   }
 
   const shift = await prisma.shift.findFirst({
@@ -282,7 +282,15 @@ export async function assignShift(
   });
 
   if (!shift) {
-    throw new Error("Shift not found");
+    throw new Error("Shift not found in your company");
+  }
+
+  if (employee.companyId !== companyId) {
+    throw new Error("Employee does not belong to your company");
+  }
+
+  if (shift.companyId !== companyId) {
+    throw new Error("Shift does not belong to your company");
   }
 
   await prisma.shiftAssignment.upsert({
@@ -318,6 +326,15 @@ export async function getEmployeeShift(
   employeeId: string,
   date: Date = new Date()
 ): Promise<{ shift: ShiftListItem | null; assignment: unknown | null }> {
+  const employee = await prisma.employee.findUnique({
+    where: { id: employeeId },
+    select: { id: true, companyId: true },
+  });
+
+  if (!employee) {
+    return { shift: null, assignment: null };
+  }
+
   const assignment = await prisma.shiftAssignment.findFirst({
     where: {
       employeeId,
@@ -329,28 +346,28 @@ export async function getEmployeeShift(
     orderBy: { effectiveFrom: "desc" },
   });
 
-  if (!assignment) {
-    const employee = await prisma.employee.findUnique({
-      where: { id: employeeId },
-      select: { companyId: true },
-    });
-
-    if (!employee) {
-      return { shift: null, assignment: null };
+  if (assignment) {
+    if (assignment.shift.companyId !== employee.companyId) {
+      console.error(`[SECURITY] Cross-company shift assignment detected! Employee ${employeeId} (Company: ${employee.companyId}) has assignment to Shift ${assignment.shiftId} (Company: ${assignment.shift.companyId}). Cleaning up...`);
+      await prisma.shiftAssignment.delete({ where: { id: assignment.id } });
+      const defaultShift = await prisma.shift.findFirst({
+        where: { companyId: employee.companyId, isActive: true },
+        orderBy: { createdAt: "asc" },
+      });
+      return { shift: (defaultShift as ShiftListItem | null) ?? null, assignment: null };
     }
-
-    const defaultShift = await prisma.shift.findFirst({
-      where: { companyId: employee.companyId, isActive: true },
-      orderBy: { createdAt: "asc" },
-    });
-
-    return { shift: (defaultShift as ShiftListItem | null) ?? null, assignment: null };
+    return {
+      shift: assignment.shift as ShiftListItem,
+      assignment,
+    };
   }
 
-  return {
-    shift: assignment.shift as ShiftListItem,
-    assignment,
-  };
+  const defaultShift = await prisma.shift.findFirst({
+    where: { companyId: employee.companyId, isActive: true },
+    orderBy: { createdAt: "asc" },
+  });
+
+  return { shift: (defaultShift as ShiftListItem | null) ?? null, assignment: null };
 }
 
 function parseTimeToMinutes(time: string): number {
@@ -1478,4 +1495,108 @@ export async function listRegularizations(
   });
 
   return regularizations;
+}
+
+export async function cleanupOrphanedShiftAssignments(companyId?: string): Promise<{
+  deletedAssignments: number;
+  deletedAttendances: number;
+  errors: string[];
+}> {
+  const errors: string[] = [];
+  let deletedAssignments = 0;
+  let deletedAttendances = 0;
+
+  try {
+    const orphanedAssignments = await prisma.shiftAssignment.findMany({
+      where: companyId ? { shift: { companyId } } : {},
+      include: { shift: true, employee: true },
+    });
+
+    for (const assignment of orphanedAssignments) {
+      if (assignment.shift.companyId !== assignment.employee.companyId) {
+        console.log(`[CLEANUP] Deleting orphaned ShiftAssignment ${assignment.id}: Employee ${assignment.employeeId} (Company: ${assignment.employee.companyId}) -> Shift ${assignment.shiftId} (Company: ${assignment.shift.companyId})`);
+        await prisma.shiftAssignment.delete({ where: { id: assignment.id } });
+        deletedAssignments++;
+      }
+    }
+  } catch (error) {
+    errors.push(`Failed to cleanup ShiftAssignments: ${error instanceof Error ? error.message : "Unknown error"}`);
+  }
+
+  try {
+    const orphanedAttendances = await prisma.attendance.findMany({
+      where: companyId ? { companyId } : {},
+      include: { employee: true },
+    });
+
+    for (const attendance of orphanedAttendances) {
+      if (attendance.companyId !== attendance.employee.companyId) {
+        console.log(`[CLEANUP] Deleting orphaned Attendance ${attendance.id}: Company ${attendance.companyId} vs Employee ${attendance.employeeId} (Company: ${attendance.employee.companyId})`);
+        await prisma.attendance.delete({ where: { id: attendance.id } });
+        deletedAttendances++;
+      }
+    }
+  } catch (error) {
+    errors.push(`Failed to cleanup Attendances: ${error instanceof Error ? error.message : "Unknown error"}`);
+  }
+
+  return { deletedAssignments, deletedAttendances, errors };
+}
+
+export async function validateCompanyDataIntegrity(companyId: string): Promise<{
+  isValid: boolean;
+  issues: string[];
+  stats: {
+    totalEmployees: number;
+    totalShifts: number;
+    totalShiftAssignments: number;
+    totalAttendances: number;
+    orphanedAssignments: number;
+    orphanedAttendances: number;
+  };
+}> {
+  const issues: string[] = [];
+
+  const [employees, shifts, assignments, attendances] = await Promise.all([
+    prisma.employee.count({ where: { companyId } }),
+    prisma.shift.count({ where: { companyId } }),
+    prisma.shiftAssignment.count({
+      where: { employee: { companyId }, shift: { companyId } },
+    }),
+    prisma.attendance.count({ where: { companyId } }),
+  ]);
+
+  const orphanedAssignments = await prisma.shiftAssignment.count({
+    where: {
+      employee: { companyId },
+      shift: { NOT: { companyId } },
+    },
+  });
+
+  const orphanedAttendances = await prisma.attendance.count({
+    where: {
+      employee: { NOT: { companyId } },
+    },
+  });
+
+  if (orphanedAssignments > 0) {
+    issues.push(`${orphanedAssignments} ShiftAssignments with mismatched company`);
+  }
+
+  if (orphanedAttendances > 0) {
+    issues.push(`${orphanedAttendances} Attendances with mismatched employee company`);
+  }
+
+  return {
+    isValid: issues.length === 0,
+    issues,
+    stats: {
+      totalEmployees: employees,
+      totalShifts: shifts,
+      totalShiftAssignments: assignments,
+      totalAttendances: attendances,
+      orphanedAssignments,
+      orphanedAttendances,
+    },
+  };
 }

@@ -13,6 +13,10 @@ import {
   MdMoreTime,
   MdPayments,
   MdHelp,
+  MdSelfImprovement,
+  MdReceipt,
+  MdDescription,
+  MdCampaign,
 } from "react-icons/md";
 import { useTheme } from "@/contexts/theme-context";
 
@@ -24,7 +28,11 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   { label: "Dashboard", href: "/dashboard/employee", icon: MdDashboard },
+  { label: "Self-Service", href: "/dashboard/employee/self-service/dashboard", icon: MdSelfImprovement },
   { label: "My Profile", href: "/dashboard/employee/profile", icon: MdPerson },
+  { label: "My Payslips", href: "/dashboard/employee/self-service/payslips", icon: MdReceipt },
+  { label: "My Documents", href: "/dashboard/employee/self-service/documents", icon: MdDescription },
+  { label: "Announcements", href: "/dashboard/employee/self-service/announcements", icon: MdCampaign },
   { label: "Inbox", href: "/dashboard/employee/inbox", icon: MdInbox },
   { label: "Employee", href: "/dashboard/employee/employees", icon: MdPeople },
   { label: "Attendance", href: "/dashboard/employee/attendance", icon: MdAccessTime },
