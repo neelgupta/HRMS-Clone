@@ -1,3 +1,5 @@
+"use client";
+
 import type { PayrollApiResult, PayrollMonthResult } from "@/lib/types/payroll";
 
 type ApiResponse<T> = {
