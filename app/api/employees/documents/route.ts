@@ -20,7 +20,10 @@ export async function GET(request: NextRequest) {
     });
 
     if (!user?.employeeId) {
-      return NextResponse.json({ message: "Employee not found." }, { status: 404 });
+      return NextResponse.json(
+        { message: "Employee not found." },
+        { status: 404 },
+      );
     }
 
     const documents = await prisma.document.findMany({
@@ -30,7 +33,7 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: "desc" },
     });
 
-    const mappedDocuments = documents.map((doc) => ({
+    const mappedDocuments = documents.map((doc: any) => ({
       id: doc.id,
       name: doc.name,
       type: doc.type,
@@ -42,7 +45,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ documents: mappedDocuments });
   } catch (error) {
     console.error("Documents fetch error:", error);
-    return NextResponse.json({ message: "Failed to fetch documents." }, { status: 500 });
+    return NextResponse.json(
+      { message: "Failed to fetch documents." },
+      { status: 500 },
+    );
   }
 }
 
@@ -64,22 +70,44 @@ export async function POST(request: NextRequest) {
     const file = formData.get("file") as File | null;
 
     if (!employeeId || !type || !name) {
-      return NextResponse.json({ message: "Missing required fields." }, { status: 400 });
+      return NextResponse.json(
+        { message: "Missing required fields." },
+        { status: 400 },
+      );
     }
 
     if (!file) {
-      return NextResponse.json({ message: "File is required." }, { status: 400 });
+      return NextResponse.json(
+        { message: "File is required." },
+        { status: 400 },
+      );
     }
 
     const validTypes = [
-      "AADHAR_CARD", "PAN_CARD", "PASSPORT", "DRIVING_LICENSE", "VOTER_ID",
-      "BANK_PASSBOOK", "EDUCATION_CERTIFICATE", "EXPERIENCE_LETTER", "OFFER_LETTER",
-      "APPOINTMENT_LETTER", "SALARY_SLIP", "FORM_16", "PF_DOCUMENT", "ESI_DOCUMENT",
-      "PHOTO", "SIGNATURE", "OTHER"
+      "AADHAR_CARD",
+      "PAN_CARD",
+      "PASSPORT",
+      "DRIVING_LICENSE",
+      "VOTER_ID",
+      "BANK_PASSBOOK",
+      "EDUCATION_CERTIFICATE",
+      "EXPERIENCE_LETTER",
+      "OFFER_LETTER",
+      "APPOINTMENT_LETTER",
+      "SALARY_SLIP",
+      "FORM_16",
+      "PF_DOCUMENT",
+      "ESI_DOCUMENT",
+      "PHOTO",
+      "SIGNATURE",
+      "OTHER",
     ];
 
     if (!validTypes.includes(type)) {
-      return NextResponse.json({ message: "Invalid document type." }, { status: 400 });
+      return NextResponse.json(
+        { message: "Invalid document type." },
+        { status: 400 },
+      );
     }
 
     const parsed = documentUploadSchema.parse({
@@ -95,7 +123,10 @@ export async function POST(request: NextRequest) {
     });
 
     if (!employee) {
-      return NextResponse.json({ message: "Employee not found." }, { status: 404 });
+      return NextResponse.json(
+        { message: "Employee not found." },
+        { status: 404 },
+      );
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
@@ -112,6 +143,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(result, { status: 201 });
   } catch (error) {
     console.error("Document upload error:", error);
-    return NextResponse.json({ message: "Failed to upload document." }, { status: 500 });
+    return NextResponse.json(
+      { message: "Failed to upload document." },
+      { status: 500 },
+    );
   }
 }
