@@ -5,6 +5,7 @@ import { useState } from "react";
 import { MdArrowForward, MdLock, MdVisibility, MdVisibilityOff, MdEmail } from "react-icons/md";
 import { Spinner } from "@/components/ui/loaders/spinner";
 import { dismissToast, showError, showLoading, showSuccess } from "@/lib/toast";
+import { API_ENDPOINTS } from "@/lib/constants";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -23,7 +24,7 @@ export default function ResetPasswordPage() {
     setLoading(true);
 
     try {
-      const response = await fetch("/api/auth/reset-password/init", {
+      const response = await fetch(API_ENDPOINTS.AUTH.RESET_PASSWORD_INIT, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
@@ -76,7 +77,7 @@ export default function ResetPasswordPage() {
     const toastId = showLoading("Setting your password...");
 
     try {
-      const response = await fetch("/api/auth/reset-password", {
+      const response = await fetch(API_ENDPOINTS.AUTH.RESET_PASSWORD, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),

@@ -34,7 +34,10 @@ type NotificationType =
   | "COMP_OFF_EXPIRING"
   | "COMP_OFF_APPLIED"
   | "COMP_OFF_APPROVED"
-  | "COMP_OFF_REJECTED";
+  | "COMP_OFF_REJECTED"
+  | "TICKET_CREATED"
+  | "TICKET_UPDATED"
+  | "TICKET_COMMENT_ADDED";
 
 const notificationConfig: Record<string, { icon: any; color: string; bgColor: string }> = {
   LEAVE_APPLIED: { icon: HiOutlineCalendar, color: "text-blue-600", bgColor: "bg-blue-100" },
@@ -48,6 +51,9 @@ const notificationConfig: Record<string, { icon: any; color: string; bgColor: st
   COMP_OFF_APPLIED: { icon: HiOutlineCalendar, color: "text-indigo-600", bgColor: "bg-indigo-100" },
   COMP_OFF_APPROVED: { icon: HiOutlineCheckCircle, color: "text-green-600", bgColor: "bg-green-100" },
   COMP_OFF_REJECTED: { icon: HiOutlineXCircle, color: "text-red-600", bgColor: "bg-red-100" },
+  TICKET_CREATED: { icon: HiOutlineCalendar, color: "text-indigo-600", bgColor: "bg-indigo-100" },
+  TICKET_UPDATED: { icon: HiOutlineClock, color: "text-amber-600", bgColor: "bg-amber-100" },
+  TICKET_COMMENT_ADDED: { icon: HiOutlineCheck, color: "text-blue-600", bgColor: "bg-blue-100" },
 };
 
 const typeLabels: Record<string, string> = {

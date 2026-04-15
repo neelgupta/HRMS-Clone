@@ -6,6 +6,7 @@ import { MdArrowForward, MdLock, MdVisibility, MdVisibilityOff } from "react-ico
 import { PageLoader } from "@/components/ui/loaders/page-loader";
 import { Spinner } from "@/components/ui/loaders/spinner";
 import { dismissToast, showError, showLoading, showSuccess } from "@/lib/toast";
+import { API_ENDPOINTS } from "@/lib/constants";
 
 export default function SetPasswordPage() {
   const router = useRouter();
@@ -54,7 +55,7 @@ export default function SetPasswordPage() {
     setLoading(true);
     const toastId = showLoading("Setting your password...");
     try {
-      const response = await fetch("/api/auth/set-password", {
+      const response = await fetch(API_ENDPOINTS.AUTH.SET_PASSWORD, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token, password, confirmPassword }),

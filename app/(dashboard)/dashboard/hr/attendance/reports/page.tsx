@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Skeleton } from "@/components/ui/loaders/skeleton";
+import { HR_ROUTES } from "@/lib/constants/routes";
 
 type CurrentUser = {
   userId: string;
@@ -31,7 +32,7 @@ export default function AttendanceReportsPage() {
         setUser(data);
 
         if (data.role !== "HR_ADMIN" && data.role !== "SUPER_ADMIN" && data.role !== "PAYROLL_MANAGER") {
-          router.push("/dashboard/hr");
+          router.push(HR_ROUTES.DASHBOARD);
           return;
         }
       } catch {
