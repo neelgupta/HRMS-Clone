@@ -10,21 +10,32 @@ function currentYear() {
 }
 
 export async function GET(request: NextRequest) {
-  const authResult = await requireUser();
-  if ("response" in authResult) return authResult.response;
-
-  const { userId, companyId } = authResult;
-  const yearParam = request.nextUrl.searchParams.get("year");
-  const fiscalStartYear = yearParam ? Number(yearParam) : currentYear();
-
   try {
+    const authResult = await requireUser();
+    if ("response" in authResult) return authResult.response;
+
+    const { userId, companyId } = authResult;
+    const yearParam = request.nextUrl.searchParams.get("year");
+    const fiscalStartYear = yearParam ? Number(yearParam) : currentYear();
+
+    // Validate year parameter
+    if (yearParam && isNaN(Number(yearParam))) {
+      return NextResponse.json(
+        { message: "Invalid year parameter" },
+        { status: 400 }
+      );
+    }
+
     const user = await prisma.user.findFirst({
       where: { id: userId, companyId },
       select: { employeeId: true },
     });
 
     if (!user?.employeeId) {
-      return NextResponse.json({ message: "Employee not linked to user." }, { status: 400 });
+      return NextResponse.json(
+        { message: "Employee not linked to user." },
+        { status: 400 }
+      );
     }
 
     const employee = await prisma.employee.findFirst({
@@ -41,25 +52,46 @@ export async function GET(request: NextRequest) {
     });
 
     if (!employee) {
-      return NextResponse.json({ message: "Employee not found." }, { status: 404 });
+      return NextResponse.json(
+        { message: "Employee not found." },
+        { status: 404 }
+      );
     }
 
-    const sharedRuns = await prisma.$queryRaw<
-      Array<{ id: string; year: number; month: number; status: string; updatedAt: Date; holidays: number; weekOffDays: number; workingDays: number }>
-    >`
-      SELECT "id", "year", "month", "status", "updatedAt", "holidays", "weekOffDays", "workingDays"
-      FROM "payroll_runs"
-      WHERE
-        "companyId" = ${companyId}
-        AND "sharedWithEmployees" = true
-        AND (
-          ("year" = ${fiscalStartYear} AND "month" >= 4)
-          OR ("year" = ${fiscalStartYear + 1} AND "month" <= 3)
-        )
-      ORDER BY "year" ASC, "month" ASC
-    `;
+    // Replace raw query with Prisma findMany for better type safety
+    const sharedRuns = await prisma.payrollRun.findMany({
+      where: {
+        companyId: companyId,
+        sharedWithEmployees: true,
+        OR: [
+          {
+            year: fiscalStartYear,
+            month: { gte: 4 }
+          },
+          {
+            year: fiscalStartYear + 1,
+            month: { lte: 3 }
+          }
+        ]
+      },
+      select: {
+        id: true,
+        year: true,
+        month: true,
+        status: true,
+        updatedAt: true,
+        holidays: true,
+        weekOffDays: true,
+        workingDays: true,
+      },
+      orderBy: [
+        { year: 'asc' },
+        { month: 'asc' }
+      ]
+    });
 
     const runIds = sharedRuns.map((r) => r.id);
+    
     if (runIds.length === 0) {
       return NextResponse.json({
         year: fiscalStartYear,
@@ -77,7 +109,11 @@ export async function GET(request: NextRequest) {
     }
 
     const items = await prisma.payrollItem.findMany({
-      where: { companyId, employeeId: employee.id, payrollRunId: { in: runIds } },
+      where: { 
+        companyId: companyId, 
+        employeeId: employee.id, 
+        payrollRunId: { in: runIds } 
+      },
       select: {
         payrollRunId: true,
         basicSalary: true,
@@ -90,23 +126,26 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    const itemByRunId = new Map<string, (typeof items)[number]>();
-    for (const i of items) itemByRunId.set(i.payrollRunId, i);
+    const itemByRunId = new Map();
+    for (const item of items) {
+      itemByRunId.set(item.payrollRunId, item);
+    }
 
     const payroll = sharedRuns
-      .map((r) => {
-        const item = itemByRunId.get(r.id);
+      .map((run) => {
+        const item = itemByRunId.get(run.id);
         if (!item) return null;
+        
         return {
-          runId: r.id,
-          year: r.year,
-          month: r.month,
-          status: r.status,
-          updatedAt: r.updatedAt.toISOString(),
+          runId: run.id,
+          year: run.year,
+          month: run.month,
+          status: run.status,
+          updatedAt: run.updatedAt?.toISOString() || new Date().toISOString(),
           calendar: {
-            workingDays: r.workingDays,
-            holidays: r.holidays,
-            weekOffDays: r.weekOffDays,
+            workingDays: run.workingDays,
+            holidays: run.holidays,
+            weekOffDays: run.weekOffDays,
           },
           item: {
             basicSalary: item.basicSalary ?? null,
@@ -119,7 +158,7 @@ export async function GET(request: NextRequest) {
           },
         };
       })
-      .filter((r): r is NonNullable<typeof r> => !!r);
+      .filter((run): run is NonNullable<typeof run> => run !== null);
 
     return NextResponse.json({
       year: fiscalStartYear,
@@ -134,7 +173,9 @@ export async function GET(request: NextRequest) {
       },
       payroll,
     });
+    
   } catch (error) {
+    console.error("Payroll fetch error:", error);
     return getErrorResponse(error, "Failed to fetch employee payroll.");
   }
 }
