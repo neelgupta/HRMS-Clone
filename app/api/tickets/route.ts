@@ -134,9 +134,15 @@ export async function GET(request: NextRequest) {
     });
 
     // Fetch assignedTo data separately
-    const assignedToIds = [...new Set(tickets.map((t: { assignedToId?: string }) => t.assignedToId).filter(Boolean))];
+    const assignedToIdsSet = new Set<string>();
+    for (const ticket of tickets) {
+      if (ticket.assignedToId) {
+        assignedToIdsSet.add(ticket.assignedToId!);
+      }
+    }
+    const assignedToIds: string[] = Array.from(assignedToIdsSet);
     const assignedToUsers = assignedToIds.length > 0 ? await prisma.user.findMany({
-      where: { id: { in: assignedToIds } },
+      where: { id: { in: assignedToIds } } as any,
       select: { id: true, name: true, email: true },
     }) : [];
 

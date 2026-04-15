@@ -29,6 +29,7 @@ import {
   breakEnd,
   fetchTodayAttendance,
   fetchEmployeeAttendanceDashboard,
+  clearTodayAttendanceCache,
   type EmployeeAttendanceDashboard,
   type AttendanceDetail,
 } from "@/lib/client/attendance";
@@ -237,30 +238,49 @@ function DashboardContent() {
   const clockOutActivity = attendanceActivities.find(a => a.type === "CLOCK_OUT");
 
   const calculateWorkingTime = () => {
-    if (!isClockedIn || !clockInActivity) return "—";
+    // Calculate working time based on clock-in and clock-out activities
+    if (!clockInActivity) return "—";
+    
     const clockInTime = new Date(clockInActivity.time).getTime();
-    let endTime = clockOutActivity ? new Date(clockOutActivity.time).getTime() : Date.now();
-    if (isOnBreak && breakStartActivity) {
+    let endTime = Date.now();
+    
+    // If clocked out, use clock-out time
+    if (clockOutActivity) {
+      endTime = new Date(clockOutActivity.time).getTime();
+    } 
+    // If currently on break, use break start time
+    else if (isOnBreak && breakStartActivity) {
       endTime = new Date(breakStartActivity.time).getTime();
     }
+    
     const diff = endTime - clockInTime;
     const mins = Math.floor(diff / 60000);
     const hours = Math.floor(mins / 60);
     const remainingMins = mins % 60;
+    
     if (hours === 0) return `${remainingMins}m`;
     return `${hours}h ${remainingMins}m`;
   };
 
   const calculateBreakTime = () => {
-    if (!isClockedIn || !todayAttendance) return "—";
-    const baseSeconds = (todayAttendance.totalBreakMins ?? 0) * 60;
-    const liveSeconds =
-      todayAttendance.breakStart && !todayAttendance.breakEnd
-        ? Math.max(0, Math.floor((currentTime.getTime() - new Date(todayAttendance.breakStart).getTime()) / 1000))
-        : 0;
-    const totalSeconds = baseSeconds + liveSeconds;
-    if (totalSeconds <= 0) return "—";
-    return formatHms(totalSeconds);
+    if (!todayAttendance) return "—";
+    // Use totalBreakMins from attendance record (includes all completed breaks)
+    const totalBreakMins = todayAttendance.totalBreakMins ?? 0;
+    
+    // If currently on break, add live time
+    if (todayAttendance.breakStart && !todayAttendance.breakEnd) {
+      const liveSeconds = Math.max(0, Math.floor((currentTime.getTime() - new Date(todayAttendance.breakStart).getTime()) / 1000));
+      const totalSeconds = (totalBreakMins * 60) + liveSeconds;
+      return formatHms(totalSeconds);
+    }
+    
+    // If not on break or clocked out, show total break time
+    if (totalBreakMins <= 0) return "0m";
+    const hours = Math.floor(totalBreakMins / 60);
+    const mins = totalBreakMins % 60;
+    if (hours === 0) return `${mins}m`;
+    if (mins === 0) return `${hours}h`;
+    return `${hours}h ${mins}m`;
   };
 
   const handleBreak = async () => {
@@ -329,6 +349,12 @@ function DashboardContent() {
             },
           ]);
           void loadDashboard();
+          // Clear cache and refresh today's attendance to get updated totalHours and totalBreakMins
+          clearTodayAttendanceCache();
+          const attendanceResult = await fetchTodayAttendance();
+          if (attendanceResult.data?.attendance) {
+            setTodayAttendance(attendanceResult.data.attendance);
+          }
         }
       } else if (modalType === "breakStart") {
         const result = await breakStart({ remarks: remarks || undefined });
@@ -445,7 +471,7 @@ function DashboardContent() {
             <div className="grid grid-cols-2 gap-3 mb-4">
               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3">
                 <p className="text-xs text-indigo-200 dark:text-indigo-300">Current Time</p>
-                <p className="text-sm font-bold text-white">{isClockedIn ? calculateWorkingTime() : "—"}</p>
+                <p className="text-sm font-bold text-white">{calculateWorkingTime()}</p>
               </div>
               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3">
                 <p className="text-xs text-indigo-200 dark:text-indigo-300">Break Time</p>
