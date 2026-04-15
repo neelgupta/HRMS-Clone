@@ -2,14 +2,15 @@ import { NextResponse, type NextRequest } from "next/server";
 import { requireUser } from "@/lib/auth-guard";
 import { getErrorResponse } from "@/lib/api-response";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 
-function currentYear() {
+function currentYear(): number {
   const now = new Date();
   // Fiscal year start: Apr (4)
   return now.getMonth() + 1 >= 4 ? now.getFullYear() : now.getFullYear() - 1;
 }
 
-export async function GET(request: NextRequest) {
+export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
     const authResult = await requireUser();
     if ("response" in authResult) return authResult.response;
@@ -19,13 +20,14 @@ export async function GET(request: NextRequest) {
     const fiscalStartYear = yearParam ? Number(yearParam) : currentYear();
 
     // Validate year parameter
-    if (yearParam && isNaN(Number(yearParam))) {
+    if (yearParam && (isNaN(Number(yearParam)) || Number(yearParam) < 2000 || Number(yearParam) > 2100)) {
       return NextResponse.json(
-        { message: "Invalid year parameter" },
+        { message: "Invalid year parameter. Year must be between 2000 and 2100." },
         { status: 400 }
       );
     }
 
+    // Get employee ID from user
     const user = await prisma.user.findFirst({
       where: { id: userId, companyId },
       select: { employeeId: true },
@@ -38,8 +40,13 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Get employee details
     const employee = await prisma.employee.findFirst({
-      where: { id: user.employeeId, companyId, isDeleted: false },
+      where: { 
+        id: user.employeeId, 
+        companyId, 
+        isDeleted: false 
+      },
       select: {
         id: true,
         firstName: true,
@@ -58,7 +65,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Replace raw query with Prisma findMany for better type safety
+    // Get payroll runs
     const sharedRuns = await prisma.payrollRun.findMany({
       where: {
         companyId: companyId,
@@ -87,13 +94,13 @@ export async function GET(request: NextRequest) {
       orderBy: [
         { year: 'asc' },
         { month: 'asc' }
-      ]
+      ],
     });
 
-    const runIds = sharedRuns.map((r) => r.id);
-    
-    if (runIds.length === 0) {
+    // If no payroll runs found, return employee data only
+    if (sharedRuns.length === 0) {
       return NextResponse.json({
+        success: true,
         year: fiscalStartYear,
         employee: {
           id: employee.id,
@@ -108,11 +115,14 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const items = await prisma.payrollItem.findMany({
-      where: { 
-        companyId: companyId, 
-        employeeId: employee.id, 
-        payrollRunId: { in: runIds } 
+    // Get payroll items for the employee
+    const runIds = sharedRuns.map((run) => run.id);
+    
+    const payrollItems = await prisma.payrollItem.findMany({
+      where: {
+        companyId: companyId,
+        employeeId: employee.id,
+        payrollRunId: { in: runIds },
       },
       select: {
         payrollRunId: true,
@@ -126,11 +136,12 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    const itemByRunId = new Map();
-    for (const item of items) {
-      itemByRunId.set(item.payrollRunId, item);
-    }
+    // Create a map for quick lookup
+    const itemByRunId = new Map(
+      payrollItems.map((item) => [item.payrollRunId, item])
+    );
 
+    // Combine payroll runs with their items
     const payroll = sharedRuns
       .map((run) => {
         const item = itemByRunId.get(run.id);
@@ -141,7 +152,7 @@ export async function GET(request: NextRequest) {
           year: run.year,
           month: run.month,
           status: run.status,
-          updatedAt: run.updatedAt?.toISOString() || new Date().toISOString(),
+          updatedAt: run.updatedAt.toISOString(),
           calendar: {
             workingDays: run.workingDays,
             holidays: run.holidays,
@@ -160,7 +171,9 @@ export async function GET(request: NextRequest) {
       })
       .filter((run): run is NonNullable<typeof run> => run !== null);
 
+    // Return successful response
     return NextResponse.json({
+      success: true,
       year: fiscalStartYear,
       employee: {
         id: employee.id,
@@ -176,6 +189,9 @@ export async function GET(request: NextRequest) {
     
   } catch (error) {
     console.error("Payroll fetch error:", error);
-    return getErrorResponse(error, "Failed to fetch employee payroll.");
+    return getErrorResponse(
+      error instanceof Error ? error : new Error(String(error)), 
+      "Failed to fetch employee payroll."
+    );
   }
 }
