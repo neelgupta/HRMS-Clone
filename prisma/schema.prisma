@@ -282,7 +282,7 @@ model Employee {
   leaveApplications        LeaveApplication[]
   leaveBalances            LeaveBalance[]
   shiftAssignments         ShiftAssignment[]
-  user                     User?                      @relation(fields: [id], references: [employeeId])
+  user                     User?
   payrollItems             PayrollItem[]
 
   @@index([companyId])
