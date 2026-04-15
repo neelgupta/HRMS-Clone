@@ -30,6 +30,7 @@ model Company {
   updatedAt            DateTime              @updatedAt
   attendancePolicy     AttendancePolicy?
   auditLogs            AuditLog[]
+  announcements        Announcement[]
   bankDetail           BankDetail?
   branches             Branch[]
   compOffBalances      CompOffBalance[]
@@ -1113,4 +1114,42 @@ model PolicyDocument {
   @@index([companyId])
   @@index([category])
   @@map("policy_documents")
+}
+
+model Announcement {
+  id          String           @id @default(uuid())
+  companyId   String
+  title       String
+  content     String           @db.Text
+  type        AnnouncementType @default(GENERAL)
+  priority    AnnouncementPriority @default(NORMAL)
+  attachmentUrl String?
+  attachmentName String?
+  isActive    Boolean          @default(true)
+  validFrom   DateTime?
+  validUntil  DateTime?
+  createdBy   String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  company     Company          @relation(fields: [companyId], references: [id])
+
+  @@index([companyId])
+  @@index([isActive])
+  @@map("announcements")
+}
+
+enum AnnouncementType {
+  GENERAL
+  HR_POLICY
+  EVENT
+  HOLIDAY
+  BENEFIT
+  URGENT
+}
+
+enum AnnouncementPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
 }

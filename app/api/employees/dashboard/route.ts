@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
-import type { LeaveNotification } from "@prisma/client";
 
 export async function GET(request: NextRequest) {
   const authResult = await requireAuth(request);
@@ -50,7 +49,7 @@ export async function GET(request: NextRequest) {
         take: 5,
       });
 
-      notifications = employeeNotifications.map((n: LeaveNotification) => ({
+      notifications = employeeNotifications.map((n: any) => ({
         id: n.id,
         type: n.type,
         title: getNotificationTitle(n.type),
